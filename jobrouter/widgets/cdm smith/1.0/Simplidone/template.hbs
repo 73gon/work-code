@@ -1,0 +1,300 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"
+    type="text/css">
+<link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+<script>
+    let invisLabel = JSON.parse(document.getElementById("simplidone_invisLabel").innerHTML);
+    let invisIncident = JSON.parse(document.getElementById("simplidone_invisIncident").innerHTML);
+
+    simplidoneWidget();
+    $j('#simplidone_outerBox').parent().toggleClass('simplidone_background', true);
+
+    function simplidoneWidget() {
+        let outerBox = document.getElementById("simplidone_outerBox");
+
+        let dateRange = document.createElement("div");
+        dateRange.setAttribute("class", "simplidone_dateRange");
+        outerBox.appendChild(dateRange);
+
+        let labelFrom = document.createElement("label");
+        dateRange.appendChild(labelFrom);
+
+        let dateFrom = document.createElement("input");
+        dateFrom.id = "simplidone_dateFrom";
+        dateFrom.placeholder = "Startdatum";
+        dateFrom.autocomplete = "off";
+        dateFrom.addEventListener("change", function () {
+            update();
+        });
+        dateRange.appendChild(dateFrom);
+
+        let labelTo = document.createElement("label");
+        dateRange.appendChild(labelTo);
+
+        let dateTo = document.createElement("input");
+        dateTo.id = "simplidone_dateTo";
+        dateTo.placeholder = "Enddatum";
+        dateTo.autocomplete = "off";
+        dateTo.addEventListener("change", function () {
+            update();
+        });
+        dateRange.appendChild(dateTo);
+
+        $j(function () {
+            let dateFormat = "dd.mm.yy",
+                from = $j("#simplidone_dateFrom")
+                    .datepicker({
+                        defaultDate: "+1w",
+                        changeMonth: true,
+                        numberOfMonths: 1,
+                        dateFormat: dateFormat,
+                        onSelect: function(dateText, inst) {
+                            update();
+                        }
+                    })
+                    .on("change", function () {
+                        to.datepicker("option", "minDate", getDate(this));
+                        
+                    }),
+                to = $j("#simplidone_dateTo").datepicker({
+                    defaultDate: "+1w",
+                    changeMonth: true,
+                    numberOfMonths: 1,
+                    dateFormat: dateFormat,
+                    onSelect: function(dateText, inst) {
+                        update();
+                    }
+                })
+                    .on("change", function () {
+                        from.datepicker("option", "maxDate", getDate(this));
+                    });
+
+            function getDate(element) {
+                let date;
+                try {
+                    date = $j.datepicker.parseDate(dateFormat, element.value);
+                } catch (error) {
+                    date = null;
+                }
+
+                return date;
+            }
+        });
+
+        let gridContainer = document.createElement("div");
+        gridContainer.setAttribute("class", "simplidone_gridContainer");
+        gridContainer.id = "simplidone_gridContainer";
+        outerBox.appendChild(gridContainer);
+
+        let gridBoxLeft = document.createElement("div");
+        gridBoxLeft.setAttribute("class", "simplidone_gridBox");
+        gridContainer.appendChild(gridBoxLeft);
+
+        let gridBoxOne = document.createElement("div");
+        gridBoxOne.setAttribute("class", "simplidone_gridBox");
+        gridContainer.appendChild(gridBoxOne);
+
+        let gridBoxTwo = document.createElement("div");
+        gridBoxTwo.setAttribute("class", "simplidone_gridBox");
+        gridContainer.appendChild(gridBoxTwo);
+
+        let gridBoxThree = document.createElement("div");
+        gridBoxThree.setAttribute("class", "simplidone_gridBox");
+        gridContainer.appendChild(gridBoxThree);
+
+        for (let i = 0; i < invisLabel.length; i++) {
+            let label = document.createElement("div");
+            label.setAttribute("class", "simplidone_label");
+            if (i === 0) {
+                label.classList.add('first-index');
+            }
+            label.innerHTML = invisLabel[i];
+            gridBoxLeft.appendChild(label);
+
+            let amount = document.createElement("div");
+            amount.setAttribute("class", "simplidone_incident");
+            if (i === 0) {
+                amount.classList.add('first-index');
+            }
+            amount.innerHTML = invisIncident[i][0];
+            gridBoxOne.appendChild(amount);
+
+            let avg = document.createElement("div");
+            avg.setAttribute("class", "simplidone_incident");
+            if (i === 0) {
+                avg.classList.add('first-index');
+            }
+            avg.innerHTML = invisIncident[i][1];
+            gridBoxTwo.appendChild(avg);
+
+            let sum = document.createElement("div");
+            sum.setAttribute("class", "simplidone_incident");
+            if (i === 0) {
+                sum.classList.add('first-index');
+            }
+            sum.innerHTML = invisIncident[i][2];
+            gridBoxThree.appendChild(sum);
+        }
+    }
+
+    function update() {
+        indate = document.getElementById("simplidone_dateFrom").value;
+        outdate = document.getElementById("simplidone_dateTo").value;
+
+
+        if (indate != "") {
+            let parts = indate.split(".");
+            indate = parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+        if (outdate != "") {
+            let parts = outdate.split(".");
+            outdate = parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+        $j.ajax({
+            url: "dashboard/MyWidgets/Simplidone/query.php",
+            type: "GET",
+            data: { indate: indate, outdate: outdate },
+            dataType: "text",
+            success: function (data) {
+                invisIncident = JSON.parse(data);
+                let gridContainer = document.getElementById("simplidone_gridContainer");
+                gridContainer.innerHTML = ''
+                let gridBoxLeft = document.createElement("div");
+                gridBoxLeft.setAttribute("class", "simplidone_gridBox");
+                gridContainer.appendChild(gridBoxLeft);
+
+                let gridBoxOne = document.createElement("div");
+                gridBoxOne.setAttribute("class", "simplidone_gridBox");
+                gridContainer.appendChild(gridBoxOne);
+
+                let gridBoxTwo = document.createElement("div");
+                gridBoxTwo.setAttribute("class", "simplidone_gridBox");
+                gridContainer.appendChild(gridBoxTwo);
+
+                let gridBoxThree = document.createElement("div");
+                gridBoxThree.setAttribute("class", "simplidone_gridBox");
+                gridContainer.appendChild(gridBoxThree);
+
+                for (let i = 0; i < invisLabel.length; i++) {
+                    let label = document.createElement("div");
+                    label.setAttribute("class", "simplidone_label");
+                    if (i === 0) {
+                        label.classList.add('first-index');
+                    }
+                    label.innerHTML = invisLabel[i];
+                    gridBoxLeft.appendChild(label);
+
+                    let amount = document.createElement("div");
+                    amount.setAttribute("class", "simplidone_incident");
+                    if (i === 0) {
+                        amount.classList.add('first-index');
+                    }
+                    amount.innerHTML = invisIncident[i][0];
+                    gridBoxOne.appendChild(amount);
+
+                    let avg = document.createElement("div");
+                    avg.setAttribute("class", "simplidone_incident");
+                    if (i === 0) {
+                        avg.classList.add('first-index');
+                    }
+                    avg.innerHTML = invisIncident[i][1];
+                    gridBoxTwo.appendChild(avg);
+
+                    let sum = document.createElement("div");
+                    sum.setAttribute("class", "simplidone_incident");
+                    if (i === 0) {
+                        sum.classList.add('first-index');
+                    }
+                    sum.innerHTML = invisIncident[i][2];
+                    gridBoxThree.appendChild(sum);
+                };
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(textStatus, errorThrown);
+            }
+        });
+    }
+</script>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+    #simplidone_outerBox {
+        width: 100%;
+        font-family: 'Poppins';
+    }
+
+    .simplidone_background {
+        background-color: #3B3E4D;
+        color: #FFCC0D;
+        border: none;
+    }
+
+    .simplidone_dateRange {
+        text-align: right;
+        margin-right: 10px;
+        font-size: 16px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+
+    .simplidone_dateRange label {
+        margin-right: 10px;
+        margin-left: 10px;
+    }
+
+    .simplidone_dateRange input {
+        width: 100px;
+        border: 1px solid #252730;
+        border-radius: 5px;
+        background: #252730;
+        text-align: center;
+        padding: 2px;
+    }
+
+    .simplidone_dateRange input::placeholder {
+        color: #DDDDDD;
+    }
+
+
+    .simplidone_gridContainer {
+        display: grid;
+        grid-template-columns: auto auto auto auto;
+    }
+
+    .simplidone_gridBox {
+        padding: 10px;
+        font-size: 14px;
+        line-height: 1.75;
+        overflow-x: hidden;
+    }
+
+    .first-index {
+        font-weight: bold;
+    }
+
+    .simplidone_label {
+        border-bottom: 1px solid #252730;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .simplidone_incident {
+        text-align: right;
+        border-bottom: 1px solid #252730;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    [id^="simplidone_invis"] {
+        display: none;
+    }
+</style>
+
+<div id="simplidone_invisIncident">{{incidents}}</div>
+<div id="simplidone_invisLabel">{{labels}}</div>
+<div id="simplidone_outerBox"></div>

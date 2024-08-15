@@ -1,0 +1,575 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" type="text/css">
+<script> 
+
+const columns = JSON.parse(document.getElementById("invisiblecolumns").innerHTML);
+for (const index in columns) {
+  if (typeof columns[index] === 'object' && !Array.isArray(columns[index])){
+    columns[index] = Object.values(columns[index]);
+  }
+}
+
+let entries = [];
+let maxPages = 5;
+let pageNum = 1;
+let runningxhr = false;
+
+
+simplifyListWidget();
+
+function simplifyListWidget(){
+    const list_outerBox = document.getElementById('list_outerBox');
+    list_outerBox.innerHTML = "";
+
+    document.documentElement.style.setProperty('--columns', columns.length);
+	let sIzE = 100/columns.length + '%';
+	document.documentElement.style.setProperty('--size', sIzE);
+    
+	const settings = document.createElement('div');
+		  settings.setAttribute('class', 'settings');
+	list_outerBox.appendChild(settings);
+	
+	let limit = document.createElement('div');
+		limit.setAttribute('class', 'limit');
+		limit.innerHTML = "Einträge";
+	settings.appendChild(limit);
+	let limit_button = document.createElement('button');
+		limit_button.setAttribute('class', 'limit_button');
+		limit_button.setAttribute('onclick', 'showDropDown()');
+		limit_button.innerHTML = "100";
+	limit.appendChild(limit_button);
+	let dropDown = document.createElement('div');
+		dropDown.setAttribute('id', 'dropDown');
+	limit.appendChild(dropDown);
+	let content50 = document.createElement('button');
+		content50.addEventListener('click', function() {limit_button.innerHTML = "50"; createRows();});
+		content50.innerHTML = "50";
+	dropDown.appendChild(content50);
+	let content100 = document.createElement('button');
+		content100.addEventListener('click', function() {limit_button.innerHTML = "100"; createRows();});
+		content100.innerHTML = "100";
+	dropDown.appendChild(content100);
+	let content200 = document.createElement('button');
+		content200.addEventListener('click', function() {limit_button.innerHTML = "200"; createRows();});
+		content200.innerHTML = "200";
+	dropDown.appendChild(content200);
+	
+	
+	let clearContainer = document.createElement('div');
+		clearContainer.id = 'clearContainer';
+	settings.appendChild(clearContainer);	
+	let clearFilter = document.createElement('div');
+		clearFilter.id = 'clearFilter';
+		clearFilter.innerHTML = "Alle Filter löschen"	
+	clearContainer.appendChild(clearFilter);
+	let clearButton = document.createElement('button');
+		clearButton.setAttribute('class', 'fa-solid fa-trash');
+		clearButton.addEventListener('click', function() {for(let i = 0; i < columns.length; i++){document.getElementById("input" + i).value = "";}createRows();});
+	clearContainer.appendChild(clearButton);
+
+	let pageContainer = document.createElement('div');
+		pageContainer.setAttribute('class', 'pageContainer');
+	settings.appendChild(pageContainer);
+	let prevButton = document.createElement('button');
+		prevButton.setAttribute('class', 'prevButton');
+		prevButton.innerText = '\u003C';
+		prevButton.addEventListener('click', function() {if(pageNum > 1){pageNum-=1; createRows();}});
+	pageContainer.appendChild(prevButton);
+	let page = document.createElement('div');
+		page.setAttribute('class', 'page');
+		page.innerHTML = pageNum + ' von ' + maxPages;
+	pageContainer.appendChild(page);	
+	let nextButton = document.createElement('button');
+		nextButton.setAttribute('class', 'nextButton');
+		nextButton.innerText = '\u003E';
+		nextButton.addEventListener('click', function() {if(pageNum < maxPages){pageNum+=1; createRows();}});
+	pageContainer.appendChild(nextButton);
+	
+	const header = document.createElement('div');
+          header.setAttribute('class', 'header');
+    list_outerBox.appendChild(header);	  
+
+    for(var i = 0; i < columns.length; i++){
+        let headlines = document.createElement('button');
+            headlines.setAttribute('class', 'headlines' + i);
+            headlines.setAttribute('id', i);
+            headlines.setAttribute('draggable', 'true');
+            headlines.setAttribute('ondrop', 'swap(event, ' + i + ')');
+            headlines.setAttribute('ondragstart', 'drag(event)');
+            headlines.setAttribute('ondragover', 'allowDrop(event)');
+        header.appendChild(headlines);
+            let title = document.createElement('div');
+                title.setAttribute('class', 'title');
+                title.innerHTML = columns[i];
+            headlines.appendChild(title);
+            let sort = document.createElement('button');
+                sort.setAttribute('class', 'fa fa-sort');
+                sort.setAttribute('aria-hidden', 'true');
+                sort.setAttribute('id', 'sort' + i);
+                sort.setAttribute('content', '0');
+                sort.setAttribute('onclick', 'sort(' + i + ')');
+            headlines.appendChild(sort);
+            let filter = document.createElement('div');
+                filter.setAttribute('class', 'fa-solid fa-filter');
+                filter.setAttribute('id', 'filter' + i);
+                filter.setAttribute('onclick', 'showandhide(' + i + ')');
+            headlines.appendChild(filter);
+                let input = document.createElement('input');
+                    input.setAttribute('class', 'input');
+                    input.setAttribute('id', 'input' + i);
+                    input.setAttribute('type', 'text');   
+                    input.setAttribute('placeholder', 'Suche');   
+					input.addEventListener('input', () => {pageNum = 1; createRows();});
+                filter.appendChild(input);
+    }
+
+    const list_innerBox = document.createElement('div');
+        list_innerBox.setAttribute('id', 'list_innerBox');
+    list_outerBox.appendChild(list_innerBox);
+    createRows();
+}
+
+function createRows(){
+
+    const list_innerBox = document.getElementById('list_innerBox');
+    list_innerBox.innerHTML = "";
+	let limit = document.getElementsByClassName('limit_button')[0].innerHTML;
+	let input = [];
+    for(var i = 0; i < columns.length; i++){
+        input.push(filter(i));	
+    }
+	let check = 0;
+	let sort = 'DESC';
+	let sortID = 1;
+	if(document.getElementsByClassName('fa fa-arrow-up-a-z').length > 0){
+		check = 'fa fa-arrow-up-a-z';
+	}else if(document.getElementsByClassName('fa fa-arrow-down-a-z').length > 0){
+		check = 'fa fa-arrow-down-a-z';
+	}
+	if(check == 'fa fa-arrow-up-a-z' || check == 'fa fa-arrow-down-a-z'){
+		sortID = document.getElementsByClassName(check)[0].getAttribute('id');
+		sortID = sortID.slice(-1);
+		if(document.getElementsByClassName(check)[0].getAttribute('content') == '1'){
+			sort = 'ASC'
+		}else{
+			sort = 'DESC'
+		}
+	}
+	
+	$j.ajax({
+			url: "dashboard/MyWidgets/Liste/query.php",
+			type: "GET",
+			data: { columns: columns, filter: input, version: 1 },
+			dataType: "text",
+			success: function(data) { maxPages = Math.ceil(parseInt(data) / limit); 
+									  document.getElementsByClassName('page')[0].innerHTML = pageNum + ' von ' + maxPages;},
+			error: function(jqXHR, textStatus, errorThrown) {
+				console.log(textStatus, errorThrown);
+			}
+	});
+	if(runningxhr) {
+		runningxhr.abort();
+	}
+    runningxhr = $j.ajax({
+			url: "dashboard/MyWidgets/Liste/query.php",
+			type: "GET",
+			data: { columns: columns, filter: input, limit: limit, offset: (pageNum - 1) * limit, sort: sort, sortID: sortID, version: 2},
+			dataType: "json",
+			success: function(data) {
+				entries = data;
+				for(var j = 0; j < entries[1].length; j++){
+					let row = document.createElement('div');
+					row.setAttribute('class', 'row');
+					list_innerBox.appendChild(row);
+					for(var i = 0; i < entries.length; i++){
+						let details = document.createElement('div')   
+							details.innerHTML = entries[i][j];
+							details.setAttribute('class', 'details');
+						row.appendChild(details);    
+					}
+				}
+			},
+			error: function(jqXHR, textStatus, errorThrown) {
+				console.log(textStatus, errorThrown);
+			}
+	});
+}
+
+function showDropDown(){
+    let dropDown = document.getElementById("dropDown");
+	let limit_button = document.getElementsByClassName("limit_button")[0];
+	dropDown.classList.toggle("show");
+    document.addEventListener('click', (event) => {
+        if (event.target !== limit_button) {
+            dropDown.classList.remove("show");
+        }
+      });
+}
+
+
+function showandhide(id){
+    let input = document.getElementById("input" + id);
+    let icon = document.getElementById("filter" + id);
+        input.style.display = "block";
+    document.addEventListener('click', (event) => {
+        if (event.target !== input && event.target !== icon) {
+          input.style.display = 'none';
+        }
+      });
+}
+
+function filter(id){
+    let header = document.getElementsByClassName("header")[0];
+	const inputId = header.children[id].id;
+    const input = document.getElementById('input' + inputId);
+    const value = input.value.toLowerCase();   
+    const rows = document.getElementsByClassName('row');
+    const icon = document.getElementsByClassName('fa-solid fa-filter')[id];
+
+    if(value != ""){
+        icon.style.color = "#4C8FF8";
+    }else{
+        icon.style.color = "#242630";
+    }
+	return value;
+}
+
+function swap(event, id){
+    event.preventDefault();
+    var data = event.dataTransfer.getData("id");
+    let header = document.getElementsByClassName("header")[0];
+
+    for(var i = 0; i < header.childNodes.length; i++){
+        if(header.childNodes[i].getAttribute("id") == data){   
+            var newData = i;
+        }
+        if(header.childNodes[i].getAttribute("id") == id){
+            var newID = i;
+        }
+    }
+	
+	const doma = document.getElementsByClassName("headlines" + id)[0];
+	const domb = document.getElementsByClassName("headlines" + data)[0];
+	swapDom(doma, domb);
+
+    let tempC = columns[newID]
+    columns[newID] = columns[newData]
+    columns[newData] = tempC; 
+	
+	createRows();
+}
+
+function drag(event){
+    event.dataTransfer.setData("id", event.target.id);
+}
+
+function allowDrop(event){
+    event.preventDefault();
+}
+
+
+
+function sort(id){
+	for(var i = 0; i < columns.length; i++){
+		document.getElementById('sort' + i).setAttribute('class', 'fa fa-sort');
+	}
+
+	let sort = document.getElementById('sort' + id);
+    marked = sort.getAttribute('content');
+
+    let header = document.getElementsByClassName("header")[0];
+    for(var i = 0; i < header.childNodes.length; i++){
+        if(header.childNodes[i].getAttribute("id") == id){
+            var newID = i;
+        }
+    }
+    const index = newID;
+	
+    if(marked == '0' || marked == '2'){
+        sort.setAttribute('content', '1');
+        sort.setAttribute('class', 'fa fa-arrow-down-a-z');
+        createRows();
+    }else if(marked == '1'){
+        sort.setAttribute('content', '2');
+        sort.setAttribute('class', 'fa fa-arrow-up-a-z');
+        createRows();
+    }
+}
+
+function swapDom(a, b) {
+	var p1 = a.parentNode,
+		p2 = b.parentNode,
+		i1, i2;
+
+	if (!p1 || !p2 || p1.isEqualNode(b) || p2.isEqualNode(a)) return;
+
+	for (var i = 0; i < p1.children.length; i++) {
+		if (p1.children[i].isEqualNode(a)) {
+			i1 = i;
+		}
+	}
+	for (var i = 0; i < p2.children.length; i++) {
+		if (p2.children[i].isEqualNode(b)) {
+			i2 = i;
+		}
+	}
+
+	if (p1.isEqualNode(p2) && i1 < i2) {
+		i2++;
+	}
+	p1.insertBefore(b, p1.children[i1]);
+	p2.insertBefore(a, p2.children[i2]);
+}
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+#list_outerBox{
+    font-family: 'Poppins';
+    overflow-y: auto;
+	max-height: 100%;
+    overflow-x: auto;
+	max-width: 100%;
+}
+
+#list_innerBox{
+	margin-bottom: 33px;
+}
+
+.settings{
+    background: #C6CADC;
+	color: black;
+    border: 1px solid black;
+	border-bottom: 0;
+	font-size: 12px;
+	overflow: auto;
+}
+
+.limit{
+	border-left: 1px solid black;;
+	padding-left: 4px;
+	font-size: 12px;
+	float: left;
+	user-select: none;
+}
+
+.limit_button{
+	background-color: #4A5574;
+	color: white;
+	border-radius: 10%;
+	border: none;
+	padding-left: 2px;
+	padding-right: 2px;
+	margin-left: 2px;
+	margin-right: 2px;
+	font-size:12px;
+}
+
+#dropDown{
+   display: none;
+   position: absolute;
+   background-color: #C6CADC;
+   overflow: auto;
+   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+   z-index: 1;
+   border-radius: 5%;
+   left: 2%;
+}
+
+#dropDown button{
+   background-color: #C6CADC;
+   padding: 5px 5px;
+   width: 60px;
+   display: block;
+   border: none;
+}
+
+#dropDown button:hover{
+	background-color: #ddd
+}
+
+#clearContainer{
+	display:inline-block;
+	font-size: 12px;
+	margin-left: 40%;
+	user-select: none;
+}
+
+#clearFilter{
+	display: inline-block;
+	padding-right: 5px;
+}
+
+[class*="fa-solid fa-trash"]{
+    color: #242630;
+    padding-right: 15px;
+    background: none;
+    border: none;
+    margin-right: 10px;
+    text-align: left;
+    display: inline-block;
+    width: 6%;
+}
+
+.pageContainer{
+	display:inline-block;
+	right: 0;
+	font-size: 12px;
+	float: right;
+}
+
+.prevButton, .nextButton{
+	color: white;
+	display: inline-block;
+	border: none;
+	background-color: #4A5574;
+	border-radius: 10%;
+    padding-left: 6px;
+	padding-right: 6px;
+    margin-left: 3px;
+	margin-right: 3px;
+    text-decoration: none;
+	font-weight: 500;
+}
+
+.page{
+	display: inline-block;
+	user-select: none;
+}
+
+.header{
+    background: #C6CADC;
+    border: 1px solid black;
+    display: grid;
+    grid-template-columns: repeat(var(--columns), var(--size));
+    grid-auto-rows: max-content;
+    position: relative;
+}
+
+[class*="headlines"]{
+	background: #C6CADC;
+    border: none;
+	border-left: 1px solid black;
+	padding: 0;
+	margin: 0;
+    padding-left: 3px;
+    font-size: 14px;
+	font-weight: 300;
+    text-align: left;
+    position: relative;
+	display: inline-block;
+}
+
+.title{
+    color: #242630;
+    border: none;
+    background: none;
+	padding-right: 5px;
+    font-weight: 600;
+    display: inline-block;
+    text-align: left;
+	width: 60%;
+	white-space: nowrap;
+	overflow-x: clip;
+}
+
+[class*="fa-sort"]{
+    color: #242630;
+    padding-right: 15px;
+    background: none;
+    border: none;
+    margin-right: 10px;
+    text-align: left;
+    display: inline-block;
+    width: 6%;
+}
+
+[class*="fa-arrow"]{
+    color: #242630;
+    padding-right: 15px;
+    background: none;
+    border: none;
+    margin-right: 10px;
+    text-align: left;
+    display: inline-block;
+    width: 6%;
+}
+
+[class*="fa-solid fa-filter"]{
+    background: none;
+    border: none;
+    text-align: left;
+    display: inline-block;
+	padding-right: 10px;
+	width: 6%;
+	margin-left: auto;
+	margin-right: 0;
+}
+
+[class*="input"]{
+    color: #242630;
+    display: none;
+    position: absolute;
+    z-index: 11;
+    color: rgb(215, 214, 214);
+    border: 1px solid #3a3e4c;
+    background: #3a3e4c;
+    margin: 1px;
+    padding: 2px;
+    font-size: 14px;
+    text-align: left;
+    border-radius: 10px;
+    min-width: 100px;
+    top: 25px;
+	left: 50%;
+}
+
+[class*="input"][type="text"]{
+    width: 30px;
+}
+
+[class*="input"]::placeholder{
+    color: rgb(215, 214, 214);
+}
+
+
+.row{
+    border: 1px solid rgba(0, 0, 0, 0.8);
+	border-left: 1px solid black;
+	border-right: 1px solid black;
+    margin: 0px;
+    text-align: left;
+    display: grid;
+    grid-template-columns: repeat(var(--columns), var(--size));
+	grid-auto-rows: min-content;
+    width: 99.9%;
+}
+
+.details{
+	display: inline-block
+	border: none;
+    border-left: 1px solid black;
+    padding: 0px;
+    padding-left: 5px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	transition: 0.1s;
+}
+
+.details:hover{
+	overflow: visible;
+	background: white;
+	z-index: 10;
+	width: max-content;
+	padding-inline: 2px;
+	font-size: 13px;
+	transition: 0.1s;
+}
+
+[id*="invisible"]{
+   display:none;
+}
+</style>
+
+<div id="invisiblecolumns">{{columns}}</div>
+	<div id="list_outerBox"></div>

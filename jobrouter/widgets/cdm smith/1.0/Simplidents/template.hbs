@@ -1,0 +1,83 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" type="text/css">
+<link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+<script> 
+let invisLabel= JSON.parse(document.getElementById("simplidents_invisLabel").innerHTML);
+let invisIncident= JSON.parse(document.getElementById("simplidents_invisIncident").innerHTML);
+
+
+simplidentsWidget();
+$j('#simplidents_outerBox').parent().toggleClass('simplidents_background', true);
+
+function simplidentsWidget(){
+	let outerBox = document.getElementById("simplidents_outerBox");
+
+    let gridContainer = document.createElement("div");
+        gridContainer.setAttribute("class", "simplidents_gridContainer");
+    outerBox.appendChild(gridContainer);
+        let gridBoxLeft = document.createElement("div");
+            gridBoxLeft.setAttribute("class", "simplidents_gridBox");
+        gridContainer.appendChild(gridBoxLeft);
+        let gridBoxRight = document.createElement("div");
+            gridBoxRight.setAttribute("class", "simplidents_gridBox");
+        gridContainer.appendChild(gridBoxRight);
+        for(let i = 0; i < invisLabel.length; i++){
+            let label = document.createElement("div");
+                label.setAttribute("class", "simplidents_label");
+                label.innerHTML = invisLabel[i];
+            gridBoxLeft.appendChild(label);
+            let incident = document.createElement("div");
+                incident.setAttribute("class", "simplidents_incident");
+                incident.innerHTML = invisIncident[i];
+            gridBoxRight.appendChild(incident);
+        }
+}
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+#simplidents_outerBox{
+    width: 100%;
+    font-family: 'Poppins';
+}
+
+.simplidents_background{
+    background-color: #3B3E4D;
+    color: #FFCC0D;
+    border: none;
+}
+
+.simplidents_gridContainer{
+    display: grid;
+    grid-template-columns: 70% 30%;
+}
+
+.simplidents_gridBox{
+    padding: 10px;
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+.simplidents_label{
+    border-bottom: 1px solid #252730;
+    white-space: nowrap;
+    overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.simplidents_incident{
+    text-align: right;
+    border-bottom: 1px solid #252730;
+    overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+[id^="simplidents_invis"]{
+    display: none;
+}
+</style>
+
+<div id="simplidents_invisIncident">{{incidents}}</div>
+<div id="simplidents_invisLabel">{{labels}}</div>
+<div id="simplidents_outerBox"></div>
