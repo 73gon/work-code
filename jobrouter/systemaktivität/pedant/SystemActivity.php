@@ -52,7 +52,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if($this->resolveInputParameter('demo') == '1'){
             $url = 'https://api.demo.pedant.ai/v1/external/documents/invoices/upload';
         } else {
-            $url = 'https://api.pedant.ai/external/upload-file';
+            $url = 'https://api.pedant.ai/v1/external/documents/invoices/upload ';
         }
 
         if ($this->resolveInputParameter('flag') == 'normal') {
@@ -120,7 +120,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if($this->resolveInputParameter('demo') == '1'){
             $url = 'https://api.demo.pedant.ai/v1/external/documents/invoices?fileId=' . $this->getSystemActivityVar('FILEID') .'&auditTrail=true';
         } else {
-            $url = 'https://api.pedant.ai/external/invoices?fileId=' . $this->getSystemActivityVar('FILEID') .'&auditTrail=true';
+            $url = 'https://api.pedant.ai/v1/external/documents/invoices?fileId=' . $this->getSystemActivityVar('FILEID') .'&auditTrail=true';
         }
         
         $jobDB = $this->getJobDB();
