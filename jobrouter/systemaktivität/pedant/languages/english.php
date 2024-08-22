@@ -49,7 +49,8 @@ define('INTERNALNUMBER', 'Internalnumber');
 
 define('VENDORTABLE', 'Vendortable');
 define('POSTVENDOR', 'Vendorconfiguration');
-	define('PROFILNAME', 'Profilname');
+	define('PROFILNAME', 'Profilename');
+	define('VENDORNAME', 'Vendorname');
 	define('RECIPIENTGROUPID', 'RecipientgroupID');
 	define('KVK', 'KvK-Number');
 	define('LOCK', 'Locked');

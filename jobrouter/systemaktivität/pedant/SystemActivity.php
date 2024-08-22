@@ -2,7 +2,11 @@
 class pedantSystemActivity extends AbstractSystemActivityAPI
 {
 
-    const OUTPUTFILENAME = "pedantOutput.csv";
+    private $outputFileName = "pedantOutput.csv";
+    private $tableName = "pedantSystemActivity";
+    private $demoURL  = "https://api.demo.pedant.ai";
+    private $productiveURL = "https://api.pedant.ai";
+    private $maxFileSize = 2; // in MegaBytes
 
     public function getActivityName()
     {
@@ -49,10 +53,16 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $file = $this->getUploadPath() . $this->resolveInputParameter('inputFile');
         $action = 'normal';
 
+        $fileSizeB = filesize($file);
+        $fileSizeMB = $fileSizeB / (1024 * 1024);
+        if ($fileSizeMB > $this->maxFileSize) {
+            throw new JobRouterException("File size exceeds the maximum limit of $this->maxFileSize MB. Actual size: $fileSizeMB MB.");
+        }
+
         if($this->resolveInputParameter('demo') == '1'){
-            $url = 'https://api.demo.pedant.ai/v1/external/documents/invoices/upload';
+            $url = "$this->demoURL/v1/external/documents/invoices/upload";
         } else {
-            $url = 'https://api.pedant.ai/v1/external/documents/invoices/upload ';
+            $url = "$this->productiveURL/v1/external/documents/invoices/upload";
         }
 
         if ($this->resolveInputParameter('flag') == 'normal') {
@@ -103,8 +113,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $invoiceId = $data['files'][0]['invoiceId'];
 
         $jobDB = $this->getJobDB();
-        $insert = "INSERT INTO pedantSystemActivity(incident, fileid, counter)
-                   VALUES(" .$this->resolveInputParameter('incident') .", " ."'" .$fileId  ."'" .", 0)";
+        $insert = "INSERT INTO $this->tableName (incident, fileid, counter)
+                   VALUES(" .$this->resolveInputParameter('incident') .", '$fileId', 0)";
         $jobDB->exec($insert);
         $this->storeOutputParameter('fileID', $fileId);
         $this->storeOutputParameter('invoiceID', $invoiceId);
@@ -118,9 +128,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         if($this->resolveInputParameter('demo') == '1'){
-            $url = 'https://api.demo.pedant.ai/v1/external/documents/invoices?fileId=' . $this->getSystemActivityVar('FILEID') .'&auditTrail=true';
+            $url = "$this->demoURL/v1/external/documents/invoices?fileId=" . $this->getSystemActivityVar('FILEID') ."&auditTrail=true";
         } else {
-            $url = 'https://api.pedant.ai/v1/external/documents/invoices?fileId=' . $this->getSystemActivityVar('FILEID') .'&auditTrail=true';
+            $url = "$this->productiveURL/v1/external/documents/invoices?fileId=" . $this->getSystemActivityVar('FILEID') ."&auditTrail=true";
         }
         
         $jobDB = $this->getJobDB();
@@ -152,7 +162,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
 
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        $counterQuery = "SELECT counter FROM pedantSystemActivity WHERE fileid = '" . $this->getSystemActivityVar('FILEID') . "'";
+        $counterQuery = "SELECT counter FROM $this->tableName WHERE fileid = '" .$this->getSystemActivityVar('FILEID') . "'";
         $result = $jobDB->query($counterQuery);
         $row = $jobDB->fetchAll($result);
         if ($row[0]["counter"] > 10) {
@@ -177,15 +187,15 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $falseStates = ['processing', 'failed', 'uploaded'];
 
         $temp = "SELECT fileid
-                 FROM pedantSystemActivity
-                 WHERE incident = -" . $this->resolveInputParameter('incident');
+                 FROM $this->tableName
+                 WHERE incident = " . $this->resolveInputParameter('incident');
         $result = $jobDB->query($temp);
         $row = $jobDB->fetchAll($result);
 
         if ($row[0]["fileid"] != $file && $data["data"][0]["status"] == "uploaded") {
             $this->storeOutputParameter('tempJSON', json_encode($data));
-            $insert = "INSERT INTO pedantSystemActivity(incident, fileid, counter)
-                       VALUES(-" . $this->resolveInputParameter('incident') . ", " . "'" . $data["data"][0]["fileId"]  . "'" . ", 0)";
+            $insert = "INSERT INTO $this->tableName (incident, fileid, counter)
+                       VALUES(" . $this->resolveInputParameter('incident') . ", " . "'" .$data["data"][0]["fileId"]  . "'" . ", 0)";
             $jobDB->exec($insert);
         }
 
@@ -194,7 +204,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $this->storeList($data);
         }
         if ($check === true) {
-            $delete = "DELETE FROM pedantSystemActivity
+            $delete = "DELETE FROM $this->tableName
                        WHERE fileid = '" . $this->getSystemActivityVar('FILEID') . "'";
             $jobDB->exec($delete);
             $this->markActivityAsCompleted();
@@ -222,7 +232,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if ($this->isMySQL() === true) {
             $tableExists = "SELECT EXISTS (SELECT 1
                                            FROM information_schema.tables
-                                           WHERE table_name = 'pedantSystemActivity'
+                                           WHERE table_name = $this->tableName
                                           ) AS versionExists";
             $result = $JobDB->query($tableExists);
             $existing = $JobDB->fetchAll($result);
@@ -230,11 +240,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         } else {
             $tableExists = "DECLARE @table_exists BIT;
  
-                            IF OBJECT_ID('pedantSystemActivity', 'U') IS NOT NULL
+                            IF OBJECT_ID('$this->tableName', 'U') IS NOT NULL
                                 SET @table_exists = 1;
                             ELSE
                                 SET @table_exists = 0;
- 
+
                             SELECT @table_exists AS versionExists";
             $result = $JobDB->query($tableExists);
             $existing = $JobDB->fetchAll($result);
@@ -246,9 +256,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     {
         $JobDB = $this->getJobDB();
         $id = "SELECT *
-               FROM pedantSystemActivity
+               FROM $this->tableName
                WHERE incident = '" . $this->resolveInputParameter('incident') . "'";
-        $table = "CREATE TABLE pedantSystemActivity (
+        $table = "CREATE TABLE $this->tableName (
                   incident INT NOT NULL PRIMARY KEY,
                   fileid NVARCHAR(50) NOT NULL),
                   counter INT NOT NULL DEFAULT 0";
@@ -275,14 +285,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     protected function increaseCounter($fileid){
         $JobDB = $this->getJobDB();
         $counter = "SELECT counter
-                    FROM pedantSystemActivity
-                    WHERE fileid = '" . $fileid . "'";
+                    FROM $this->tableName
+                    WHERE fileid = '$fileid'";
         $result = $JobDB->query($counter);
         $row = $JobDB->fetchAll($result);
         $count = $row[0]["counter"] + 1;
-        $update = "UPDATE pedantSystemActivity
-                   SET counter = " . $count . "
-                   WHERE fileid = '" . $fileid . "'";
+        $update = "UPDATE $this->tableName
+                   SET counter = $count
+                   WHERE fileid = '$fileid'";
         $JobDB->exec($update);
     }
 
@@ -350,7 +360,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $csvData[] = $rowData;
         }
 
-        $csvFilePath = __DIR__ . '/' . self::OUTPUTFILENAME;
+        $csvFilePath = __DIR__ . '/' .$this->outputFileName;
         
         $csvFile = fopen($csvFilePath, 'w');
 
@@ -361,7 +371,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         fclose($csvFile);
 
         if($this->resolveInputParameter('demo') == '1'){
-            $url = 'https://api.demo.pedant.ai/v2/external/entities/vendors/import';
+            $url = "$this->demoURL/v2/external/entities/vendors/import";
         } else {
             $url = 'https://entity.api.pedant.ai/v2/external/entities/vendors/import';
         }
