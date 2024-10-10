@@ -260,8 +260,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                WHERE incident = '" . $this->resolveInputParameter('incident') . "'";
         $table = "CREATE TABLE $this->tableName (
                   incident INT NOT NULL PRIMARY KEY,
-                  fileid NVARCHAR(50) NOT NULL),
-                  counter INT NOT NULL DEFAULT 0";
+                  fileid NVARCHAR(50) NOT NULL,
+                  counter INT NOT NULL DEFAULT 0)";
         if ($var == 1) {
             $result = $JobDB->query($id);
             $count = 0;
