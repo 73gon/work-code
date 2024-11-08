@@ -104,7 +104,7 @@ define('INVOICEDETAILS', 'Invoicedetails');
 	define('CURRENCY', 'Currency');
 	define('RESOLVEDISSUES', 'Resolved Issues');
 	define('EDITOR', 'Editor');
-	define('HASPROCESSINGISSUES', ' Has Processing Issues');
+	define('HASPROCESSINGISSUES', 'Has Processing Issues');
 
 define('AUDITTRAILDETAILS', 'Audit Trail Details');
 	define('USERNAME', 'Username');
@@ -114,4 +114,12 @@ define('AUDITTRAILDETAILS', 'Audit Trail Details');
 
 define('REJECTIONDETAILS', 'Rejection Details');
 	define('CODE', 'Code');
-	define('REJECTREASON', 'Reject Reason');	
+	define('REJECTREASON', 'Reject Reason');
+	define('VIOLATIONS', 'Violations');
+
+define('ATTACHMENTS', 'Attachments');
+	define('E_INVOICEPDF', 'E-Invoice PDF');
+	define('E_INVOICEREPORT', 'X-Rechnung Rejectreport');
+	define('E_INVOICEATTACHMENT1', 'E-Invoice Attachment 1');
+	define('E_INVOICEATTACHMENT2', 'E-Invoice Attachment 2');
+	define('E_INVOICEATTACHMENT3', 'E-Invoice Attachment 3');

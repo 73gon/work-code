@@ -295,4 +295,3 @@ function addTimes($times)
 
     return sprintf("%dd: %dh: %dm: %ds", $days, $hours, $minutes, $seconds);
 }
-?>

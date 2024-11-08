@@ -115,5 +115,13 @@ define('AUDITTRAILDETAILS', 'Aufzeichnugskontrollendetails');
 define('REJECTIONDETAILS', 'Ablehnungsdetails');
 	define('CODE', 'Code');
 	define('REJECTREASON', 'Abweisungsgrund');	
+	define('VIOLATIONS', 'Verstöße');
+
+define('ATTACHMENTS', 'Anhänge');
+	define('E_INVOICEPDF', 'X-Rechnung PDF');
+	define('E_INVOICEREPORT', 'X-Rechnung Ablehnungsbericht');
+	define('E_INVOICEATTACHMENT1', 'X-Rechnung Anhang 1');
+	define('E_INVOICEATTACHMENT2', 'X-Rechnung Anhang 2');
+	define('E_INVOICEATTACHMENT3', 'X-Rechnung Anhang 3');
 
 	
