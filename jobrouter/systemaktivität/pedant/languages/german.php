@@ -120,8 +120,6 @@ define('REJECTIONDETAILS', 'Ablehnungsdetails');
 define('ATTACHMENTS', 'Anhänge');
 	define('E_INVOICEPDF', 'X-Rechnung PDF');
 	define('E_INVOICEREPORT', 'X-Rechnung Ablehnungsbericht');
-	define('E_INVOICEATTACHMENT1', 'X-Rechnung Anhang 1');
-	define('E_INVOICEATTACHMENT2', 'X-Rechnung Anhang 2');
-	define('E_INVOICEATTACHMENT3', 'X-Rechnung Anhang 3');
+	define('E_INVOICEATTACHMENT1', 'X-Rechnung Anhänge');
 
 	

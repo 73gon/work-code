@@ -566,27 +566,26 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             
 
             foreach ($attachmentFiles as $i => $attachmentPath) {
-                $values6['e_invoiceAttachment' . ($i + 1)] = $attachmentPath;
-            }
-
-            for ($i = count($attachmentFiles) + 1; $i <= 3; $i++) {
-                $values6['e_invoiceAttachment' . $i] = '';
+                $values6['e_invoiceAttachments'][] = $attachmentPath;
             }
         }else{
             $values6 = [
                 'e_invoicePDF' => '',
                 'e_reportFile' => '',
-                'e_invoiceAttachment1' => '',
-                'e_invoiceAttachment2' => '',
-                'e_invoiceAttachment3' => ''
+                'e_invoiceAttachments' => []
             ];
         }
             
         foreach ($attributes6 as $attribute) {
-            if($attribute['subtable'] == "") {
-                $this->attachFile($attribute['value'], $values6[$attribute['id']]);
+            $value = $values6[$attribute['id']];
+            if ($attribute['subtable'] == "") {
+                $this->attachFile($attribute['value'], $value);
             } else {
-            }    
+                $attachments = is_array($value) ? $value : [$value];
+                foreach ($attachments as $attachment) {
+                    $this->attachSubtableFile($attribute['subtable'], $this->getSubtableCount($attribute['subtable']) + 1, $attribute['value'], $attachment);
+                }
+            }
         }
             
     }
@@ -700,9 +699,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => '-', 'value' => ''],
                 ['name' => E_INVOICEPDF, 'value' => 'e_invoicePDF'],
                 ['name' => E_INVOICEREPORT, 'value' => 'e_invoiceReport'],
-                ['name' => E_INVOICEATTACHMENT1, 'value' => 'e_invoiceAttachment1'],
-                ['name' => E_INVOICEATTACHMENT2, 'value' => 'e_invoiceAttachment2'],
-                ['name' => E_INVOICEATTACHMENT3, 'value' => 'e_invoiceAttachment3']
+                ['name' => E_INVOICEATTACHMENT1, 'value' => 'e_invoiceAttachments']
             ];
         }
         return null;
