@@ -2,7 +2,6 @@
 class pedantSystemActivity extends AbstractSystemActivityAPI
 {
     private $outputFileName = "pedantOutput.csv";
-    private $tableName = "pedantSystemActivity";
     private $demoURL  = "https://api.demo.pedant.ai";
     private $productiveURL = "https://api.pedant.ai";
     private $maxFileSize = 2; // in MegaBytes
@@ -26,7 +25,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
     protected function pedant()
     {
-        $this->checkFILEID();
         date_default_timezone_set("Europe/Berlin");
         if ($this->isFirstExecution()) {
             $this->setResubmission(10, 'm');
@@ -61,14 +59,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if($this->resolveInputParameter('demo') == '1'){
             $url = "$this->demoURL/v2/external/documents/invoices/upload";
         } else {
-            $url = "$this->productiveURL/v1/external/documents/invoices/upload";//TODO does the new URL count for productive as well?
+            $url = "$this->productiveURL/v1/external/documents/invoices/upload";
         }
 
         if ($this->resolveInputParameter('flag') == 'normal') {
             $action = 'normal';
         } else if ($this->resolveInputParameter('flag') == 'check_extraction') {
             $action = 'check_extraction';
-            $this->setResubmission(10, 'm');
         } else if ($this->resolveInputParameter('flag') == 'skip_review') {
             $action = 'skip_review';
         } else if ($this->resolveInputParameter('flag') == 'force_skip') {
@@ -76,28 +73,25 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         } else {
             throw new Exception('Invalid input parameter value for FLAG: ' . $this->resolveInputParameter('flag'));
         }
-        curl_setopt_array(
-            $curl,
-            array(
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => array(
-                    'file' => new CURLFILE($file),
-                    'recipientInternalNumber' => $this->resolveInputParameter('internalNumber'),
-                    'action' => $action,
-                    'note' => $this->resolveInputParameter('note'),
-                ),
-                CURLOPT_HTTPHEADER => array('X-API-KEY: ' . $this->resolveInputParameter('api_key')),
-                CURLOPT_SSL_VERIFYHOST => 0,
-                CURLOPT_SSL_VERIFYPEER => 0
-            )
-        );
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => [
+            'file' => new CURLFILE($file),
+            'recipientInternalNumber' => $this->resolveInputParameter('internalNumber'),
+            'action' => $action,
+            'note' => $this->resolveInputParameter('note'),
+            ],
+            CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->resolveInputParameter('api_key')],
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0
+        ));
         $response = curl_exec($curl);
 
         $data = json_decode($response, TRUE);
@@ -112,13 +106,10 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $invoiceId = $data['files'][0]['invoiceId'];
         $type = $data['files'][0]['type'];
 
-        $jobDB = $this->getJobDB();
-        $insert = "INSERT INTO $this->tableName (incident, fileid, counter)
-                   VALUES(" .$this->resolveInputParameter('incident') .", '$fileId', 0)";
-        $jobDB->exec($insert);
         $this->storeOutputParameter('fileID', $fileId);
         $this->storeOutputParameter('invoiceID', $invoiceId);
         $this->setSystemActivityVar('FILEID', $fileId);
+        $this->setSystemActivityVar('COUNTER', 0);
         $this->setSystemActivityVar('TYPE', $type);
         $this->markActivityAsPending();
     }
@@ -128,206 +119,81 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $this->postVendorDetails();
         }
 
-        if($this->resolveInputParameter('demo') == '1'){
-            $url = "$this->demoURL/v1/external/documents/invoices?fileId=" . $this->getSystemActivityVar('FILEID') ."&auditTrail=true";
-            if($this->getSystemActivityVar('TYPE') == 'e_invoice'){
-                $url = "$this->demoURL/v1/external/documents/e-invoices?documentId=" . $this->getSystemActivityVar('FILEID') ."&auditTrail=true";
-            }
-        } else {
-            $url = "$this->productiveURL/v1/external/documents/invoices?fileId=" . $this->getSystemActivityVar('FILEID') ."&auditTrail=true";
-        }
+        $baseURL = $this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL;
+        $fileId = $this->getSystemActivityVar('FILEID');
+        $type = $this->getSystemActivityVar('TYPE') == 'e_invoice' ? 'e-invoices' : 'invoices';
+        $url = "$baseURL/v1/external/documents/$type?" . ($type == 'e-invoices' ? "documentId=$fileId" : "fileId=$fileId") . "&auditTrail=true";
         
-        $jobDB = $this->getJobDB();
-        if (date("H") >= 6 && date("H") <= 24) {
-            $this->setResubmission(10, 'm');
-        } else {
-            $this->setResubmission(60, 'm');
-        }
+        $resubmissionTime = (date("H") >= 6 && date("H") <= 24) ? 10 : 60;
+        $this->setResubmission($resubmissionTime, 'm');
 
         $curl = curl_init();
-        curl_setopt_array(
-            $curl,
-            array(
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'GET',
-                CURLOPT_HTTPHEADER => array('X-API-KEY: ' . $this->resolveInputParameter('api_key')),
-                CURLOPT_SSL_VERIFYHOST => 0,
-                CURLOPT_SSL_VERIFYPEER => 0
-            )
-        );
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->resolveInputParameter('api_key')],
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0
+        ));
 
         $response = curl_exec($curl);
 
 
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        $counterQuery = "SELECT counter FROM $this->tableName WHERE fileid = '" .$this->getSystemActivityVar('FILEID') . "'";
-        $result = $jobDB->query($counterQuery);
-        $row = $jobDB->fetchAll($result);
-        if ($row[0]["counter"] > 10) {
+        $counter = $this->getSystemActivityVar('COUNTER');
+        if ($counter > 10) {
             if ($httpcode != 200 && $httpcode != 404 && $httpcode != 503 && $httpcode != 502 && $httpcode != 500 && $httpcode != 0) {
                 throw new JobRouterException('Error occurred during file extraction. HTTP Error Code: ' . $httpcode);
             }
         }else{
-            $this->increaseCounter($this->getSystemActivityVar('FILEID'));
-            $this->setResubmission(10, 'm');
+            $counter = $this->getSystemActivityVar('COUNTER') + 1;
+            $this->setSystemActivityVar('COUNTER', $counter);
+            $this->setResubmission(60, 'm');
         }
 
 
         if ($httpcode == 503 || $httpcode == 502 || $httpcode == 0 || $httpcode == 500) {
-            $this->setResubmission(10, 'm');
+            $this->setResubmission(30, 'm');
         }
         curl_close($curl);
 
         $data = json_decode($response, TRUE);
         $dataItem = $data["data"][0];
-        $file = $this->getSystemActivityVar('FILEID');
         $check = false;
 
         $falseStates = ['processing', 'failed', 'uploaded'];
 
-        $temp = "SELECT fileid
-                 FROM $this->tableName
-                 WHERE incident = " . $this->resolveInputParameter('incident');
-        $result = $jobDB->query($temp);
-        $row = $jobDB->fetchAll($result);
-
-        if ($row[0]["fileid"] != $file && $dataItem["status"] == "uploaded") {
+        if ($dataItem["status"] == "uploaded") {
             $this->storeOutputParameter('tempJSON', json_encode($data));
-
-            $insert = "INSERT INTO $this->tableName (incident, fileid, counter)
-                       VALUES(" . $this->resolveInputParameter('incident') . ", " . "'" .$dataItem["documentId"]  . "'" . ", 0)";
-            $jobDB->exec($insert);
         }
 
-        if ($dataItem["documentId"] == $file && in_array($dataItem["status"], $falseStates) === false) {
-            if($this->getSystemActivityVar('TYPE') == 'e_invoice'){
-                
-                $url = $dataItem['eInvoicePdfPath'];
-                $tempPath = $this->getTempPath();
-                $tempFILEID = $this->getSystemActivityVar('FILEID');
-                $savePath = $tempPath . "/pedant";
-
-                if (!is_dir($savePath)) {
-                    mkdir($savePath, 0777, true);
-                }
-                
-                $ch = curl_init($url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-                
-                $data = curl_exec($ch);
-
-                $eInvoicePDF = $savePath . "/" . $tempFILEID . ".pdf";
-                file_put_contents($eInvoicePDF, $data);
-                $this->setSystemActivityVar('PDFPATH', $eInvoicePDF);
-            
-                curl_close($ch);
-
-                $this->storeOutputParameter('invoicePDF', $eInvoicePDF);
-            }
+        if (in_array($dataItem["status"], $falseStates) === false) {
             $check = true;
             $this->storeList($data);
         }
+
+        
         if ($check === true) {
-            $delete = "DELETE FROM $this->tableName
-                       WHERE fileid = '" . $this->getSystemActivityVar('FILEID') . "'";
-            $jobDB->exec($delete);
             unlink($this->getSystemActivityVar('PDFPATH'));
+            unlink($this->getSystemActivityVar('REPORTPATH'));
+
+            $index = 0;
+            while (true) {
+                $attachmentPath = $this->getSystemActivityVar('ATTACHMENTPATH' . $index);
+                if (!$attachmentPath) {break;}
+                if (file_exists($attachmentPath)) {
+                    unlink($attachmentPath);
+                }
+                $index++;
+            }
             $this->markActivityAsCompleted();
         }
-    }
-
-    protected function isMySQL()
-    {
-        $jobDB = $this->getJobDB();
-        $my = "SELECT @@VERSION AS versionName";
-        $res = $jobDB->query($my);
-        if ($res === false) {
-            throw new JobRouterException($jobDB->getErrorMessage());
-        }
-        $row = $jobDB->fetchAll($res);
-        if (substr($row[0]["versionName"], 0, 9) == "Microsoft") {
-            return false;
-        } else {
-            return true;
-        }
-    }
-    protected function checkFILEID()
-    {
-        $JobDB = $this->getJobDB();
-        if ($this->isMySQL() === true) {
-            $tableExists = "SELECT EXISTS (SELECT 1
-                                           FROM information_schema.tables
-                                           WHERE table_name = $this->tableName
-                                          ) AS versionExists";
-            $result = $JobDB->query($tableExists);
-            $existing = $JobDB->fetchAll($result);
-            return $this->checkID($existing[0]["versionExists"]);
-        } else {
-            $tableExists = "DECLARE @table_exists BIT;
- 
-                            IF OBJECT_ID('$this->tableName', 'U') IS NOT NULL
-                                SET @table_exists = 1;
-                            ELSE
-                                SET @table_exists = 0;
-
-                            SELECT @table_exists AS versionExists";
-            $result = $JobDB->query($tableExists);
-            $existing = $JobDB->fetchAll($result);
-            return $this->checkID($existing[0]["versionExists"]);
-        }
-    }
-
-    protected function checkID($var)
-    {
-        $JobDB = $this->getJobDB();
-        $id = "SELECT *
-               FROM $this->tableName
-               WHERE incident = '" . $this->resolveInputParameter('incident') . "'";
-        $table = "CREATE TABLE $this->tableName (
-                  incident INT NOT NULL PRIMARY KEY,
-                  fileid NVARCHAR(50) NOT NULL,
-                  counter INT NOT NULL DEFAULT 0)";
-        if ($var == 1) {
-            $result = $JobDB->query($id);
-            $count = 0;
-            while ($row = $JobDB->fetchRow($result)) {
-                $count++;
-                $fileid = $row['fileid'];
-            }
-            if ($count == 0) {
-                return false;
-            } else {
-                $this->setSystemActivityVar('FILEID', $fileid);
-                $this->markActivityAsPending();
-                return true;
-            }
-        } else {
-            $JobDB->exec($table);
-            return false;
-        }
-    }
-
-    protected function increaseCounter($fileid){
-        $JobDB = $this->getJobDB();
-        $counter = "SELECT counter
-                    FROM $this->tableName
-                    WHERE fileid = '$fileid'";
-        $result = $JobDB->query($counter);
-        $row = $JobDB->fetchAll($result);
-        $count = $row[0]["counter"] + 1;
-        $update = "UPDATE $this->tableName
-                   SET counter = $count
-                   WHERE fileid = '$fileid'";
-        $JobDB->exec($update);
     }
 
     protected function postVendorDetails()
@@ -437,9 +303,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 'currency' => 'currrency',
                 'file'=> new CURLFILE($csvFilePath)
             ),
-            CURLOPT_HTTPHEADER => array(
-                'x-api-key: ' .$this->resolveInputParameter('api_key')
-            ),
+            CURLOPT_HTTPHEADER => array('x-api-key: ' .$this->resolveInputParameter('api_key')),
             CURLOPT_SSL_VERIFYHOST => 0,
             CURLOPT_SSL_VERIFYPEER => 0
         ));
@@ -468,10 +332,19 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $document = $dataItem['document'];
         $vatBreakdown = $eInvoiceFields['vatBreakdown'][0];
         $auditTrailItem = $dataItem['auditTrail'][0];
+        $taxRates = $dataItem['taxRates'];
 
-        //recipientDetails
-        $attributes1 = $this->resolveOutputParameterListAttributes('recipientDetails');
-        $values1PDF = [
+        $attributes1 = $this->resolveOutputParameterListAttributes('recipientDetails'); //recipientDetails
+        $values1 = ($type == "e_invoice") ? [
+            'recipientCompanyName' => $eInvoiceFields['recipientName'],
+            'recipientName' => $eInvoiceFields['recipientContactPersonName'],
+            'recipientStreet' => $eInvoiceFields['recipientPostalAddressAddressLines'][0],
+            'recipientZipCode' => $eInvoiceFields['recipientPostalAddressPostCode'],
+            'recipientCity' => $eInvoiceFields['recipientPostalAddressCity'],
+            'recipientCountry' => $eInvoiceFields['recipientPostalAddressCountryCode'],
+            'recipientVatNumber' => $eInvoiceFields['recipientVatIdentifier'],
+            'recipientInternalNumber' => ''
+        ] : [
             'recipientCompanyName' => $dataItem["recipientCompanyName"],
             'recipientName' => $dataItem["recipientName"],
             'recipientStreet' => $dataItem["recipientStreet"],
@@ -482,26 +355,24 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'recipientInternalNumber' => $dataItem["recipientEntity"]["internalNumber"]
         ];
 
-        $values1XML = [
-            'recipientCompanyName' => $eInvoiceFields['recipientName'],
-            'recipientName' => $eInvoiceFields['recipientContactPersonName'],
-            'recipientStreet' => $eInvoiceFields['recipientPostalAddressAddressLines'][0],
-            'recipientZipCode' => $eInvoiceFields['recipientPostalAddressPostCode'],
-            'recipientCity' => $eInvoiceFields['recipientPostalAddressCity'],
-            'recipientCountry' => $eInvoiceFields['recipientPostalAddressCountryCode'],
-            'recipientVatNumber' => $eInvoiceFields['recipientVatIdentifier'],
-            'recipientInternalNumber' => ''
-        ];
-
-        $values1 = ($type == "e_invoice") ? $values1XML : $values1PDF;
-
         foreach ($attributes1 as $attribute) {
             $this->setTableValue($attribute['value'], $values1[$attribute['id']]);
         }
 
-        //vendorDetails
-        $attributes2 = $this->resolveOutputParameterListAttributes('vendorDetails');
-        $values2PDF = [
+        $attributes2 = $this->resolveOutputParameterListAttributes('vendorDetails'); //vendorDetails
+        $values2 = ($type == "e_invoice") ? [
+            'vendorBankNumber' => $paymentInstructionsCreditTransfer['paymentAccountIdentifierId'],
+            'vendorVatNumber' => $eInvoiceFields['vendorVatIdentifier'],
+            'vendorTaxNumber' => $eInvoiceFields['vendorTaxRegistrationIdentifier'],
+            'vendorCompanyName' => $eInvoiceFields['vendorName'],
+            'vendorStreet' => $eInvoiceFields['vendorPostalAddressAddressLines'][0],
+            'vendorZipCode' => $eInvoiceFields['vendorPostalAddressPostCode'],
+            'vendorCity' => $eInvoiceFields['vendorPostalAddressCity'],
+            'vendorCountry' => $eInvoiceFields['vendorPostalAddressCountryCode'],
+            'vendorDeliveryPeriod' => '',
+            'vendorAccountNumber' => '',
+            'vendorInternalNumber' => ''
+        ] : [
             'vendorBankNumber' => $dataItem["bankNumber"],
             'vendorVatNumber' => $dataItem["vat"],
             'vendorTaxNumber' => $dataItem["taxNumber"],
@@ -515,40 +386,45 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'vendorInternalNumber' => $dataItem["vendorEntity"]["internalNumber"]
         ];
 
-        $values2XML = [
-            'vendorBankNumber' => $paymentInstructionsCreditTransfer['paymentAccountIdentifierId'],
-            'vendorVatNumber' => $eInvoiceFields['vendorVatIdentifier'],
-            'vendorTaxNumber' => $eInvoiceFields['vendorTaxRegistrationIdentifier'],
-            'vendorCompanyName' => $eInvoiceFields['vendorName'],
-            'vendorStreet' => $eInvoiceFields['vendorPostalAddressAddressLines'][0],
-            'vendorZipCode' => $eInvoiceFields['vendorPostalAddressPostCode'],
-            'vendorCity' => $eInvoiceFields['vendorPostalAddressCity'],
-            'vendorCountry' => $eInvoiceFields['vendorPost21alAddressCountryCode'],
-            'vendorDeliveryPeriod' => '',
-            'vendorAccountNumber' => '',
-            'vendorInternalNumber' => ''
-        ];
-
-        $values2 = ($type == "e_invoice") ? $values2XML : $values2PDF;
-
         foreach ($attributes2 as $attribute) {
             $this->setTableValue($attribute['value'], $values2[$attribute['id']]);
         }
 
-        //invoiceDetails
-        $attributes3 = $this->resolveOutputParameterListAttributes('invoiceDetails');
+        $attributes3 = $this->resolveOutputParameterListAttributes('invoiceDetails'); //invoiceDetails
 
-        $values3PDF = [
-            'taxRate1' => $dataItem["taxRates"][0]["subNetAmount"] . ";" . $dataItem["taxRates"][0]["subTaxAmount"] . ";" . $dataItem["taxRates"][0]["subTaxRate"],
-            'taxRate2' => $dataItem["taxRates"][1]["subNetAmount"] . ";" . $dataItem["taxRates"][1]["subTaxAmount"] . ";" . $dataItem["taxRates"][1]["subTaxRate"],
-            'taxRate3' => $dataItem["taxRates"][2]["subNetAmount"] . ";" . $dataItem["taxRates"][2]["subTaxAmount"] . ";" . $dataItem["taxRates"][2]["subTaxRate"],
-            'taxRate4' => $dataItem["taxRates"][3]["subNetAmount"] . ";" . $dataItem["taxRates"][3]["subTaxAmount"] . ";" . $dataItem["taxRates"][3]["subTaxRate"],
-            'taxRate5' => $dataItem["taxRates"][4]["subNetAmount"] . ";" . $dataItem["taxRates"][4]["subTaxAmount"] . ";" . $dataItem["taxRates"][4]["subTaxRate"],
-            'taxRate6' => $dataItem["taxRates"][5]["subNetAmount"] . ";" . $dataItem["taxRates"][5]["subTaxAmount"] . ";" . $dataItem["taxRates"][5]["subTaxRate"],
-            'taxRate7' => $dataItem["taxRates"][6]["subNetAmount"] . ";" . $dataItem["taxRates"][6]["subTaxAmount"] . ";" . $dataItem["taxRates"][6]["subTaxRate"],
-            'taxRate8' => $dataItem["taxRates"][7]["subNetAmount"] . ";" . $dataItem["taxRates"][7]["subTaxAmount"] . ";" . $dataItem["taxRates"][7]["subTaxRate"],
-            'taxRate9' => $dataItem["taxRates"][8]["subNetAmount"] . ";" . $dataItem["taxRates"][8]["subTaxAmount"] . ";" . $dataItem["taxRates"][8]["subTaxRate"],
-            'taxRate10' => $dataItem["taxRates"][9]["subNetAmount"] . ";" . $dataItem["taxRates"][9]["subTaxAmount"] . ";" . $dataItem["taxRates"][9]["subTaxRate"],
+        $values3 = ($type == "e_invoice") ? [
+            'taxRate1' => '',
+            'taxRate2' => '',
+            'taxRate3' => '',
+            'taxRate4' => '',
+            'taxRate5' => '',
+            'invoiceNumber' => $eInvoiceFields['invoiceNumber'],
+            'date' => date("Y-m-d", strtotime(str_replace(".", "-", $eInvoiceFields['invoiceIssueDate']))) . ' 00:00:00.000',
+            'netAmount' => $eInvoiceFields['sumOfInvoiceLineNetAmount'],
+            'taxAmount' => $eInvoiceFields['invoiceTotalVatAmount'],
+            'grossAmount' => $eInvoiceFields['invoiceTotalAmountWithVat'],
+            'taxRate' => $vatBreakdown['vatCategoryRate'],
+            'projectNumber' => $eInvoiceFields['projectReferenceId'],
+            'purchaseOrder' => '',
+            'purchaseDate' => '',
+            'deliveryDate' => $eInvoiceFields['deliveryInformationActualDeliveryDate'],
+            'hasDiscount' => '',
+            'refund' => '',
+            'discountPercentage' => '',
+            'discountAmount' => '',
+            'discountDate' => '',
+            'invoiceType' => $eInvoiceFields['invoiceTypeCode'],
+            'note' => $document['note'],
+            'status' => $dataItem['status'],
+            'currency' => $eInvoiceFields['invoiceCurrencyCode'],
+            'resolvedIssuesCount' => '',
+            'hasProcessingIssues' => '',
+        ] : [
+            'taxRate1' => $taxRates[0]["subNetAmount"] . ";" . $taxRates[0]["subTaxAmount"] . ";" . $taxRates[0]["subTaxRate"],
+            'taxRate2' => $taxRates[1]["subNetAmount"] . ";" . $taxRates[1]["subTaxAmount"] . ";" . $taxRates[1]["subTaxRate"],
+            'taxRate3' => $taxRates[2]["subNetAmount"] . ";" . $taxRates[2]["subTaxAmount"] . ";" . $taxRates[2]["subTaxRate"],
+            'taxRate4' => $taxRates[3]["subNetAmount"] . ";" . $taxRates[3]["subTaxAmount"] . ";" . $taxRates[3]["subTaxRate"],
+            'taxRate5' => $taxRates[4]["subNetAmount"] . ";" . $taxRates[4]["subTaxAmount"] . ";" . $taxRates[4]["subTaxRate"],
             'invoiceNumber' => $dataItem["invoiceNumber"],
             'date' => date("Y-m-d", strtotime(str_replace(".", "-", $dataItem["issueDate"]))) . ' 00:00:00.000',
             'netAmount' => $dataItem["netAmount"],
@@ -572,89 +448,146 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'deliveryDate' => $dataItem["deliveryDate"],
         ];
 
-        $values3XML = [
-            'taxRate1' => '',
-            'taxRate2' => '',
-            'taxRate3' => '',
-            'taxRate4' => '',
-            'taxRate5' => '',
-            'taxRate6' => '',
-            'taxRate7' => '',
-            'taxRate8' => '',
-            'taxRate9' => '',
-            'taxRate10' => '',
-            'invoiceNumber' => $eInvoiceFields['invoiceNumber'],
-            'date' => date("Y-m-d", strtotime(str_replace(".", "-", $eInvoiceFields['invoiceIssueDate']))) . ' 00:00:00.000',
-            'netAmount' => $eInvoiceFields['sumOfInvoiceLineNetAmount'],
-            'taxAmount' => $eInvoiceFields['invoiceTotalVatAmount'],
-            'grossAmount' => $eInvoiceFields['invoiceTotalAmountWithVat'],
-            'taxRate' => $vatBreakdown['vatCategoryRate'],
-            'projectNumber' => $eInvoiceFields['projectReferenceId'],
-            'purchaseOrder' => '',
-            'purchaseDate' => '',
-            'deliveryDate' => $eInvoiceFields['deliveryInformationActualDeliveryDate'],
-            'hasDiscount' => '',
-            'refund' => '',
-            'discountPercentage' => '',
-            'discountAmount' => '',
-            'discountDate' => '',
-            'invoiceType' => $eInvoiceFields['invoiceTypeCode'],
-            'note' => $document['note'],
-            'status' => $dataItem['status'],
-            'currency' => $eInvoiceFields['invoiceCurrencyCode'],
-            'resolvedIssuesCount' => '',
-            'hasProcessingIssues' => '',
-        ];
-
-        $values3 = ($type == "e_invoice") ? $values3XML : $values3PDF;
-
         foreach ($attributes3 as $attribute) {
             $this->setTableValue($attribute['value'], $values3[$attribute['id']]);
         }
 
-        //auditTrailDetails
-        $attributes4 = $this->resolveOutputParameterListAttributes('auditTrailDetails');
+        $attributes4 = $this->resolveOutputParameterListAttributes('auditTrailDetails'); //auditTrailDetails
+        $auditTrail = $type == "e_invoice" ? $auditTrailItem : $dataItem["auditTrail"][1];
 
-        $values4PDF = [
-            'auditTrailuserName' => $dataItem["auditTrail"][1]["userName"],
-            'auditTrailtype' => $dataItem["auditTrail"][1]["type"],
-            'auditTrailsubType' => $dataItem["auditTrail"][1]["subType"],
-            'auditTrailcomment' => $dataItem["auditTrail"][1]["comment"]
+        $values4 = [
+            'auditTrailuserName' => $auditTrail['userName'],
+            'auditTrailtype' => $auditTrail['type'],
+            'auditTrailsubType' => $auditTrail['subType'],
+            'auditTrailcomment' => $auditTrail['comment']
         ];
-
-        $values4XML = [
-            'auditTrailuserName' =>  $auditTrailItem['userName'],
-            'auditTrailtype' => $auditTrailItem['type'],
-            'auditTrailsubType' => $auditTrailItem['subType'],
-            'auditTrailcomment' => $auditTrailItem['comment']
-        ];
-
-        $values4 = ($type == "e_invoice") ? $values4XML : $values4PDF;
 
         foreach ($attributes4 as $attribute) {
             $this->setTableValue($attribute['value'], $values4[$attribute['id']]);
         }
 
-        //rejectionDetails
-        $attributes5 = $this->resolveOutputParameterListAttributes('rejectionDetails');
+        $attributes5 = $this->resolveOutputParameterListAttributes('rejectionDetails'); //rejectionDetails
 
-        $values5PDF = [
-            'rejectReason' => $dataItem["rejectReason"],
-            'rejectionCode' => isset($dataItem["rejectionType"]) ? $dataItem["rejectionType"]["code"] : null,
-            'rejectionType' => isset($dataItem["rejectionType"]) ? $dataItem["rejectionType"]["type"] : null
+        $values5 = [
+            'rejectReason' => $type == "e_invoice" ? $dataItem['rejectReason'] : $dataItem['rejectReason'],
+            'rejectionCode' => $type == "e_invoice" ? '' : ($dataItem['rejectionType']['code'] ?? null),
+            'rejectionType' => $type == "e_invoice" ? '' : ($dataItem['rejectionType']['type'] ?? null)
         ];
-
-        $values5XML = [
-            'rejectReason' => $dataItem['rejectReason'],
-            'rejectionCode' => '',
-            'rejectionType' => ''
-        ];
-
-        $values5 = ($type == "e_invoice") ? $values5XML : $values5PDF;
+        if($type == "e_invoice"){  
+            $violations = [];
+            foreach ($dataItem['violations'] as $violation) {
+                $messages = implode(', ', $violation['messages']);
+                $violations[] = $violation['level'] . ': ' . $messages;
+            }
+            $values5['violations'] = implode(" --- ", $violations);
+        }else{
+            $values5['violations'] = '';
+        }
 
         foreach ($attributes5 as $attribute) {
             $this->setTableValue($attribute['value'], $values5[$attribute['id']]);
         }
+
+
+        $attributes6 = $this->resolveOutputParameterListAttributes('attachments'); //atttachments
+
+        if($type == "e_invoice"){
+            //pdf
+            $urlPDF = $dataItem['eInvoicePdfPath'];
+            $tempPath = $this->getTempPath();
+            $tempFILEID = $this->getSystemActivityVar('FILEID');
+            $savePath = $tempPath . "/pedant";
+
+            if (!is_dir($savePath)) {
+                mkdir($savePath, 0777, true);
+            }
+            
+            $ch = curl_init($urlPDF);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            
+            $dataPDF = curl_exec($ch);
+            curl_close($ch);
+
+            $eInvoicePDF = $savePath . "/" . $tempFILEID . "_PDF_.pdf";
+            file_put_contents($eInvoicePDF, $dataPDF);
+            $this->setSystemActivityVar('PDFPATH', $eInvoicePDF);
+
+            //report
+            $urlReport = $dataItem['reportFilePath'];
+
+            if (!is_dir($savePath)) {
+                mkdir($savePath, 0777, true);
+            }
+            
+            $ch = curl_init($urlReport);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            
+            $dataReport = curl_exec($ch);
+            curl_close($ch);
+
+            $eInvoiceReport= $savePath . "/" . $tempFILEID . "_REPORT_.xml";
+            file_put_contents($eInvoiceReport, $dataReport);
+            $this->setSystemActivityVar('REPORTPATH', $eInvoiceReport);
+
+            //attachments
+            $attachments = $dataItem['attachments'];
+            $attachmentFiles = [];
+            foreach ($attachments as $index => $url) {
+                if ($index >= 3) {
+                    break;
+                }
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+
+                $dataAttachment = curl_exec($ch);
+                curl_close($ch);
+
+                if ($dataAttachment !== false) {
+                    $attachmentPath = $savePath . "/" . $tempFILEID . "_ATTACHMENT_" . ($index + 1) . ".pdf";
+                    file_put_contents($attachmentPath, $dataAttachment);
+                    $this->setSystemActivityVar('ATTACHMENTPATH' .$index, $attachmentPath);
+                    $attachmentFiles[] = $attachmentPath;
+                }
+            }
+
+            $values6 = [
+                'e_invoicePDF' => $eInvoicePDF,
+                'e_invoiceReport' => $eInvoiceReport
+            ];
+            
+
+            foreach ($attachmentFiles as $i => $attachmentPath) {
+                $values6['e_invoiceAttachments'][] = $attachmentPath;
+            }
+        }else{
+            $values6 = [
+                'e_invoicePDF' => '',
+                'e_reportFile' => '',
+                'e_invoiceAttachments' => []
+            ];
+        }
+            
+        foreach ($attributes6 as $attribute) {
+            $value = $values6[$attribute['id']];
+            if ($attribute['subtable'] == "") {
+                $this->attachFile($attribute['value'], $value);
+            } else {
+                $attachments = is_array($value) ? $value : [$value];
+                foreach ($attachments as $attachment) {
+                    $this->attachSubtableFile($attribute['subtable'], $this->getSubtableCount($attribute['subtable']) + 1, $attribute['value'], $attachment);
+                }
+            }
+        }
+            
     }
 
     public function getUDL($udl, $elementID)
@@ -717,11 +650,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => TAXRATE3, 'value' => 'taxRate3'],
                 ['name' => TAXRATE4, 'value' => 'taxRate4'],
                 ['name' => TAXRATE5, 'value' => 'taxRate5'],
-                ['name' => TAXRATE6, 'value' => 'taxRate6'],
-                ['name' => TAXRATE7, 'value' => 'taxRate7'],
-                ['name' => TAXRATE8, 'value' => 'taxRate8'],
-                ['name' => TAXRATE9, 'value' => 'taxRate9'],
-                ['name' => TAXRATE10, 'value' => 'taxRate10'],
                 ['name' => INVOICENUMBER, 'value' => 'invoiceNumber'],
                 ['name' => DATE, 'value' => 'date'],
                 ['name' => NETAMOUNT, 'value' => 'netAmount'],
@@ -761,7 +689,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => '-', 'value' => ''],
                 ['name' => REJECTREASON, 'value' => 'rejectReason'],
                 ['name' => CODE, 'value' => 'rejectionCode'],
-                ['name' => TYPE, 'value' => 'rejectionType']
+                ['name' => TYPE, 'value' => 'rejectionType'],
+                ['name' => VIOLATIONS, 'value' => 'violations']
+            ];
+        }
+
+        if ($elementID == 'attachments') {
+            return [
+                ['name' => '-', 'value' => ''],
+                ['name' => E_INVOICEPDF, 'value' => 'e_invoicePDF'],
+                ['name' => E_INVOICEREPORT, 'value' => 'e_invoiceReport'],
+                ['name' => E_INVOICEATTACHMENT1, 'value' => 'e_invoiceAttachments']
             ];
         }
         return null;
