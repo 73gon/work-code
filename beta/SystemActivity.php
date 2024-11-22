@@ -27,7 +27,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     {
         date_default_timezone_set("Europe/Berlin");
         if ($this->isFirstExecution()) {
-            $this->setResubmission(10, 'm');
+            $this->setResubmission(17520, 'h');
             $this->uploadFile();
         }
 
@@ -42,10 +42,16 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $this->markActivityAsCompleted();
     }
 
+    protected function fetchData()
+    {
+        $this->markActivityAsPending();
+        $this->setResubmission(10, 'm');
+        $this->fetchInvoices();
+    }
+
 
     protected function uploadFile()
     {
-
         $curl = curl_init();
         $file = $this->getUploadPath() . $this->resolveInputParameter('inputFile');
 
@@ -55,23 +61,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             throw new JobRouterException("File size exceeds the maximum limit of $this->maxFileSize MB. Actual size: $fileSizeMB MB.");
         }
 
-        if($this->resolveInputParameter('demo') == '1'){
-            $url = "$this->demoURL/v2/external/documents/invoices/upload";
-        } else {
-            $url = "$this->productiveURL/v1/external/documents/invoices/upload";
-        }
+        $url = $this->resolveInputParameter('demo') == '1' ? 
+               "$this->demoURL/v2/external/documents/invoices/upload" : 
+               "$this->productiveURL/v1/external/documents/invoices/upload";
 
-        if ($this->resolveInputParameter('flag') == 'normal') {
-            $action = 'normal';
-        } else if ($this->resolveInputParameter('flag') == 'check_extraction') {
-            $action = 'check_extraction';
-        } else if ($this->resolveInputParameter('flag') == 'skip_review') {
-            $action = 'skip_review';
-        } else if ($this->resolveInputParameter('flag') == 'force_skip') {
-            $action = 'force_skip';
-        } else {
-            throw new Exception('Invalid input parameter value for FLAG: ' . $this->resolveInputParameter('flag'));
+        $validFlags = ['normal', 'check_extraction', 'skip_review', 'force_skip'];
+        $flag = $this->resolveInputParameter('flag');
+        if (!in_array($flag, $validFlags)) {
+            throw new Exception('Invalid input parameter value for FLAG: ' . $flag);
         }
+        $action = $flag;
+
         curl_setopt_array($curl, array(
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
@@ -122,9 +122,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $fileId = $this->getSystemActivityVar('FILEID');
         $type = $this->getSystemActivityVar('TYPE') == 'e_invoice' ? 'e-invoices' : 'invoices';
         $url = "$baseURL/v1/external/documents/$type?" . ($type == 'e-invoices' ? "documentId=$fileId" : "fileId=$fileId") . "&auditTrail=true";
-        
-        $resubmissionTime = (date("H") >= 6 && date("H") <= 24) ? 10 : 60;
-        $this->setResubmission($resubmissionTime, 'm');
 
         $curl = curl_init();
         curl_setopt_array($curl, array(
@@ -143,30 +140,22 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $response = curl_exec($curl);
 
-
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $counter = $this->getSystemActivityVar('COUNTER');
-        if ($counter > 10) {
-            if ($httpcode != 200 && $httpcode != 404 && $httpcode != 503 && $httpcode != 502 && $httpcode != 500 && $httpcode != 0) {
-                throw new JobRouterException('Error occurred during file extraction. HTTP Error Code: ' . $httpcode);
-            }
-        }else{
-            $counter = $this->getSystemActivityVar('COUNTER') + 1;
-            $this->setSystemActivityVar('COUNTER', $counter);
-            $this->setResubmission(60, 'm');
+
+        if ($counter > 10 && !in_array($httpcode, [200, 404, 503, 502, 500, 0])) {
+            throw new JobRouterException('Error occurred during file extraction. HTTP Error Code: ' . $httpcode);
+        } else {
+            $this->setSystemActivityVar('COUNTER', ++$counter);
         }
 
-
-        if ($httpcode == 503 || $httpcode == 502 || $httpcode == 0 || $httpcode == 500) {
-            $this->setResubmission(30, 'm');
-        }
         curl_close($curl);
 
         $data = json_decode($response, TRUE);
         $dataItem = $data["data"][0];
         $check = false;
 
-        $falseStates = ['processing', 'failed', 'uploaded'];
+        $falseStates = ['processing', 'failed', 'uploaded', ''];
 
         if ($dataItem["status"] == "uploaded") {
             $this->storeOutputParameter('tempJSON', json_encode($data));
@@ -179,17 +168,19 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         
         if ($check === true) {
-            unlink($this->getSystemActivityVar('PDFPATH'));
-            unlink($this->getSystemActivityVar('REPORTPATH'));
-
-            $index = 0;
-            while (true) {
-                $attachmentPath = $this->getSystemActivityVar('ATTACHMENTPATH' . $index);
-                if (!$attachmentPath) {break;}
-                if (file_exists($attachmentPath)) {
-                    unlink($attachmentPath);
+            if( $type = "e_invoice"){
+                unlink($this->getSystemActivityVar('PDFPATH'));
+                unlink($this->getSystemActivityVar('REPORTPATH'));
+    
+                $index = 0;
+                while (true) {
+                    $attachmentPath = $this->getSystemActivityVar('ATTACHMENTPATH' . $index);
+                    if (!$attachmentPath) {break;}
+                    if (file_exists($attachmentPath)) {
+                        unlink($attachmentPath);
+                    }
+                    $index++;
                 }
-                $index++;
             }
             $this->markActivityAsCompleted();
         }
@@ -207,9 +198,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
         ksort($list);
 
-        if (empty($table)) {
-            return;
-        }
+        if (empty($table)) {return;}
 
         $JobDB = $this->getJobDB();
 
@@ -224,7 +213,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         foreach ($list as $listindex => $listvalue) {
             if (!empty($listvalue)) {
                 $temp .= $listvalue . " AS " . $fields[$listindex - 1];
-
                 if ($listindex !== $lastKey) {
                     $temp .= ", ";
                 }
@@ -232,19 +220,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
         
         $temp .= " FROM " . $table;
-
         $result = $JobDB->query($temp);
-
         $payload = [];
 
         while ($row = $JobDB->fetchRow($result)) {
-
             $data = [];
-
             foreach ($fields as $index => $field) {
                     $data[$field] = isset($row[$fields[$index]]) && !empty($row[$fields[$index]]) ? $row[$fields[$index]] : '';
             }
-
             $payloads[] = $data;
         }
 
@@ -269,11 +252,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         fclose($csvFile);
 
-        if($this->resolveInputParameter('demo') == '1'){
-            $url = "$this->demoURL/v2/external/entities/vendors/import";
-        } else {
-            $url = 'https://entity.api.pedant.ai/v2/external/entities/vendors/import';
-        }
+        $url = $this->resolveInputParameter('demo') == '1' ? "$this->demoURL/v2/external/entities/vendors/import" : 'https://entity.api.pedant.ai/v2/external/entities/vendors/import';
 
         $curl = curl_init();
         
@@ -313,13 +292,91 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if ($httpcode != 200) {
             throw new JobRouterException('Error occurred during vendor update. HTTP Error Code: ' . $httpcode);
         }
-            
+        
         curl_close($curl);
-
         unlink($csvFilePath);
     }
 
+    protected function fetchInvoices() //TODO add intervall every 10m/20m field, range 6h-18h field, only workdays button in xml config
+    {
+        $curl = curl_init();
 
+        $baseURL = $this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL;
+        $url = "$baseURL/v1/external/documents/invoices/to-export";
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->resolveInputParameter('api_key')],
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0
+        ));
+        $response = curl_exec($curl);
+
+        $data = json_decode($response, TRUE);
+
+        $ids = $data["data"];
+        $table_head = $this->resolveInputParameter('table_head');
+        $stepID = $this->resolveInputParameter('stepID');
+
+        $currentTime = new DateTime();
+        $currentTime->modify('+10 seconds');
+        $formattedTime = $currentTime->format('Y-m-d H:i:s');
+
+        foreach ($ids as $id) {
+            $dbType = $this->getDatabaseType();
+            if ($dbType === "MySQL") {
+                $query = "
+                    UPDATE jrincidents j
+                    JOIN $table_head t ON t.step_id = j.process_step_id
+                    SET j.resubmission_date = '$formattedTime'
+                    WHERE t.step = $stepID AND t.T_FILEID = '$id';
+                ";
+            } elseif ($dbType === "MSSQL") {
+                $query = "
+                    UPDATE j
+                    SET j.resubmission_date = '$formattedTime'
+                    FROM jrincidents AS j
+                    JOIN $table_head AS t ON t.step_id = j.process_step_id
+                    WHERE t.step = $stepID AND t.T_FILEID = '$id';
+                ";
+            } else {
+                throw new Exception("Unsupported database type");
+            }
+            try {
+                $jobDB = $this->getJobDB();
+                $jobDB->exec($query);
+            } catch (Exception $e) {
+                throw new Exception("Failed to execute query: " . $e->getMessage());
+            }
+        }
+    }
+
+    public function getDatabaseType() {
+        $jobDB = $this->getJobDB();
+        try {
+            $result = $jobDB->query("SELECT VERSION()");
+            $row = $jobDB->fetchAll($result);
+            if (is_string($row[0]["VERSION()"])) {
+                return "MySQL";
+            }
+        } catch (Exception $e) {}
+    
+        try {
+            $result = $jobDB->query("SELECT @@VERSION");
+            $row = $jobDB->fetchAll($result);
+            if (is_string($row[0]["VERSION()"])) {
+                    return "MSSQL";
+            }
+        } catch (Exception $e) {}
+        throw new Exception("Database could not be detected");
+    }
 
     public function storeList($data)
     {

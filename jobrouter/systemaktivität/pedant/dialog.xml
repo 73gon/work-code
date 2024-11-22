@@ -18,9 +18,6 @@
 					<field id='fileID' name='FILEID' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='invoiceID' name='INVOICEID' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
                     <field id='tempJSON' name='TEMPJSON' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
-                    <field id='error' name='ERROR' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
-                    <field id='errorMessage' name='ERRORMESSAGE' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
-                    <field id='userData' name='USERDATA' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
 					<list id='recipientDetails' name='RECIPIENTDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>				
 					<list id='vendorDetails' name='VENDORDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
 					<list id='invoiceDetails' name='INVOICEDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
@@ -37,9 +34,16 @@
                     <list id="postVendor" name="POSTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
                 </inputParameters> 
                 <outputParameters>
-                    <field id='error' name='ERROR' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
-                    <field id='errorMessage' name='ERRORMESSAGE' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
-                    <field id='userData' name='USERDATA' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
+                </outputParameters> 
+            </function>
+            <function id='fetchData' name='FETCH' description='FETCH_DESC'>
+                <inputParameters>
+                    <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
+                    <field id="table_head" name="TABLEHEAD" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
+                    <field id="stepID" name="STEPID" worktable="yes" subtable="no" fixed="yes" datatype="int" required="yes"/>
+                </inputParameters> 
+                <outputParameters>
                 </outputParameters> 
             </function>
         </functions>

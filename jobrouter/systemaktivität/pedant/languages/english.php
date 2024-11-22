@@ -11,6 +11,10 @@ define('DATA_DESC', 'This systemactivity can be used to add a database of vendor
 
 define('DATA', 'Add Vendor');
 
+define('FETCH', 'Fetch Invoices');
+
+define('FETCH_DESC', 'This systemactivity can be used to fetch invoices from pedant in a bundle.');
+
 //input
 
 define('INPUTFILE', 'Inputfile');
@@ -26,6 +30,9 @@ define('INCIDENT', 'Incident');
 define('FLAG', 'Flag');
 
 define('FLAG_DESC', "If only error-free files should be fetched and exported, enter 'check_extraction'.\nIf all files should be fetched, enter 'skip_review'.\nIf all files should be fetched and exported, enter 'force_skip'.");
+
+define('TABLEHEAD', 'Tablehead Name');
+define('STEPID', 'Stepnumber');
 //output basic
 
 define('ERROR', 'Errorcode');

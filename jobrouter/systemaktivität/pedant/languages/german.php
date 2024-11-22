@@ -10,6 +10,10 @@ define('DATA_DESC', 'Diese Systemaktivität kann dazu verwendet werden, eine Dat
 
 define('DATA', 'Lieferanten hinzufügen');
 
+define('FETCH', 'Rechnungen abholen');
+
+define('FETCH_DESC', 'Diese Systemaktivität kann dazu verwendet werden, gebündelt Rechnungen von Pedant abzuholen.');
+
 //input
 
 define('INPUTFILE', 'Eingabedatei');
@@ -27,6 +31,10 @@ define('FLAG', 'Flag');
 define('FLAG_DESC', "Wenn nur fehlerfreie Dateien abgeholt und nach Verifizierung des Nutzers exportiert werden sollen dann 'check_extraction eingeben.
 						  \nWenn nur fehlerfreie Dateien abgeholt und ohne Verifizierung des Nutzers exportiert werden sollen dann 'skip_review' eingeben.
 						  \nWenn alle Dateien abgeholt und exportiert werden sollen dann 'force_skip' eingeben.");
+
+
+define('TABLEHEAD', 'Kopftabellenname');
+define('STEPID', 'Schrittnummer');
 
 //output basic
 
