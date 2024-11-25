@@ -35,7 +35,11 @@ define('FLAG_DESC', "Wenn nur fehlerfreie Dateien abgeholt und nach Verifizierun
 
 define('TABLEHEAD', 'Kopftabellenname');
 define('STEPID', 'Schrittnummer');
-
+define('INTERVAL', 'Ausführungsintervall in Minuten');
+define('INTERVAL_DESC', value: 'Ausführungsintervall in Minuten z.B. 10');
+define('WORKTIME', 'Arbeitszeit mit komma getrennt');
+define('WORKTIME_DESC', 'Arbeitszeit mit komma getrennt z.B. 6,18');
+define('WEEKEND', 'Ausführung am Wochenende');
 //output basic
 
 define('ERROR', 'Fehlercode');

@@ -33,6 +33,11 @@ define('FLAG_DESC', "If only error-free files should be fetched and exported, en
 
 define('TABLEHEAD', 'Tablehead Name');
 define('STEPID', 'Stepnumber');
+define('INTERVAL', 'Execution Interval');
+define('INTERVAL_DESC', 'Execution Interval in minutes e.g. 10');
+define('WORKTIME', 'Worktime separated by comma');
+define('WORKTIME_DESC', 'Worktime separated by comma e.g. 6,18');
+define('WEEKEND', 'Execution on Weekend');
 //output basic
 
 define('ERROR', 'Errorcode');

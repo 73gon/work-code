@@ -45,7 +45,37 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     protected function fetchData()
     {
         $this->markActivityAsPending();
-        $this->setResubmission(10, 'm');
+
+        $interval = $this->resolveInputParameter('interval');
+        $worktime = $this->resolveInputParameter('worktime');
+        $weekend = $this->resolveInputParameter('weekend');
+
+        date_default_timezone_set('Europe/Berlin');
+        list($startTime, $endTime) = array_map('intval', explode(',', $worktime));
+        list($currentHour, $currentDayOfWeek) = [(int) (new DateTime())->format('G'), (int) (new DateTime())->format('w')];
+
+        if($weekend){
+            if ($currentHour >= $startTime && $currentHour < $endTime) {
+                $this->setResubmission($interval, 'm');
+            } else {
+                $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
+                $this->setResubmission($hoursToStart, 'h');
+            }
+        }else{
+            if ($currentDayOfWeek >= 1 && $currentDayOfWeek <= 5) {
+                if ($currentHour >= $startTime && $currentHour < $endTime) {
+                    $this->setResubmission($interval, 'm');
+                } else {
+                    $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
+                    $this->setResubmission($hoursToStart, 'h');
+                }
+            } else {
+                $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
+                if ($currentDayOfWeek == 6) {$hoursToStart += 24;}
+                $this->setResubmission($hoursToStart, 'h');
+            }
+        }
+
         $this->fetchInvoices();
     }
 
