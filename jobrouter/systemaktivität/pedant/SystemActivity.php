@@ -166,7 +166,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $dataItem = $data["data"][0];
         $check = false;
 
-        $falseStates = ['processing', 'failed', 'uploaded'];
+        $falseStates = ['processing', 'failed', 'uploaded', ''];
 
         if ($dataItem["status"] == "uploaded") {
             $this->storeOutputParameter('tempJSON', json_encode($data));
