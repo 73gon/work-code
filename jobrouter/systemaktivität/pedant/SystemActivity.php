@@ -179,6 +179,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         
         if ($check === true) {
+            if( $type = "e_invoice"){
             unlink($this->getSystemActivityVar('PDFPATH'));
             unlink($this->getSystemActivityVar('REPORTPATH'));
 
@@ -190,6 +191,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     unlink($attachmentPath);
                 }
                 $index++;
+                }
             }
             $this->markActivityAsCompleted();
         }
