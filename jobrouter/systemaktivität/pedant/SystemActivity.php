@@ -112,7 +112,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $this->setSystemActivityVar('TYPE', $type);
         $this->markActivityAsPending();
     }
-    protected function checkFile()
+    protected function checkFile() //TODO getTableValue, check mapping
     {
         if (!empty($this->resolveInputParameter('vendorTable'))) {
             $this->postVendorDetails();
@@ -408,7 +408,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'projectNumber' => $eInvoiceFields['projectReferenceId'],
             'purchaseOrder' => '',
             'purchaseDate' => '',
-            'deliveryDate' => $eInvoiceFields['deliveryInformationActualDeliveryDate'],
+            'deliveryDate' => date("Y-m-d", strtotime(str_replace(".", "-", $eInvoiceFields['deliveryInformationActualDeliveryDate']))) . ' 00:00:00.000',
             'hasDiscount' => '',
             'refund' => '',
             'discountPercentage' => '',
@@ -446,7 +446,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'currency' => $dataItem["currency"],
             'resolvedIssuesCount' => $dataItem["resolvedIssuesCount"],
             'hasProcessingIssues' => $dataItem["hasProcessingIssues"],
-            'deliveryDate' => $dataItem["deliveryDate"],
+            'deliveryDate' => date("Y-m-d", strtotime(str_replace(".", "-", $dataItem["deliveryDate"]))) . ' 00:00:00.000',
         ];
 
         foreach ($attributes3 as $attribute) {
@@ -622,7 +622,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => CITY, 'value' => 'recipientCity'],
                 ['name' => COUNTRY, 'value' => 'recipientCountry'],
                 ['name' => RECIPIENTVATNUMBER, 'value' => 'recipientVatNumber'],
-                ['name' => INTERNALNUMBER, 'value' => 'internalNumber']
+                ['name' => INTERNALNUMBER, 'value' => 'recipientInternalNumber']
             ];
         }
 
