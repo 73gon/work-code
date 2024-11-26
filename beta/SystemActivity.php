@@ -327,7 +327,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         unlink($csvFilePath);
     }
 
-    protected function fetchInvoices() //TODO add intervall every 10m/20m field, range 6h-18h field, only workdays button in xml config
+    protected function fetchInvoices() 
     {
         $curl = curl_init();
 
