@@ -52,6 +52,7 @@ define('FILEID', 'File-ID');
 define('INVOICEID', 'Invoice-ID');
 define('TEMPJSON', 'Temporary JSON-File');
 define('SQLQUERY', 'SQL-Query');
+define('MAXRETRIES', 'Max Retries');
 
 define('CITY', 'City');
 define('STREET', 'Street');

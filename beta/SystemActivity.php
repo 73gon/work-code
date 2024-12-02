@@ -25,10 +25,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
     protected function pedant()
     {
+        $this->setResubmission(17520, 'h');
         date_default_timezone_set("Europe/Berlin");
-        if ($this->isFirstExecution()) {
-            $this->setResubmission(17520, 'h');
-            $this->uploadFile();
+
+        if (!$this->getSystemActivityVar('FILEID')) {
+            if ($this->isFirstExecution()) {
+                $this->uploadFile();
+            }
         }
 
         if ($this->isPending()) {
@@ -152,6 +155,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $fileId = $this->getSystemActivityVar('FILEID');
         $type = $this->getSystemActivityVar('TYPE') == 'e_invoice' ? 'e-invoices' : 'invoices';
         $url = "$baseURL/v1/external/documents/$type?" . ($type == 'e-invoices' ? "documentId=$fileId" : "fileId=$fileId") . "&auditTrail=true";
+        $maxCounter = $this->resolveInputParameter('maxCounter');
 
         $curl = curl_init();
         curl_setopt_array($curl, array(
@@ -173,8 +177,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $counter = $this->getSystemActivityVar('COUNTER');
 
-        if ($counter > 10 && !in_array($httpcode, [200, 404, 503, 502, 500, 0])) {
-            throw new JobRouterException('Error occurred during file extraction. HTTP Error Code: ' . $httpcode);
+        if ($counter > $maxCounter && !in_array($httpcode, [200, 404, 503, 502, 500, 0])) {
+            throw new JobRouterException('Error occurred during file extraction after maximum retries (' . $counter . '). HTTP Error Code: ' . $httpcode);
         } else {
             $this->setSystemActivityVar('COUNTER', ++$counter);
         }
@@ -493,7 +497,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'projectNumber' => $eInvoiceFields['projectReferenceId'],
             'purchaseOrder' => '',
             'purchaseDate' => '',
-            'deliveryDate' => date("Y-m-d", strtotime(str_replace(".", "-", $eInvoiceFields['deliveryInformationActualDeliveryDate']))) . ' 00:00:00.000',
             'hasDiscount' => '',
             'refund' => '',
             'discountPercentage' => '',
@@ -505,6 +508,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'currency' => $eInvoiceFields['invoiceCurrencyCode'],
             'resolvedIssuesCount' => '',
             'hasProcessingIssues' => '',
+            'deliveryDate' => date("Y-m-d", strtotime(str_replace(".", "-", $eInvoiceFields['deliveryInformationActualDeliveryDate']))) . ' 00:00:00.000',
         ] : [
             'taxRate1' => $taxRates[0]["subNetAmount"] . ";" . $taxRates[0]["subTaxAmount"] . ";" . $taxRates[0]["subTaxRate"],
             'taxRate2' => $taxRates[1]["subNetAmount"] . ";" . $taxRates[1]["subTaxAmount"] . ";" . $taxRates[1]["subTaxRate"],
@@ -542,10 +546,10 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $auditTrail = $type == "e_invoice" ? $auditTrailItem : $dataItem["auditTrail"][1];
 
         $values4 = [
-            'auditTrailuserName' => $auditTrail['userName'],
-            'auditTrailtype' => $auditTrail['type'],
-            'auditTrailsubType' => $auditTrail['subType'],
-            'auditTrailcomment' => $auditTrail['comment']
+            'auditTrailUserName' => $auditTrail['userName'],
+            'auditTrailType' => $auditTrail['type'],
+            'auditTrailSubType' => $auditTrail['subType'],
+            'auditTrailComment' => $auditTrail['comment']
         ];
 
         foreach ($attributes4 as $attribute) {
@@ -657,7 +661,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }else{
             $values6 = [
                 'e_invoicePDF' => '',
-                'e_reportFile' => '',
+                'e_invoiceReport' => '',
                 'e_invoiceAttachments' => []
             ];
         }
