@@ -405,7 +405,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         try {
             $result = $jobDB->query("SELECT @@VERSION");
             $row = $jobDB->fetchAll($result);
-            if (is_string($row[0]["VERSION()"])) {
+            if (is_string(reset($row[0]))) {
                     return "MSSQL";
             }
         } catch (Exception $e) {}
