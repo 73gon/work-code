@@ -25,7 +25,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
     protected function pedant()
     {
-        $this->setResubmission(17520, 'h');
+        $this->setResubmission($this->resolveInputParameter('new') ? 17520 : 10, $this->resolveInputParameter('new') ? 'h' : 'm');
+        
         date_default_timezone_set("Europe/Berlin");
 
         if (!$this->getSystemActivityVar('FILEID')) {
