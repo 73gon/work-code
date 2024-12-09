@@ -26,7 +26,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     protected function pedant()
     {
         $this->setResubmission($this->resolveInputParameter('new') ? 17520 : $this->resolveInputParameter('intervalOld'), $this->resolveInputParameter('new') ? 'h' : 'm');
-        
         date_default_timezone_set("Europe/Berlin");
 
         if ($this->getSystemActivityVar('FILEID')) {
@@ -34,11 +33,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         if (!$this->getSystemActivityVar('FILEID')) {
-            if ($this->isFirstExecution()) {
                 $this->uploadFile();
-            }
         }
-
     }
 
     protected function pedantData()
@@ -80,7 +76,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 $this->setResubmission($hoursToStart, 'h');
             }
         }
-
         $this->fetchInvoices();
     }
 
@@ -140,19 +135,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $invoiceId = $data['files'][0]['invoiceId'];
         $type = $data['files'][0]['type'];
 
-        $this->setSystemActivityVar('FILEID', $fileId);
         $this->storeOutputParameter('fileID', $fileId);
         $this->storeOutputParameter('invoiceID', $invoiceId);
+        $this->setSystemActivityVar('FILEID', $fileId);
         $this->setSystemActivityVar('COUNTER', 0);
         $this->setSystemActivityVar('TYPE', $type);
-        $this->markActivityAsPending();
     }
     protected function checkFile()
     {
         if (!empty($this->resolveInputParameter('vendorTable'))) {
             $this->postVendorDetails();
         }
-
 
         $baseURL = $this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL;
         $fileId = $this->getSystemActivityVar('FILEID');
@@ -188,7 +181,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         curl_close($curl);
 
-
         $data = json_decode($response, TRUE);
         $dataItem = $data["data"][0];
         $check = false;
@@ -204,9 +196,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $this->storeList($data);
         }
 
-        
         if ($check === true) {
-            if( $type = "e_invoice"){
+            if($type = "e_invoice"){
                 unlink($this->getSystemActivityVar('PDFPATH'));
                 unlink($this->getSystemActivityVar('REPORTPATH'));
     
@@ -281,7 +272,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         $csvFilePath = __DIR__ . '/' .$this->outputFileName;
-        
         $csvFile = fopen($csvFilePath, 'w');
 
         foreach ($csvData as $row) {
@@ -358,7 +348,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $response = curl_exec($curl);
 
         $data = json_decode($response, TRUE);
-
         $ids = $data["data"];
         $table_head = $this->resolveInputParameter('table_head');
         $stepID = $this->resolveInputParameter('stepID');
@@ -650,7 +639,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     file_put_contents($attachmentPath, $dataAttachment);
                     $this->setSystemActivityVar('ATTACHMENTPATH' .$index, $attachmentPath);
                     $attachmentFiles[] = $attachmentPath;
-                }
+                } 
             }
 
             $values6 = [
