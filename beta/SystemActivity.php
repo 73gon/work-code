@@ -25,9 +25,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
     protected function pedant()
     {
-        $this->setResubmission($this->resolveInputParameter('new') ? 17520 : 10, $this->resolveInputParameter('new') ? 'h' : 'm');
+        $this->setResubmission($this->resolveInputParameter('new') ? 17520 : $this->resolveInputParameter('intervalOld'), $this->resolveInputParameter('new') ? 'h' : 'm');
         
         date_default_timezone_set("Europe/Berlin");
+
+        if ($this->getSystemActivityVar('FILEID')) {
+            $this->checkFile();
+        }
 
         if (!$this->getSystemActivityVar('FILEID')) {
             if ($this->isFirstExecution()) {
@@ -35,9 +39,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             }
         }
 
-        if ($this->isPending()) {
-            $this->checkFile();
-        }
     }
 
     protected function pedantData()
@@ -139,9 +140,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $invoiceId = $data['files'][0]['invoiceId'];
         $type = $data['files'][0]['type'];
 
+        $this->setSystemActivityVar('FILEID', $fileId);
         $this->storeOutputParameter('fileID', $fileId);
         $this->storeOutputParameter('invoiceID', $invoiceId);
-        $this->setSystemActivityVar('FILEID', $fileId);
         $this->setSystemActivityVar('COUNTER', 0);
         $this->setSystemActivityVar('TYPE', $type);
         $this->markActivityAsPending();
@@ -151,6 +152,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if (!empty($this->resolveInputParameter('vendorTable'))) {
             $this->postVendorDetails();
         }
+
 
         $baseURL = $this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL;
         $fileId = $this->getSystemActivityVar('FILEID');
@@ -185,6 +187,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         curl_close($curl);
+
 
         $data = json_decode($response, TRUE);
         $dataItem = $data["data"][0];
