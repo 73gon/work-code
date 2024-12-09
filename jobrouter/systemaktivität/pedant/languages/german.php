@@ -13,13 +13,11 @@ define('INTNUMBER', 'Mandant Vorauswahl');
 define('INCIDENT', 'Vorgang');
 define('FLAG', 'Flag');
 define('NEWVERSION', 'Neue Version');
-define('FLAG_DESC', "Wenn nur fehlerfreie Dateien abgeholt und nach Verifizierung des Nutzers exportiert werden sollen dann 'check_extraction eingeben.
-						\nWenn nur fehlerfreie Dateien abgeholt und ohne Verifizierung des Nutzers exportiert werden sollen dann 'skip_review' eingeben.
-						\nWenn alle Dateien abgeholt und exportiert werden sollen dann 'force_skip' eingeben.");
+define('FLAG_DESC', "Wenn nur fehlerfreie Dateien abgeholt und nach Verifizierung des Nutzers exportiert werden sollen dann 'check_extraction eingeben. Wenn nur fehlerfreie Dateien abgeholt und ohne Verifizierung des Nutzers exportiert werden sollen dann 'skip_review' eingeben. Wenn alle Dateien abgeholt und exportiert werden sollen dann 'force_skip' eingeben.");
 define('TABLEHEAD', 'Kopftabellenname');
 define('STEPID', 'Schrittnummer');
 define('INTERVAL', 'Ausführungsintervall in Minuten');
-define('INTERVAL_DESC', value: 'Ausführungsintervall in Minuten z.B. 10');
+define('INTERVAL_DESC', 'Ausführungsintervall in Minuten z.B. 10');
 define('WORKTIME', 'Arbeitszeit mit komma getrennt');
 define('WORKTIME_DESC', 'Arbeitszeit mit komma getrennt z.B. 6,18');
 define('WEEKEND', 'Ausführung am Wochenende');
