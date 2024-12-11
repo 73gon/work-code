@@ -23,7 +23,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return file_get_contents(__DIR__ . '/dialog.xml');
     }
 
-    protected function pedant()
+    protected function pedant() //TODO runs one iteration more than needed
     {
         $this->setResubmission($this->resolveInputParameter('new') ? 17520 : $this->resolveInputParameter('intervalOld'), $this->resolveInputParameter('new') ? 'h' : 'm');
         date_default_timezone_set("Europe/Berlin");
@@ -93,7 +93,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $url = $this->resolveInputParameter('demo') == '1' ? 
                "$this->demoURL/v2/external/documents/invoices/upload" : 
-               "$this->productiveURL/v1/external/documents/invoices/upload";
+               "$this->productiveURL/v2/external/documents/invoices/upload";
 
         $validFlags = ['normal', 'check_extraction', 'skip_review', 'force_skip'];
         $flag = $this->resolveInputParameter('flag');
