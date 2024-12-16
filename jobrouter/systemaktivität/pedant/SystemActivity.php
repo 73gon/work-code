@@ -330,9 +330,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $curl = curl_init();
 
         $baseURL = $this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL;
-        $url = "$baseURL/v1/external/documents/invoices/to-export";
+        $url_invoice = "$baseURL/v1/external/documents/invoices/to-export";
+        $url_einvoice = "$baseURL/v1/external/documents/e-invoices/to-export";
 
-        curl_setopt_array($curl, array(
+        foreach ([$url_invoice, $url_einvoice] as $url) {
+            curl_setopt_array($curl, array(
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
@@ -344,34 +346,34 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->resolveInputParameter('api_key')],
             CURLOPT_SSL_VERIFYHOST => 0,
             CURLOPT_SSL_VERIFYPEER => 0
-        ));
-        $response = curl_exec($curl);
+            ));
+            $response = curl_exec($curl);
 
-        $data = json_decode($response, TRUE);
-        $ids = $data["data"];
-        $table_head = $this->resolveInputParameter('table_head');
-        $stepID = $this->resolveInputParameter('stepID');
+            $data = json_decode($response, TRUE);
+            $ids = $data["data"];
+            $table_head = $this->resolveInputParameter('table_head');
+            $stepID = $this->resolveInputParameter('stepID');
 
-        $currentTime = new DateTime();
-        $currentTime->modify('+10 seconds');
-        $formattedTime = $currentTime->format('Y-m-d H:i:s');
+            $currentTime = new DateTime();
+            $currentTime->modify('+10 seconds');
+            $formattedTime = $currentTime->format('Y-m-d H:i:s');
 
-        foreach ($ids as $id) {
+            foreach ($ids as $id) {
             $dbType = $this->getDatabaseType();
             if ($dbType === "MySQL") {
                 $query = "
-                    UPDATE jrincidents j
-                    JOIN $table_head t ON t.step_id = j.process_step_id
-                    SET j.resubmission_date = '$formattedTime'
-                    WHERE t.step = $stepID AND t.T_FILEID = '$id';
+                UPDATE jrincidents j
+                JOIN $table_head t ON t.step_id = j.process_step_id
+                SET j.resubmission_date = '$formattedTime'
+                WHERE t.step = $stepID AND t.T_FILEID = '$id';
                 ";
             } elseif ($dbType === "MSSQL") {
                 $query = "
-                    UPDATE j
-                    SET j.resubmission_date = '$formattedTime'
-                    FROM jrincidents AS j
-                    JOIN $table_head AS t ON t.step_id = j.process_step_id
-                    WHERE t.step = $stepID AND t.T_FILEID = '$id';
+                UPDATE j
+                SET j.resubmission_date = '$formattedTime'
+                FROM jrincidents AS j
+                JOIN $table_head AS t ON t.step_id = j.process_step_id
+                WHERE t.step = $stepID AND t.T_FILEID = '$id';
                 ";
             } else {
                 throw new Exception("Unsupported database type");
@@ -382,7 +384,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             } catch (Exception $e) {
                 throw new Exception("Failed to execute query: " . $e->getMessage());
             }
+            }
         }
+        curl_close($curl);
     }
 
     public function getDatabaseType() {
@@ -495,7 +499,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'discountPercentage' => '',
             'discountAmount' => '',
             'discountDate' => '',
-            'invoiceType' => $type,
+            'invoiceType' => $eInvoiceFields['invoiceTypeCode'],
+            'type' => $type,
             'note' => $document['note'],
             'status' => $dataItem['status'],
             'currency' => $eInvoiceFields['invoiceCurrencyCode'],
@@ -522,7 +527,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'discountPercentage' => $dataItem["discountPercentage"],
             'discountAmount' => $dataItem["discountAmount"],
             'discountDate' => $dataItem["discountDate"],
-            'invoiceType' => $type,
+            'invoiceType' => $dataItem["invoiceType"],
+            'type' => $type,
             'note' => $dataItem["file"]["note"],
             'status' => $dataItem["status"],
             'currency' => $dataItem["currency"],
@@ -750,6 +756,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => DISCOUNTAMOUNT, 'value' => 'discountAmount'],
                 ['name' => DISCOUNTDATE, 'value' => 'discountDate'],
                 ['name' => INVOICETYPE, 'value' => 'invoiceType'],
+                ['name' => TYPEINV, 'value' => 'type'],
                 ['name' => NOTE, 'value' => 'note'],
                 ['name' => STATUS, 'value' => 'status'],
                 ['name' => CURRENCY, 'value' => 'currency'],
