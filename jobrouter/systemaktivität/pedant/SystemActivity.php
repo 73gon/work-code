@@ -23,20 +23,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return file_get_contents(__DIR__ . '/dialog.xml');
     }
 
-    protected function pedant()
+    protected function pedant() //TODO runs one iteration more than needed
     {
-        $resubmissionTime = (date("H") >= 6 && date("H") <= 24) ? 10 : 60;
-        $this->setResubmission($resubmissionTime, 'm');
+        $this->setResubmission($this->resolveInputParameter('new') ? 17520 : $this->resolveInputParameter('intervalOld'), $this->resolveInputParameter('new') ? 'h' : 'm');
+        date_default_timezone_set("Europe/Berlin");
 
-        if (!$this->getSystemActivityVar('FILEID')) {
-            date_default_timezone_set("Europe/Berlin");
-            if ($this->isFirstExecution()) {
-                $this->uploadFile();
-            }
+        if ($this->getSystemActivityVar('FILEID')) {
+            $this->checkFile();
         }
 
-        if ($this->isPending()) {
-            $this->checkFile();
+        if (!$this->getSystemActivityVar('FILEID')) {
+                $this->uploadFile();
         }
     }
 
@@ -46,10 +43,45 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $this->markActivityAsCompleted();
     }
 
+    protected function fetchData()
+    {
+        $this->markActivityAsPending();
+
+        $interval = $this->resolveInputParameter('interval');
+        $worktime = $this->resolveInputParameter('worktime');
+        $weekend = $this->resolveInputParameter('weekend');
+
+        date_default_timezone_set('Europe/Berlin');
+        list($startTime, $endTime) = array_map('intval', explode(',', $worktime));
+        list($currentHour, $currentDayOfWeek) = [(int) (new DateTime())->format('G'), (int) (new DateTime())->format('w')];
+
+        if($weekend){
+            if ($currentHour >= $startTime && $currentHour < $endTime) {
+                $this->setResubmission($interval, 'm');
+            } else {
+                $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
+                $this->setResubmission($hoursToStart, 'h');
+            }
+        }else{
+            if ($currentDayOfWeek >= 1 && $currentDayOfWeek <= 5) {
+                if ($currentHour >= $startTime && $currentHour < $endTime) {
+                    $this->setResubmission($interval, 'm');
+                } else {
+                    $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
+                    $this->setResubmission($hoursToStart, 'h');
+                }
+            } else {
+                $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
+                if ($currentDayOfWeek == 6) {$hoursToStart += 24;}
+                $this->setResubmission($hoursToStart, 'h');
+            }
+        }
+        $this->fetchInvoices();
+    }
+
 
     protected function uploadFile()
     {
-
         $curl = curl_init();
         $file = $this->getUploadPath() . $this->resolveInputParameter('inputFile');
 
@@ -59,23 +91,15 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             throw new JobRouterException("File size exceeds the maximum limit of $this->maxFileSize MB. Actual size: $fileSizeMB MB.");
         }
 
-        if($this->resolveInputParameter('demo') == '1'){
-            $url = "$this->demoURL/v2/external/documents/invoices/upload";
-        } else {
-            $url = "$this->productiveURL/v1/external/documents/invoices/upload";
-        }
+        $url = ($this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL) . "/v2/external/documents/invoices/upload";
 
-        if ($this->resolveInputParameter('flag') == 'normal') {
-            $action = 'normal';
-        } else if ($this->resolveInputParameter('flag') == 'check_extraction') {
-            $action = 'check_extraction';
-        } else if ($this->resolveInputParameter('flag') == 'skip_review') {
-            $action = 'skip_review';
-        } else if ($this->resolveInputParameter('flag') == 'force_skip') {
-            $action = 'force_skip';
-        } else {
-            throw new Exception('Invalid input parameter value for FLAG: ' . $this->resolveInputParameter('flag'));
+        $validFlags = ['normal', 'check_extraction', 'skip_review', 'force_skip'];
+        $flag = $this->resolveInputParameter('flag');
+        if (!in_array($flag, $validFlags)) {
+            throw new Exception('Invalid input parameter value for FLAG: ' . $flag);
         }
+        $action = $flag;
+
         curl_setopt_array($curl, array(
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
@@ -114,9 +138,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $this->setSystemActivityVar('FILEID', $fileId);
         $this->setSystemActivityVar('COUNTER', 0);
         $this->setSystemActivityVar('TYPE', $type);
-        $this->markActivityAsPending();
     }
-    protected function checkFile()  
+    protected function checkFile()
     {
         if (!empty($this->resolveInputParameter('vendorTable'))) {
             $this->postVendorDetails();
@@ -126,6 +149,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $fileId = $this->getSystemActivityVar('FILEID');
         $type = $this->getSystemActivityVar('TYPE') == 'e_invoice' ? 'e-invoices' : 'invoices';
         $url = "$baseURL/v1/external/documents/$type?" . ($type == 'e-invoices' ? "documentId=$fileId" : "fileId=$fileId") . "&auditTrail=true";
+        $maxCounter = $this->resolveInputParameter('maxCounter');
 
         $curl = curl_init();
         curl_setopt_array($curl, array(
@@ -144,23 +168,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $response = curl_exec($curl);
 
-
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
         $counter = $this->getSystemActivityVar('COUNTER');
-        if ($counter > 10) {
-            if ($httpcode != 200 && $httpcode != 404 && $httpcode != 503 && $httpcode != 502 && $httpcode != 500 && $httpcode != 0) {
-                throw new JobRouterException('Error occurred during file extraction. HTTP Error Code: ' . $httpcode);
-            }
-        }else{
-            $counter = $this->getSystemActivityVar('COUNTER') + 1;
-            $this->setSystemActivityVar('COUNTER', $counter);
-            $this->setResubmission(60, 'm');
+
+        if ($counter > $maxCounter && !in_array($httpcode, [200, 404, 503, 502, 500, 0])) {
+            $this->setSystemActivityVar('COUNTER', 0);
+            throw new JobRouterException('Error occurred during file extraction after maximum retries (' . $counter . '). HTTP Error Code: ' . $httpcode);
+        } else {
+            $this->setSystemActivityVar('COUNTER', ++$counter);
         }
 
-
-        if ($httpcode == 503 || $httpcode == 502 || $httpcode == 0 || $httpcode == 500) {
-            $this->setResubmission(30, 'm');
-        }
         curl_close($curl);
 
         $data = json_decode($response, TRUE);
@@ -178,20 +196,19 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $this->storeList($data);
         }
 
-        
         if ($check === true) {
-            if( $type = "e_invoice"){
-            unlink($this->getSystemActivityVar('PDFPATH'));
-            unlink($this->getSystemActivityVar('REPORTPATH'));
-
-            $index = 0;
-            while (true) {
-                $attachmentPath = $this->getSystemActivityVar('ATTACHMENTPATH' . $index);
-                if (!$attachmentPath) {break;}
-                if (file_exists($attachmentPath)) {
-                    unlink($attachmentPath);
-                }
-                $index++;
+            if($type = "e_invoice"){
+                unlink($this->getSystemActivityVar('PDFPATH'));
+                unlink($this->getSystemActivityVar('REPORTPATH'));
+    
+                $index = 0;
+                while (true) {
+                    $attachmentPath = $this->getSystemActivityVar('ATTACHMENTPATH' . $index);
+                    if (!$attachmentPath) {break;}
+                    if (file_exists($attachmentPath)) {
+                        unlink($attachmentPath);
+                    }
+                    $index++;
                 }
             }
             $this->markActivityAsCompleted();
@@ -210,9 +227,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
         ksort($list);
 
-        if (empty($table)) {
-            return;
-        }
+        if (empty($table)) {return;}
 
         $JobDB = $this->getJobDB();
 
@@ -227,7 +242,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         foreach ($list as $listindex => $listvalue) {
             if (!empty($listvalue)) {
                 $temp .= $listvalue . " AS " . $fields[$listindex - 1];
-
                 if ($listindex !== $lastKey) {
                     $temp .= ", ";
                 }
@@ -235,19 +249,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
         
         $temp .= " FROM " . $table;
-
         $result = $JobDB->query($temp);
-
         $payload = [];
 
         while ($row = $JobDB->fetchRow($result)) {
-
             $data = [];
-
             foreach ($fields as $index => $field) {
                     $data[$field] = isset($row[$fields[$index]]) && !empty($row[$fields[$index]]) ? $row[$fields[$index]] : '';
             }
-
             $payloads[] = $data;
         }
 
@@ -263,7 +272,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         $csvFilePath = __DIR__ . '/' .$this->outputFileName;
-        
         $csvFile = fopen($csvFilePath, 'w');
 
         foreach ($csvData as $row) {
@@ -272,11 +280,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         fclose($csvFile);
 
-        if($this->resolveInputParameter('demo') == '1'){
-            $url = "$this->demoURL/v2/external/entities/vendors/import";
-        } else {
-            $url = 'https://entity.api.pedant.ai/v2/external/entities/vendors/import';
-        }
+        $url = $this->resolveInputParameter('demo') == '1' ? "$this->demoURL/v2/external/entities/vendors/import" : 'https://entity.api.pedant.ai/v2/external/entities/vendors/import';
 
         $curl = curl_init();
         
@@ -316,13 +320,90 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if ($httpcode != 200) {
             throw new JobRouterException('Error occurred during vendor update. HTTP Error Code: ' . $httpcode);
         }
-            
+        
         curl_close($curl);
-
         unlink($csvFilePath);
     }
 
+    protected function fetchInvoices() 
+    {
+        $curl = curl_init();
 
+        $baseURL = $this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL;
+        $url = "$baseURL/v1/external/documents/invoices/to-export";
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->resolveInputParameter('api_key')],
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0
+        ));
+        $response = curl_exec($curl);
+
+        $data = json_decode($response, TRUE);
+        $ids = $data["data"];
+        $table_head = $this->resolveInputParameter('table_head');
+        $stepID = $this->resolveInputParameter('stepID');
+
+        $currentTime = new DateTime();
+        $currentTime->modify('+10 seconds');
+        $formattedTime = $currentTime->format('Y-m-d H:i:s');
+
+        foreach ($ids as $id) {
+            $dbType = $this->getDatabaseType();
+            if ($dbType === "MySQL") {
+                $query = "
+                    UPDATE jrincidents j
+                    JOIN $table_head t ON t.step_id = j.process_step_id
+                    SET j.resubmission_date = '$formattedTime'
+                    WHERE t.step = $stepID AND t.T_FILEID = '$id';
+                ";
+            } elseif ($dbType === "MSSQL") {
+                $query = "
+                    UPDATE j
+                    SET j.resubmission_date = '$formattedTime'
+                    FROM jrincidents AS j
+                    JOIN $table_head AS t ON t.step_id = j.process_step_id
+                    WHERE t.step = $stepID AND t.T_FILEID = '$id';
+                ";
+            } else {
+                throw new Exception("Unsupported database type");
+            }
+            try {
+                $jobDB = $this->getJobDB();
+                $jobDB->exec($query);
+            } catch (Exception $e) {
+                throw new Exception("Failed to execute query: " . $e->getMessage());
+            }
+        }
+    }
+
+    public function getDatabaseType() {
+        $jobDB = $this->getJobDB();
+        try {
+            $result = $jobDB->query("SELECT VERSION()");
+            $row = $jobDB->fetchAll($result);
+            if (is_string($row[0]["VERSION()"])) {
+                return "MySQL";
+            }
+        } catch (Exception $e) {}
+    
+        try {
+            $result = $jobDB->query("SELECT @@VERSION");
+            $row = $jobDB->fetchAll($result);
+            if (is_string(reset($row[0]))) {
+                    return "MSSQL";
+            }
+        } catch (Exception $e) {}
+        throw new Exception("Database could not be detected");
+    }
 
     public function storeList($data)
     {
@@ -414,7 +495,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'discountPercentage' => '',
             'discountAmount' => '',
             'discountDate' => '',
-            'invoiceType' => $eInvoiceFields['invoiceTypeCode'],
+            'invoiceType' => $type,
             'note' => $document['note'],
             'status' => $dataItem['status'],
             'currency' => $eInvoiceFields['invoiceCurrencyCode'],
@@ -441,7 +522,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'discountPercentage' => $dataItem["discountPercentage"],
             'discountAmount' => $dataItem["discountAmount"],
             'discountDate' => $dataItem["discountDate"],
-            'invoiceType' => $dataItem["invoiceType"],
+            'invoiceType' => $type,
             'note' => $dataItem["file"]["note"],
             'status' => $dataItem["status"],
             'currency' => $dataItem["currency"],
@@ -455,13 +536,16 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         $attributes4 = $this->resolveOutputParameterListAttributes('auditTrailDetails'); //auditTrailDetails
-        $auditTrail = $type == "e_invoice" ? $auditTrailItem : $dataItem["auditTrail"][1];
+        $auditTrail = $type == "e_invoice" ? $auditTrailItem : $dataItem["auditTrail"];
+
+        $isAutomatic = count($auditTrail) <= 2;
+        $userInformationIndex = $isAutomatic ? 0 : 1;
 
         $values4 = [
-            'auditTrailUserName' => $auditTrail['userName'],
-            'auditTrailType' => $auditTrail['type'],
-            'auditTrailSubType' => $auditTrail['subType'],
-            'auditTrailComment' => $auditTrail['comment']
+            'auditTrailUserName' => $auditTrail[$userInformationIndex]['userName'],
+            'auditTrailType' => $auditTrail[$userInformationIndex]['type'],
+            'auditTrailSubType' => $auditTrail[$userInformationIndex]['subType'],
+            'auditTrailComment' => $auditTrail[$userInformationIndex]['comment']
         ];
 
         foreach ($attributes4 as $attribute) {
@@ -558,7 +642,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     file_put_contents($attachmentPath, $dataAttachment);
                     $this->setSystemActivityVar('ATTACHMENTPATH' .$index, $attachmentPath);
                     $attachmentFiles[] = $attachmentPath;
-                }
+                } 
             }
 
             $values6 = [
@@ -589,7 +673,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 }
             }
         }
-            
     }
 
     public function getUDL($udl, $elementID)

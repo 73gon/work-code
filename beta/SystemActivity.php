@@ -91,9 +91,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             throw new JobRouterException("File size exceeds the maximum limit of $this->maxFileSize MB. Actual size: $fileSizeMB MB.");
         }
 
-        $url = $this->resolveInputParameter('demo') == '1' ? 
-               "$this->demoURL/v2/external/documents/invoices/upload" : 
-               "$this->productiveURL/v2/external/documents/invoices/upload";
+        $url = ($this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL) . "/v2/external/documents/invoices/upload";
 
         $validFlags = ['normal', 'check_extraction', 'skip_review', 'force_skip'];
         $flag = $this->resolveInputParameter('flag');
@@ -171,9 +169,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $response = curl_exec($curl);
 
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
         $counter = $this->getSystemActivityVar('COUNTER');
 
         if ($counter > $maxCounter && !in_array($httpcode, [200, 404, 503, 502, 500, 0])) {
+            $this->setSystemActivityVar('COUNTER', 0);
             throw new JobRouterException('Error occurred during file extraction after maximum retries (' . $counter . '). HTTP Error Code: ' . $httpcode);
         } else {
             $this->setSystemActivityVar('COUNTER', ++$counter);
@@ -495,7 +495,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'discountPercentage' => '',
             'discountAmount' => '',
             'discountDate' => '',
-            'invoiceType' => $eInvoiceFields['invoiceTypeCode'],
+            'invoiceType' => $type,
             'note' => $document['note'],
             'status' => $dataItem['status'],
             'currency' => $eInvoiceFields['invoiceCurrencyCode'],
@@ -522,7 +522,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'discountPercentage' => $dataItem["discountPercentage"],
             'discountAmount' => $dataItem["discountAmount"],
             'discountDate' => $dataItem["discountDate"],
-            'invoiceType' => $dataItem["invoiceType"],
+            'invoiceType' => $type,
             'note' => $dataItem["file"]["note"],
             'status' => $dataItem["status"],
             'currency' => $dataItem["currency"],
@@ -536,13 +536,16 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         $attributes4 = $this->resolveOutputParameterListAttributes('auditTrailDetails'); //auditTrailDetails
-        $auditTrail = $type == "e_invoice" ? $auditTrailItem : $dataItem["auditTrail"][1];
+        $auditTrail = $type == "e_invoice" ? $auditTrailItem : $dataItem["auditTrail"];
+
+        $isAutomatic = count($auditTrail) <= 2;
+        $userInformationIndex = $isAutomatic ? 0 : 1;
 
         $values4 = [
-            'auditTrailUserName' => $auditTrail['userName'],
-            'auditTrailType' => $auditTrail['type'],
-            'auditTrailSubType' => $auditTrail['subType'],
-            'auditTrailComment' => $auditTrail['comment']
+            'auditTrailUserName' => $auditTrail[$userInformationIndex]['userName'],
+            'auditTrailType' => $auditTrail[$userInformationIndex]['type'],
+            'auditTrailSubType' => $auditTrail[$userInformationIndex]['subType'],
+            'auditTrailComment' => $auditTrail[$userInformationIndex]['comment']
         ];
 
         foreach ($attributes4 as $attribute) {
@@ -670,7 +673,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 }
             }
         }
-            
     }
 
     public function getUDL($udl, $elementID)
