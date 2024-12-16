@@ -81,6 +81,7 @@ define('DISCOUNTPERCENTAGE', 'Rabatt-Prozentsatz');
 define('DISCOUNTAMOUNT', 'Rabatt-Betrag');
 define('DISCOUNTDATE', 'Rabatt-Datum');
 define('INVOICETYPE', 'Rechnungsart');	
+define('TYPEINV', 'Rechnungstyp');
 define('NOTE', 'Nachricht');	
 define('STATUS', 'Status');	
 define('CURRENCY', 'Währung');

@@ -83,6 +83,7 @@ define('DISCOUNTPERCENTAGE', 'Discount Percentage');
 define('DISCOUNTAMOUNT', 'Discount Amount');
 define('DISCOUNTDATE', 'Discount Date');
 define('INVOICETYPE', 'Invoice Type');
+define('TYPEINV', 'Rechnungstyp');
 define('NOTE', 'Message');
 define('STATUS', 'Status');
 define('CURRENCY', 'Currency');
