@@ -101,4 +101,13 @@ define('ATTACHMENTS', 'Anhänge');
 define('E_INVOICEPDF', 'X-Rechnung PDF');
 define('E_INVOICEREPORT', 'X-Rechnung Ablehnungsbericht');
 define('E_INVOICEATTACHMENT1', 'X-Rechnung Anhänge');
+define('POSITIONNUMBER', 'Positionsnummer');
+define('SINGLENETPRICE', 'Einzelpreis netto');
+define('QUANTITY', 'Menge');
+define('UNITOFMEASURECODE', 'Maßeinheit');
+define('ARTICLENUMBER', 'Artikelnummer');
+define('ARTICLENAME', 'Artikelname');
+define('ITEMDESCRIPTION', 'Artikelbeschreibung');
+define('VATRATEPERINVOICELINE', 'Steuersatz pro Rechnungszeile');
+define('POSITIONDETAILS', 'Positionsdetails');
 

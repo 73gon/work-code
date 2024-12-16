@@ -24,6 +24,7 @@
 					<list id='recipientDetails' name='RECIPIENTDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>				
 					<list id='vendorDetails' name='VENDORDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
 					<list id='invoiceDetails' name='INVOICEDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
+                    <list id='positionDetails' name='POSITIONDETAILS' worktable='no' subtable='yes' fixed='no' datatype='varchar' required='no' udl='yes'/>
                     <list id='auditTrailDetails' name='AUDITTRAILDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
                     <list id='rejectionDetails' name='REJECTIONDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
                     <list id='attachments' name='ATTACHMENTS' worktable='yes' subtable='yes' fixed='no' datatype='file' required='no' udl='yes'/>

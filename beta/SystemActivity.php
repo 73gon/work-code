@@ -679,6 +679,57 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 }
             }
         }
+
+        $attributes7 = $this->resolveOutputParameterListAttributes('positionDetails'); //positionDetails
+
+        if($type == "e_invoice"){
+            $invoiceLine = $eInvoiceFields['invoiceLine'];
+            $values7 = [
+                'positionNumber' => [],
+                'singleNetPrice' => [],
+                'singleNetAmount' => [],
+                'quantity' => [],
+                'unitOfMeasureCode' => [],
+                'articleNumber' => [],
+                'articleName' => [],
+                'itemDescription' => [],
+                'vatRatePerLine' => []
+            ];
+
+            foreach ($invoiceLine as $line) {
+                $values7['positionNumber'][] = $line['invoiceLineIdentifierId'];
+                $values7['singleNetPrice'][] = $line['priceDetailsItemNetPrice'];
+                $values7['singleNetAmount'][] = $line['invoiceLineNetAmount'];
+                $values7['quantity'][] = $line['invoicedQuantity'];
+                $values7['unitOfMeasureCode'][] = $line['invoicedQuantityUnitOfMeasureCode'];
+                $values7['articleNumber'][] = $line['Artikelnummer'];
+                $values7['articleName'][] = $line['itemInformationItemName'];
+                $values7['itemDescription'][] = $line['itemInformationItemDescription'];
+                $values7['vatRatePerLine'][] = $line['lineVatInformationInvoicedItemVatRate'];
+            }
+        } else {
+            $values7 = [
+                'positionNumber' => [],
+                'singleNetPrice' => [],
+                'singleNetAmount' => [],
+                'quantity' => [],
+                'unitOfMeasureCode' => [],
+                'articleNumber' => [],
+                'articleName' => [],
+                'itemDescription' => [],
+                'vatRatePerLine' => [],
+            ];
+        }
+
+        foreach ($invoiceLine as $index => $line) {
+            $rowID = $this->getSubtableCount($attributes7[0]['subtable']) + 1;
+            foreach ($attributes7 as $attribute) {
+                $value = $values7[$attribute['id']][$index];
+                $this->setSubtableValue($attribute['subtable'], $rowID + $index, $attribute['value'], $value);
+            }
+        }
+
+
     }
 
     public function getUDL($udl, $elementID)
@@ -763,6 +814,21 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => RESOLVEDISSUES, 'value' => 'resolvedIssuesCount'],
                 ['name' => HASPROCESSINGISSUES, 'value' => 'hasProcessingIssues'],
                 ['name' => DELIVERYDATE, 'value' => 'deliveryDate'],
+            ];
+        }
+
+        if ($elementID == 'positionDetails') {
+            return [
+                ['name' => '-', 'value' => ''],
+                ['name' => POSITIONNUMBER, 'value' => 'positionNumber'],
+                ['name' => SINGLENETPRICE, 'value' => 'singleNetPrice'],
+                ['name' => NETAMOUNT, 'value' => 'singleNetAmount'],
+                ['name' => QUANTITY, 'value' => 'quantity'],
+                ['name' => UNITOFMEASURECODE, 'value' => 'unitOfMeasureCode'],
+                ['name' => ARTICLENUMBER, 'value' => 'articleNumber'],
+                ['name' => ARTICLENAME, 'value' => 'articleName'],
+                ['name' => ITEMDESCRIPTION, 'value' => 'itemDescription'],
+                ['name' => VATRATEPERINVOICELINE, 'value' => 'vatRatePerLine']
             ];
         }
 
