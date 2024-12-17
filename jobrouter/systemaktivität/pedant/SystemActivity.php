@@ -448,7 +448,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $attributes2 = $this->resolveOutputParameterListAttributes('vendorDetails'); //vendorDetails
         $values2 = ($type == "e_invoice") ? [
-            'vendorBankNumber' => $paymentInstructionsCreditTransfer['paymentAccountIdentifierId'],
+            'vendorBankNumber' => $paymentInstructionsCreditTransfer['paymentAccountIdentifierId'][0],
             'vendorVatNumber' => $eInvoiceFields['vendorVatIdentifier'],
             'vendorTaxNumber' => $eInvoiceFields['vendorTaxRegistrationIdentifier'],
             'vendorCompanyName' => $eInvoiceFields['vendorName'],
@@ -536,11 +536,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'hasProcessingIssues' => $dataItem["hasProcessingIssues"],
             'deliveryDate' => date("Y-m-d", strtotime(str_replace(".", "-", $dataItem["deliveryDate"]))) . ' 00:00:00.000',
         ];
-
+        
         foreach ($attributes3 as $attribute) {
             $this->setTableValue($attribute['value'], $values3[$attribute['id']]);
         }
-
+       
         $attributes4 = $this->resolveOutputParameterListAttributes('auditTrailDetails'); //auditTrailDetails
         $auditTrail = $type == "e_invoice" ? $auditTrailItem : $dataItem["auditTrail"];
 
@@ -729,7 +729,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             }
         }
 
-
+        
     }
 
     public function getUDL($udl, $elementID)
