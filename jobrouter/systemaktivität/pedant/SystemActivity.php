@@ -415,12 +415,12 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $dataItem = $data['data'][0];
         $eInvoiceFields = $dataItem['eInvoiceFields'];
-        $paymentInstructionsCreditTransfer = $eInvoiceFields['paymentInstructionsCreditTransfer'][0];
+        $paymentInstructionsCreditTransfer = $eInvoiceFields['paymentInstructionsCreditTransfer'][0] ?? [];
         $document = $dataItem['document'];
         $vatBreakdown = $eInvoiceFields['vatBreakdown'][0];
         $auditTrailItem = $dataItem['auditTrail'][0];
         $taxRates = $dataItem['taxRates'];
-        $vatBreakdown = $eInvoiceFields['vatBreakdown'];
+        $vatBreakdown = $eInvoiceFields['vatBreakdown'] ?? [];
         $recipientEntity = $dataItem['recipientEntity'];
         $vendorEntity = $dataItem['vendorEntity'];
 
@@ -698,7 +698,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         ];
 
         if($type == "e_invoice"){
-            $invoiceLine = $eInvoiceFields['invoiceLine'];
+            $invoiceLine = $eInvoiceFields['invoiceLine'] ?? [];
             
             foreach ($invoiceLine as $line) {
                 $values7['positionNumber'][] = $line['invoiceLineIdentifierId'];
