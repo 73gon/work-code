@@ -420,6 +420,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $vatBreakdown = $eInvoiceFields['vatBreakdown'][0];
         $auditTrailItem = $dataItem['auditTrail'][0];
         $taxRates = $dataItem['taxRates'];
+        $vatBreakdown = $eInvoiceFields['vatBreakdown'];
+        $recipientEntity = $dataItem['recipientEntity'];
+        $vendorEntity = $dataItem['vendorEntity'];
 
         $attributes1 = $this->resolveOutputParameterListAttributes('recipientDetails'); //recipientDetails
         $values1 = ($type == "e_invoice") ? [
@@ -430,7 +433,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'recipientCity' => $eInvoiceFields['recipientPostalAddressCity'],
             'recipientCountry' => $eInvoiceFields['recipientPostalAddressCountryCode'],
             'recipientVatNumber' => $eInvoiceFields['recipientVatIdentifier'],
-            'recipientInternalNumber' => ''
+            'recipientInternalNumber' => $recipientEntity['internalNumber']
         ] : [
             'recipientCompanyName' => $dataItem["recipientCompanyName"],
             'recipientName' => $dataItem["recipientName"],
@@ -458,7 +461,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'vendorCountry' => $eInvoiceFields['vendorPostalAddressCountryCode'],
             'vendorDeliveryPeriod' => '',
             'vendorAccountNumber' => '',
-            'vendorInternalNumber' => ''
+            'vendorInternalNumber' => $vendorEntity['internalNumber']
         ] : [
             'vendorBankNumber' => $dataItem["bankNumber"],
             'vendorVatNumber' => $dataItem["vat"],
@@ -480,19 +483,19 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $attributes3 = $this->resolveOutputParameterListAttributes('invoiceDetails'); //invoiceDetails
 
         $values3 = ($type == "e_invoice") ? [
-            'taxRate1' => '',
-            'taxRate2' => '',
-            'taxRate3' => '',
-            'taxRate4' => '',
-            'taxRate5' => '',
+            'taxRate1' => count($vatBreakdown) > 1 ? $vatBreakdown[0]["vatCategoryTaxableAmount"] . ";" . $vatBreakdown[0]["vatCategoryTaxAmount"] . ";" . $vatBreakdown[0]["vatCategoryRate"] : '',
+            'taxRate2' => count($vatBreakdown) > 1 ? $vatBreakdown[1]["vatCategoryTaxableAmount"] . ";" . $vatBreakdown[1]["vatCategoryTaxAmount"] . ";" . $vatBreakdown[1]["vatCategoryRate"] : '',
+            'taxRate3' => count($vatBreakdown) > 2 ? $vatBreakdown[2]["vatCategoryTaxableAmount"] . ";" . $vatBreakdown[2]["vatCategoryTaxAmount"] . ";" . $vatBreakdown[2]["vatCategoryRate"] : '',
+            'taxRate4' => count($vatBreakdown) > 3 ? $vatBreakdown[3]["vatCategoryTaxableAmount"] . ";" . $vatBreakdown[3]["vatCategoryTaxAmount"] . ";" . $vatBreakdown[3]["vatCategoryRate"] : '',
+            'taxRate5' => count($vatBreakdown) > 4 ? $vatBreakdown[4]["vatCategoryTaxableAmount"] . ";" . $vatBreakdown[4]["vatCategoryTaxAmount"] . ";" . $vatBreakdown[4]["vatCategoryRate"] : '',
             'invoiceNumber' => $eInvoiceFields['invoiceNumber'],
             'date' => date("Y-m-d", strtotime(str_replace(".", "-", $eInvoiceFields['invoiceIssueDate']))) . ' 00:00:00.000',
             'netAmount' => $eInvoiceFields['sumOfInvoiceLineNetAmount'],
             'taxAmount' => $eInvoiceFields['invoiceTotalVatAmount'],
             'grossAmount' => $eInvoiceFields['invoiceTotalAmountWithVat'],
-            'taxRate' => $vatBreakdown['vatCategoryRate'],
+            'taxRate' => count($vatBreakdown) == 1 ? $vatBreakdown[0]['vatCategoryRate'] : '',
             'projectNumber' => $eInvoiceFields['projectReferenceId'],
-            'purchaseOrder' => '',
+            'purchaseOrder' => '', //purchaseOrderReference
             'purchaseDate' => '',
             'hasDiscount' => '',
             'refund' => '',
@@ -504,7 +507,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'note' => $document['note'],
             'status' => $dataItem['status'],
             'currency' => $eInvoiceFields['invoiceCurrencyCode'],
-            'resolvedIssuesCount' => '',
+            'resolvedIssuesCount' => $dataItem["resolvedIssuesCount"],
             'hasProcessingIssues' => '',
             'deliveryDate' => date("Y-m-d", strtotime(str_replace(".", "-", $eInvoiceFields['deliveryInformationActualDeliveryDate']))) . ' 00:00:00.000',
         ] : [
@@ -682,20 +685,21 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $attributes7 = $this->resolveOutputParameterListAttributes('positionDetails'); //positionDetails
 
+        $values7 = [
+            'positionNumber' => [],
+            'singleNetPrice' => [],
+            'singleNetAmount' => [],
+            'quantity' => [],
+            'unitOfMeasureCode' => [],
+            'articleNumber' => [],
+            'articleName' => [],
+            'itemDescription' => [],
+            'vatRatePerLine' => []
+        ];
+
         if($type == "e_invoice"){
             $invoiceLine = $eInvoiceFields['invoiceLine'];
-            $values7 = [
-                'positionNumber' => [],
-                'singleNetPrice' => [],
-                'singleNetAmount' => [],
-                'quantity' => [],
-                'unitOfMeasureCode' => [],
-                'articleNumber' => [],
-                'articleName' => [],
-                'itemDescription' => [],
-                'vatRatePerLine' => []
-            ];
-
+            
             foreach ($invoiceLine as $line) {
                 $values7['positionNumber'][] = $line['invoiceLineIdentifierId'];
                 $values7['singleNetPrice'][] = $line['priceDetailsItemNetPrice'];
@@ -707,18 +711,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 $values7['itemDescription'][] = $line['itemInformationItemDescription'];
                 $values7['vatRatePerLine'][] = $line['lineVatInformationInvoicedItemVatRate'];
             }
-        } else {
-            $values7 = [
-                'positionNumber' => [],
-                'singleNetPrice' => [],
-                'singleNetAmount' => [],
-                'quantity' => [],
-                'unitOfMeasureCode' => [],
-                'articleNumber' => [],
-                'articleName' => [],
-                'itemDescription' => [],
-                'vatRatePerLine' => [],
-            ];
         }
 
         foreach ($invoiceLine as $index => $line) {
