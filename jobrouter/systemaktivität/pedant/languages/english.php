@@ -112,3 +112,4 @@ define('ARTICLENAME', 'Articlename');
 define('ITEMDESCRIPTION', 'Itemdescription');
 define('VATRATEPERINVOICELINE', 'Vatrate per invoiceline');
 define('POSITIONDETAILS', 'Positiondetails');
+define('ZUGFERD', 'ZUGFeRD Edit'); 

@@ -90,8 +90,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if ($fileSizeMB > $this->maxFileSize) {
             throw new JobRouterException("File size exceeds the maximum limit of $this->maxFileSize MB. Actual size: $fileSizeMB MB.");
         }
-
-        $url = ($this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL) . "/v2/external/documents/invoices/upload";
+        
+        $url = ($this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL) . 
+               ($this->resolveInputParameter('zugferd') === 1 ? "/v1/external/documents/invoices/upload" : "/v2/external/documents/invoices/upload");
 
         $validFlags = ['normal', 'check_extraction', 'skip_review', 'force_skip'];
         $flag = $this->resolveInputParameter('flag');
