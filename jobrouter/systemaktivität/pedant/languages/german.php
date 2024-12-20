@@ -111,3 +111,4 @@ define('ITEMDESCRIPTION', 'Artikelbeschreibung');
 define('VATRATEPERINVOICELINE', 'Steuersatz pro Rechnungszeile');
 define('POSITIONDETAILS', 'Positionsdetails');
 define('ZUGFERD', 'ZUGFeRD bearbeiten');
+define('MAXFILESIZE', 'Maximale Dateigröße');

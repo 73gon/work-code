@@ -4,7 +4,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     private $outputFileName = "pedantOutput.csv";
     private $demoURL  = "https://api.demo.pedant.ai";
     private $productiveURL = "https://api.pedant.ai";
-    private $maxFileSize = 2; // in MegaBytes
+    private $maxFileSize = 20;
 
     public function getActivityName()
     {
@@ -25,7 +25,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
     protected function pedant() //TODO runs one iteration more than needed
     {
+        $this->maxFileSize = $this->resolveInputParameter('maxFileSize') ?: 20;
         $this->setResubmission($this->resolveInputParameter('new') ? 17520 : $this->resolveInputParameter('intervalOld'), $this->resolveInputParameter('new') ? 'h' : 'm');
+        
         date_default_timezone_set("Europe/Berlin");
 
         if ($this->getSystemActivityVar('FILEID')) {
