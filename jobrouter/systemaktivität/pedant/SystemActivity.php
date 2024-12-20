@@ -27,7 +27,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     {
         $this->maxFileSize = $this->resolveInputParameter('maxFileSize') ?: 20;
         $this->setResubmission($this->resolveInputParameter('new') ? 17520 : $this->resolveInputParameter('intervalOld'), $this->resolveInputParameter('new') ? 'h' : 'm');
-        
+
         date_default_timezone_set("Europe/Berlin");
 
         if ($this->getSystemActivityVar('FILEID')) {
@@ -510,8 +510,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'note' => $document['note'],
             'status' => $dataItem['status'],
             'currency' => $eInvoiceFields['invoiceCurrencyCode'],
-            'resolvedIssuesCount' => $dataItem["resolvedIssuesCount"],
-            'hasProcessingIssues' => '',
+            'resolvedIssuesCount' => $dataItem['resolvedIssuesCount'],
+            'hasProcessingIssues' => $dataItem['hasProcessingIssues'],
             'deliveryDate' => date("Y-m-d", strtotime(str_replace(".", "-", $eInvoiceFields['deliveryInformationActualDeliveryDate']))) . ' 00:00:00.000',
         ] : [
             'taxRate1' => $taxRates[0]["subNetAmount"] . ";" . $taxRates[0]["subTaxAmount"] . ";" . $taxRates[0]["subTaxRate"],
