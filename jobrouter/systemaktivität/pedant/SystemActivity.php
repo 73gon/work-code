@@ -23,7 +23,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return file_get_contents(__DIR__ . '/dialog.xml');
     }
 
-    protected function pedant() //TODO runs one iteration more than needed
+    protected function pedant() //TODO runs one iteration more than needed //action für einvoice und pdf getrennt 
     {
         $this->maxFileSize = $this->resolveInputParameter('maxFileSize') ?: 20;
         $this->setResubmission($this->resolveInputParameter('new') ? 17520 : $this->resolveInputParameter('intervalOld'), $this->resolveInputParameter('new') ? 'h' : 'm');
@@ -587,13 +587,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
 
-        $attributes6 = $this->resolveOutputParameterListAttributes('attachments'); //atttachments
+        $attributes6 = $this->resolveOutputParameterListAttributes('attachments'); //attachments
 
         if($type == "e_invoice"){
             //pdf
             $urlPDF = $dataItem['eInvoicePdfPath'];
             $tempPath = $this->getTempPath();
-            $tempFILEID = $this->getSystemActivityVar('FILEID');
+            $tempFileName = $dataItem['fileName'];
             $savePath = $tempPath . "/pedant";
 
             if (!is_dir($savePath)) {
@@ -609,7 +609,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $dataPDF = curl_exec($ch);
             curl_close($ch);
 
-            $eInvoicePDF = $savePath . "/" . $tempFILEID . "_PDF_.pdf";
+            $eInvoicePDF = $savePath . "/" . $tempFileName . "_PDF_.pdf";
             file_put_contents($eInvoicePDF, $dataPDF);
             $this->setSystemActivityVar('PDFPATH', $eInvoicePDF);
 
@@ -629,7 +629,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $dataReport = curl_exec($ch);
             curl_close($ch);
 
-            $eInvoiceReport= $savePath . "/" . $tempFILEID . "_REPORT_.xml";
+            $eInvoiceReport= $savePath . "/" . $tempFileName . "_REPORT_.xml";
             file_put_contents($eInvoiceReport, $dataReport);
             $this->setSystemActivityVar('REPORTPATH', $eInvoiceReport);
 
@@ -650,7 +650,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 curl_close($ch);
 
                 if ($dataAttachment !== false) {
-                    $attachmentPath = $savePath . "/" . $tempFILEID . "_ATTACHMENT_" . ($index + 1) . ".pdf";
+                    $attachmentPath = $savePath . "/" . $tempFileName . "_ATTACHMENT_" . ($index + 1) . ".pdf";
                     file_put_contents($attachmentPath, $dataAttachment);
                     $this->setSystemActivityVar('ATTACHMENTPATH' .$index, $attachmentPath);
                     $attachmentFiles[] = $attachmentPath;
