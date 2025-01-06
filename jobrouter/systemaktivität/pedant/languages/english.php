@@ -13,6 +13,7 @@ define('DEMO', 'Demo');
 define('INTNUMBER', 'Recipient Pre-selections');
 define('INCIDENT', 'Incident');
 define('FLAG', 'Flag');
+define('FLAGXML', 'Flag XML');
 define('NEWVERSION', 'New Version');
 define('FLAG_DESC', "If only error-free files should be fetched and exported, enter 'check_extraction'.\nIf all files should be fetched, enter 'skip_review'.\nIf all files should be fetched and exported, enter 'force_skip'.");
 define('TABLEHEAD', 'Tablehead Name');

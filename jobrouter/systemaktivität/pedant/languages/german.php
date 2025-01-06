@@ -12,6 +12,7 @@ define('DEMO', 'Demo');
 define('INTNUMBER', 'Mandant Vorauswahl');
 define('INCIDENT', 'Vorgang');
 define('FLAG', 'Flag');
+define('FLAGXML', 'Flag XML');
 define('NEWVERSION', 'Neue Version (2 SysAkt)');
 define('FLAG_DESC', "Wenn nur fehlerfreie Dateien abgeholt und nach Verifizierung des Nutzers exportiert werden sollen dann 'check_extraction eingeben. Wenn nur fehlerfreie Dateien abgeholt und ohne Verifizierung des Nutzers exportiert werden sollen dann 'skip_review' eingeben. Wenn alle Dateien abgeholt und exportiert werden sollen dann 'force_skip' eingeben.");
 define('TABLEHEAD', 'Kopftabellenname');

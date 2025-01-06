@@ -86,7 +86,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     {
         $curl = curl_init();
         $file = $this->getUploadPath() . $this->resolveInputParameter('inputFile');
-
+        $fileExtension = pathinfo($file, PATHINFO_EXTENSION);
         $fileSizeB = filesize($file);
         $fileSizeMB = $fileSizeB / (1024 * 1024);
         if ($fileSizeMB > $this->maxFileSize) {
@@ -97,14 +97,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                ($this->resolveInputParameter('zugferd') === 1 ? "/v1/external/documents/invoices/upload" : "/v2/external/documents/invoices/upload");
 
         $validFlags = ['normal', 'check_extraction', 'skip_review', 'force_skip'];
-        $flag = $this->resolveInputParameter('flag');
+       
+        $flag = $this->resolveInputParameter(strtolower($fileExtension) == 'xml' ? 'flagXML' : 'flag');
+
         if (!in_array($flag, $validFlags)) {
             throw new Exception('Invalid input parameter value for FLAG: ' . $flag);
         }
+
         $action = $flag;
 
         curl_setopt_array($curl, array(
-            CURLOPT_URL => $url,
+            CURLOPT_URL => $url,    
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
