@@ -23,7 +23,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return file_get_contents(__DIR__ . '/dialog.xml');
     }
 
-    protected function pedant() //TODO runs one iteration more than needed //action für einvoice und pdf getrennt 
+    protected function pedant() //TODO runs one iteration more than needed
     {
         $this->maxFileSize = $this->resolveInputParameter('maxFileSize') ?: 20;
         $this->setResubmission($this->resolveInputParameter('new') ? 17520 : $this->resolveInputParameter('intervalOld'), $this->resolveInputParameter('new') ? 'h' : 'm');
@@ -204,16 +204,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         if ($check === true) {
             if($type = "e_invoice"){
-                unlink($this->getSystemActivityVar('PDFPATH'));
-                unlink($this->getSystemActivityVar('REPORTPATH'));
+                $pdfPath = $this->getSystemActivityVar('PDFPATH');
+                if (file_exists($pdfPath)) {unlink($pdfPath);}
+
+                $reportPath = $this->getSystemActivityVar('REPORTPATH');
+                if (file_exists($reportPath)) {unlink($reportPath);}
     
                 $index = 0;
                 while (true) {
                     $attachmentPath = $this->getSystemActivityVar('ATTACHMENTPATH' . $index);
                     if (!$attachmentPath) {break;}
-                    if (file_exists($attachmentPath)) {
-                        unlink($attachmentPath);
-                    }
+                    if (file_exists($attachmentPath)) {unlink($attachmentPath);}
                     $index++;
                 }
             }
@@ -501,7 +502,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'grossAmount' => $eInvoiceFields['invoiceTotalAmountWithVat'],
             'taxRate' => count($vatBreakdown) == 1 ? $vatBreakdown[0]['vatCategoryRate'] : '',
             'projectNumber' => $eInvoiceFields['projectReferenceId'],
-            'purchaseOrder' => '', //purchaseOrderReference
+            'purchaseOrder' => '',
             'purchaseDate' => '',
             'hasDiscount' => '',
             'refund' => '',
