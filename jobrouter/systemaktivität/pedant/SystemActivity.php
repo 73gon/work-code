@@ -94,7 +94,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
         
         $url = ($this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL) . 
-               ($this->resolveInputParameter('zugferd') === 1 ? "/v1/external/documents/invoices/upload" : "/v2/external/documents/invoices/upload");
+               ($this->resolveInputParameter('zugferd') == '1' ? "/v1/external/documents/invoices/upload" : "/v2/external/documents/invoices/upload");
 
         $validFlags = ['normal', 'check_extraction', 'skip_review', 'force_skip'];
        
