@@ -114,4 +114,6 @@ define('ITEMDESCRIPTION', 'Itemdescription');
 define('VATRATEPERINVOICELINE', 'Vatrate per invoiceline');
 define('POSITIONDETAILS', 'Positiondetails');
 define('ZUGFERD', 'ZUGFeRD Edit');
-define('MAXFILESIZE', 'Max Filesize'); 
+define('MAXFILESIZE', 'Max Filesize');
+define('WORKFLOWDETAILS', 'Workflowdetails');
+define('DIREKT', 'Direct');

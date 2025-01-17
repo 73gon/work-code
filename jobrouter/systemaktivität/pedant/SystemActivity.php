@@ -92,13 +92,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if ($fileSizeMB > $this->maxFileSize) {
             throw new JobRouterException("File size exceeds the maximum limit of $this->maxFileSize MB. Actual size: $fileSizeMB MB.");
         }
-        
-        $url = ($this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL) . 
-               (strtolower($fileExtension) == 'xml' ? "/v2/external/documents/invoices/upload" : 
+
+        $url = ($this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL) .
+               (strtolower($fileExtension) == 'xml' ? "/v2/external/documents/invoices/upload" :
                ($this->resolveInputParameter('zugferd') == '1' ? "/v1/external/documents/invoices/upload" : "/v2/external/documents/invoices/upload"));
 
         $validFlags = ['normal', 'check_extraction', 'skip_review', 'force_skip'];
-       
+
         $flag = $this->resolveInputParameter('flag');
         if (strtolower($fileExtension) == 'xml') {
             $flagXML = $this->resolveInputParameter('flagXML');
@@ -117,7 +117,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $action = $flag;
 
         curl_setopt_array($curl, array(
-            CURLOPT_URL => $url,    
+            CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
@@ -144,7 +144,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             throw new JobRouterException('Error occurred during file upload. HTTP Error Code: ' . $httpcode);
         }
         curl_close($curl);
-        
+
         $fileId =  $data['files'][0]['fileId'];
         $invoiceId = $data['files'][0]['invoiceId'];
         $type = $data['files'][0]['type'];
@@ -219,7 +219,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
                 $reportPath = $this->getSystemActivityVar('REPORTPATH');
                 if (file_exists($reportPath)) {unlink($reportPath);}
-    
+
                 $index = 0;
                 while (true) {
                     $attachmentPath = $this->getSystemActivityVar('ATTACHMENTPATH' . $index);
@@ -255,7 +255,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $lastKey = $listindex;
             }
         }
-        
+
         foreach ($list as $listindex => $listvalue) {
             if (!empty($listvalue)) {
                 $temp .= $listvalue . " AS " . $fields[$listindex - 1];
@@ -264,7 +264,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 }
             }
         }
-        
+
         $temp .= " FROM " . $table;
         $result = $JobDB->query($temp);
         $payload = [];
@@ -279,7 +279,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $csvData = [];
         $csvData[] = $fields;
-        
+
         foreach ($payloads as $payload) {
             $rowData = [];
             foreach ($fields as $field) {
@@ -300,7 +300,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $url = $this->resolveInputParameter('demo') == '1' ? "$this->demoURL/v2/external/entities/vendors/import" : 'https://entity.api.pedant.ai/v2/external/entities/vendors/import';
 
         $curl = curl_init();
-        
+
         curl_setopt_array($curl, array(
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
@@ -337,12 +337,12 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if ($httpcode != 200) {
             throw new JobRouterException('Error occurred during vendor update. HTTP Error Code: ' . $httpcode);
         }
-        
+
         curl_close($curl);
         unlink($csvFilePath);
     }
 
-    protected function fetchInvoices() 
+    protected function fetchInvoices()
     {
         $curl = curl_init();
 
@@ -415,7 +415,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 return "MySQL";
             }
         } catch (Exception $e) {}
-    
+
         try {
             $result = $jobDB->query("SELECT @@VERSION");
             $row = $jobDB->fetchAll($result);
@@ -556,11 +556,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'hasProcessingIssues' => $dataItem["hasProcessingIssues"],
             'deliveryDate' => date("Y-m-d", strtotime(str_replace(".", "-", $dataItem["deliveryDate"]))) . ' 00:00:00.000',
         ];
-        
+
         foreach ($attributes3 as $attribute) {
             $this->setTableValue($attribute['value'], $values3[$attribute['id']]);
         }
-       
+
         $attributes4 = $this->resolveOutputParameterListAttributes('auditTrailDetails'); //auditTrailDetails
         $auditTrail = $type == "e_invoice" ? $auditTrailItem : $dataItem["auditTrail"];
 
@@ -585,7 +585,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'rejectionCode' => $type == "e_invoice" ? '' : ($dataItem['rejectionType']['code'] ?? null),
             'rejectionType' => $type == "e_invoice" ? '' : ($dataItem['rejectionType']['type'] ?? null)
         ];
-        if($type == "e_invoice"){  
+        if($type == "e_invoice"){
             $violations = [];
             foreach ($dataItem['violations'] as $violation) {
                 $messages = implode(', ', $violation['messages']);
@@ -613,13 +613,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             if (!is_dir($savePath)) {
                 mkdir($savePath, 0777, true);
             }
-            
+
             $ch = curl_init($urlPDF);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-            
+
             $dataPDF = curl_exec($ch);
             curl_close($ch);
 
@@ -633,13 +633,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             if (!is_dir($savePath)) {
                 mkdir($savePath, 0777, true);
             }
-            
+
             $ch = curl_init($urlReport);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-            
+
             $dataReport = curl_exec($ch);
             curl_close($ch);
 
@@ -668,14 +668,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     file_put_contents($attachmentPath, $dataAttachment);
                     $this->setSystemActivityVar('ATTACHMENTPATH' .$index, $attachmentPath);
                     $attachmentFiles[] = $attachmentPath;
-                } 
+                }
             }
 
             $values6 = [
                 'e_invoicePDF' => $eInvoicePDF,
                 'e_invoiceReport' => $eInvoiceReport
             ];
-            
+
 
             foreach ($attachmentFiles as $i => $attachmentPath) {
                 $values6['e_invoiceAttachments'][] = $attachmentPath;
@@ -687,7 +687,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 'e_invoiceAttachments' => []
             ];
         }
-            
+
         foreach ($attributes6 as $attribute) {
             $value = $values6[$attribute['id']];
             if ($attribute['subtable'] == "") {
@@ -716,7 +716,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         if($type == "e_invoice"){
             $invoiceLine = $eInvoiceFields['invoiceLine'] ?? [];
-            
+
             foreach ($invoiceLine as $line) {
                 $values7['positionNumber'][] = $line['invoiceLineIdentifierId'];
                 $values7['singleNetPrice'][] = $line['priceDetailsItemNetPrice'];
@@ -738,7 +738,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             }
         }
 
-        
+        $attributes8 = $this->resolveOutputParameterListAttributes('workflowDetails'); //workflowDetails
+
+        $workflows = $dataItem['workflows'];
+
+        $values8 = [
+            'direkt' => !empty($workflows) && ($workflows[0]['name'] ?? '') === 'Direkt' ? 1 : 0
+        ];
+
+        foreach ($attributes8 as $attribute) {
+            $this->setTableValue($attribute['value'], $values8[$attribute['id']]);
+        }
     }
 
     public function getUDL($udl, $elementID)
@@ -869,6 +879,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => E_INVOICEATTACHMENT1, 'value' => 'e_invoiceAttachments']
             ];
         }
+
+        if ($elementID == 'workflowDetails') {
+            return [
+                ['name' => '-', 'value' => ''],
+                ['name' => DIREKT, 'value' => 'direkt']
+            ];
+        }
         return null;
     }
 }
+//Version 1.1.0

@@ -19,19 +19,20 @@
                     <field id='maxFileSize' name='MAXFILESIZE' worktable='yes' subtable='no' fixed='yes' datatype='int' required='no'/>
                     <field id="vendorTable" name="VENDORTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no"/>
                     <list id="postVendor" name="POSTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
-                </inputParameters> 
+                </inputParameters>
                 <outputParameters>
 					<field id='fileID' name='FILEID' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='invoiceID' name='INVOICEID' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
                     <field id='tempJSON' name='TEMPJSON' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
-					<list id='recipientDetails' name='RECIPIENTDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>				
+					<list id='recipientDetails' name='RECIPIENTDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
 					<list id='vendorDetails' name='VENDORDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
 					<list id='invoiceDetails' name='INVOICEDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
                     <list id='positionDetails' name='POSITIONDETAILS' worktable='no' subtable='yes' fixed='no' datatype='varchar' required='no' udl='yes'/>
                     <list id='auditTrailDetails' name='AUDITTRAILDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
                     <list id='rejectionDetails' name='REJECTIONDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
                     <list id='attachments' name='ATTACHMENTS' worktable='yes' subtable='yes' fixed='no' datatype='file' required='no' udl='yes'/>
-                </outputParameters> 
+                    <list id='workflowDetails' name='WORKFLOWDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
+                </outputParameters>
 			</function>
             <function id='pedantData' name='DATA' description='DATA_DESC'>
                 <inputParameters>
@@ -39,9 +40,9 @@
                     <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
                     <field id="vendorTable" name="VENDORTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
                     <list id="postVendor" name="POSTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
-                </inputParameters> 
+                </inputParameters>
                 <outputParameters>
-                </outputParameters> 
+                </outputParameters>
             </function>
             <function id='fetchData' name='FETCH' description='FETCH_DESC'>
                 <inputParameters>
@@ -52,9 +53,9 @@
                     <field id="interval" name="INTERVAL" description="INTERVAL_DESC" worktable="yes" subtable="no" fixed="yes" datatype="int" required="yes"/>
                     <field id="worktime" name="WORKTIME" description="WORKTIME_DESC" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
                     <field id="weekend" name="WEEKEND" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes" texttype="checkbox"/>
-                </inputParameters> 
+                </inputParameters>
                 <outputParameters>
-                </outputParameters> 
+                </outputParameters>
             </function>
         </functions>
         <simulation>
