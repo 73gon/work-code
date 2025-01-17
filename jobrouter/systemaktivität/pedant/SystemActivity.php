@@ -23,12 +23,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return file_get_contents(__DIR__ . '/dialog.xml');
     }
 
-    protected function pedant() //TODO runs one iteration more than needed
+    protected function pedant()
     {
         $this->maxFileSize = $this->resolveInputParameter('maxFileSize') ?: 20;
         $this->setResubmission($this->resolveInputParameter('new') ? 17520 : $this->resolveInputParameter('intervalOld'), $this->resolveInputParameter('new') ? 'h' : 'm');
 
-        date_default_timezone_set("Europe/Berlin");
+        if (!date_default_timezone_get()) {
+            date_default_timezone_set('Europe/Berlin');
+        }
 
         if ($this->getSystemActivityVar('FILEID')) {
             $this->checkFile();
@@ -53,7 +55,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $worktime = $this->resolveInputParameter('worktime');
         $weekend = $this->resolveInputParameter('weekend');
 
-        date_default_timezone_set('Europe/Berlin');
         list($startTime, $endTime) = array_map('intval', explode(',', $worktime));
         list($currentHour, $currentDayOfWeek) = [(int) (new DateTime())->format('G'), (int) (new DateTime())->format('w')];
 
@@ -889,4 +890,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.1.0
+//Version 1.1.1
