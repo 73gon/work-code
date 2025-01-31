@@ -10,11 +10,11 @@ echo $incidents;
 function getIncidents($einheit){
     $JobDB = DBFactory::getJobDB();
 
-    $temp = "   
+    $temp = "
                 SELECT j.STEP, COUNT(j.STEP) AS STEP_COUNT, j.steplabel
                 FROM JRINCIDENTS j
                 INNER JOIN JRINCIDENT i ON j.processid = i.processid
-                LEFT JOIN RE_HEAD r ON j.process_step_id = r.step_id 
+                LEFT JOIN RE_HEAD r ON j.process_step_id = r.step_id
                 WHERE j.processname = 'RECHNUNGSBEARBEITUNG'
                 AND (j.STATUS = 0 OR j.STATUS = 1)
                 AND i.status = 0
@@ -69,7 +69,7 @@ function getIncidents($einheit){
             default:
                 break;
         }
-    }	
+    }
     array_unshift($incidents, (string)array_sum($incidents));
 
     return json_encode($incidents);

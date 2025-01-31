@@ -51,88 +51,79 @@ function getNormalSteps($indate, $outdate, $einheit)
 
     if($einheit != "Alle"){
         $query = "
-                    SELECT STEP AS step, 
-                        CONCAT(FLOOR(SUM(TIME_TO_SEC(duration)) / 86400), 'd: ',
-                            LPAD(FLOOR((SUM(TIME_TO_SEC(duration)) % 86400) / 3600), 2, '0'), 'h: ',
-                            LPAD(FLOOR((SUM(TIME_TO_SEC(duration)) % 3600) / 60), 2, '0'), 'm: ',
-                            LPAD(FLOOR(SUM(TIME_TO_SEC(duration)) % 60), 2, '0'), 's') AS sumTime, 
-                        CONCAT(FLOOR(AVG(TIME_TO_SEC(duration)) / 86400), 'd: ',
-                                LPAD(FLOOR((AVG(TIME_TO_SEC(duration)) % 86400) / 3600), 2, '0'), 'h: ',
-                                LPAD(FLOOR((AVG(TIME_TO_SEC(duration)) % 3600) / 60), 2, '0'), 'm: ',
-                                LPAD(FLOOR(AVG(TIME_TO_SEC(duration)) % 60), 2, '0'), 's') AS avgTime,
-                        COUNT(STEP) AS amount
-                    FROM (
-                    SELECT DOKUMENTENID, STEP, indate, outdate, TIMEDIFF(outdate, indate) AS duration
-                    FROM (
-                        SELECT r2.DOKUMENTENID, j2.STEP, j2.indate, j2.outdate
-                        FROM RECHNUGNEN r2
-                        LEFT JOIN RE_HEAD h2 ON r2.DOKUMENTENID = h2.DOKUMENTENID
-                        LEFT JOIN JRINCIDENTS j2 ON h2.step_id = j2.process_step_id
-                        AND j2.STEP IN (1, 2, 3, 4, 17, 5, 30, 40, 50, 15)
-                        AND j2.processname = 'RECHNUNGSBEARBEITUNG'
-                        AND (j2.indate >= '".$indate."' AND j2.indate < '".$outdate."')
-                        WHERE h2.EINHEITSNUMMER = '".$einheit."'
-                        GROUP BY r2.DOKUMENTENID, j2.STEP
-                        HAVING COUNT(*) = 1
-
-                        UNION ALL
-                        
-                        SELECT r1.DOKUMENTENID, j1.STEP, MIN(j1.indate) AS indate, MAX(j1.outdate) AS outdate
-                        FROM RECHNUGNEN r1
-                        LEFT JOIN RE_HEAD h1 ON r1.DOKUMENTENID = h1.DOKUMENTENID
-                        LEFT JOIN JRINCIDENTS j1 ON h1.step_id = j1.process_step_id
-                        AND j1.STEP IN (1, 2, 3, 4, 17, 5, 30, 40, 50, 15)
-                        AND j1.processname = 'RECHNUNGSBEARBEITUNG'
-                        AND (j1.indate >= '".$indate."' AND j1.indate < '".$outdate."')
-                        WHERE h1.EINHEITSNUMMER = '".$einheit."'
-                        GROUP BY r1.DOKUMENTENID, j1.STEP
-                        HAVING COUNT(*) > 1
-                    ) AS allDates
-                    ) AS final
-                    GROUP BY STEP
-                    ORDER BY STEP ASC
-                "; 
+                    WITH ProcessedData AS (
+                        SELECT j.STEP, TIMEDIFF(MAX(j.outdate), MIN(j.indate)) AS duration, COUNT(*) AS step_count
+                        FROM JRINCIDENTS j
+                        INNER JOIN RE_HEAD h ON j.process_step_id = h.step_id
+                        INNER JOIN RECHNUGNEN r ON h.DOKUMENTENID = r.DOKUMENTENID
+                        WHERE j.STEP IN (1, 2, 3, 4, 17, 5, 30, 40, 50, 15)
+                        AND j.processname = 'RECHNUNGSBEARBEITUNG'
+                        AND j.indate IS NOT NULL
+                        AND j.outdate IS NOT NULL
+                        AND (j.indate >= '".$indate."' AND j.indate < '".$outdate."')
+                        WHERE h.EINHEITSNUMMER = '".$einheit."'
+                        GROUP BY j.STEP, r.DOKUMENTENID
+                    ),
+                    AggregatedData AS (
+                        SELECT STEP, SUM(TIME_TO_SEC(duration)) AS total_seconds, AVG(TIME_TO_SEC(duration)) AS avg_seconds, COUNT(STEP) AS amount
+                        FROM ProcessedData
+                        GROUP BY STEP
+                    )
+                    SELECT
+                        STEP AS step,
+                        CONCAT(
+                            FLOOR(total_seconds / 86400), 'd: ',
+                            LPAD(FLOOR((total_seconds % 86400) / 3600), 2, '0'), 'h: ',
+                            LPAD(FLOOR((total_seconds % 3600) / 60), 2, '0'), 'm: ',
+                            LPAD(FLOOR(total_seconds % 60), 2, '0'), 's'
+                        ) AS sumTime,
+                        CONCAT(
+                            FLOOR(avg_seconds / 86400), 'd: ',
+                            LPAD(FLOOR((avg_seconds % 86400) / 3600), 2, '0'), 'h: ',
+                            LPAD(FLOOR((avg_seconds % 3600) / 60), 2, '0'), 'm: ',
+                            LPAD(FLOOR(avg_seconds % 60), 2, '0'), 's'
+                        ) AS avgTime,
+                        amount
+                    FROM AggregatedData
+                    ORDER BY STEP ASC;
+                ";
     }else{
         $query = "
-                    SELECT STEP AS step, 
-                        CONCAT(FLOOR(SUM(TIME_TO_SEC(duration)) / 86400), 'd: ',
-                            LPAD(FLOOR((SUM(TIME_TO_SEC(duration)) % 86400) / 3600), 2, '0'), 'h: ',
-                            LPAD(FLOOR((SUM(TIME_TO_SEC(duration)) % 3600) / 60), 2, '0'), 'm: ',
-                            LPAD(FLOOR(SUM(TIME_TO_SEC(duration)) % 60), 2, '0'), 's') AS sumTime, 
-                        CONCAT(FLOOR(AVG(TIME_TO_SEC(duration)) / 86400), 'd: ',
-                                LPAD(FLOOR((AVG(TIME_TO_SEC(duration)) % 86400) / 3600), 2, '0'), 'h: ',
-                                LPAD(FLOOR((AVG(TIME_TO_SEC(duration)) % 3600) / 60), 2, '0'), 'm: ',
-                                LPAD(FLOOR(AVG(TIME_TO_SEC(duration)) % 60), 2, '0'), 's') AS avgTime,
-                        COUNT(STEP) AS amount
-                    FROM (
-                    SELECT DOKUMENTENID, STEP, indate, outdate, TIMEDIFF(outdate, indate) AS duration
-                    FROM (
-                        SELECT r2.DOKUMENTENID, j2.STEP, j2.indate, j2.outdate
-                        FROM RECHNUGNEN r2
-                        LEFT JOIN RE_HEAD h2 ON r2.DOKUMENTENID = h2.DOKUMENTENID
-                        LEFT JOIN JRINCIDENTS j2 ON h2.step_id = j2.process_step_id
-                        AND j2.STEP IN (1, 2, 3, 4, 17, 5, 30, 40, 50, 15)
-                        AND j2.processname = 'RECHNUNGSBEARBEITUNG'
-                        AND (j2.indate >= '".$indate."' AND j2.indate < '".$outdate."')
-                        GROUP BY r2.DOKUMENTENID, j2.STEP
-                        HAVING COUNT(*) = 1
-
-                        UNION ALL
-                        
-                        SELECT r1.DOKUMENTENID, j1.STEP, MIN(j1.indate) AS indate, MAX(j1.outdate) AS outdate
-                        FROM RECHNUGNEN r1
-                        LEFT JOIN RE_HEAD h1 ON r1.DOKUMENTENID = h1.DOKUMENTENID
-                        LEFT JOIN JRINCIDENTS j1 ON h1.step_id = j1.process_step_id
-                        AND j1.STEP IN (1, 2, 3, 4, 17, 5, 30, 40, 50, 15)
-                        AND j1.processname = 'RECHNUNGSBEARBEITUNG'
-                        AND (j1.indate >= '".$indate."' AND j1.indate < '".$outdate."')
-                        GROUP BY r1.DOKUMENTENID, j1.STEP
-                        HAVING COUNT(*) > 1
-                    ) AS allDates
-                    ) AS final
+                WITH ProcessedData AS (
+                    SELECT j.STEP, TIMEDIFF(MAX(j.outdate), MIN(j.indate)) AS duration, COUNT(*) AS step_count
+                    FROM JRINCIDENTS j
+                    INNER JOIN RE_HEAD h ON j.process_step_id = h.step_id
+                    INNER JOIN RECHNUGNEN r ON h.DOKUMENTENID = r.DOKUMENTENID
+                    WHERE j.STEP IN (1, 2, 3, 4, 17, 5, 30, 40, 50, 15)
+                    AND j.processname = 'RECHNUNGSBEARBEITUNG'
+                    AND j.indate IS NOT NULL
+                    AND j.outdate IS NOT NULL
+                    AND (j.indate >= '".$indate."' AND j.indate < '".$outdate."')
+                    GROUP BY j.STEP, r.DOKUMENTENID
+                ),
+                AggregatedData AS (
+                    SELECT STEP, SUM(TIME_TO_SEC(duration)) AS total_seconds, AVG(TIME_TO_SEC(duration)) AS avg_seconds, COUNT(STEP) AS amount
+                    FROM ProcessedData
                     GROUP BY STEP
-                    ORDER BY STEP ASC
-                ";
+                )
+                SELECT
+                    STEP AS step,
+                    CONCAT(
+                        FLOOR(total_seconds / 86400), 'd: ',
+                        LPAD(FLOOR((total_seconds % 86400) / 3600), 2, '0'), 'h: ',
+                        LPAD(FLOOR((total_seconds % 3600) / 60), 2, '0'), 'm: ',
+                        LPAD(FLOOR(total_seconds % 60), 2, '0'), 's'
+                    ) AS sumTime,
+                    CONCAT(
+                        FLOOR(avg_seconds / 86400), 'd: ',
+                        LPAD(FLOOR((avg_seconds % 86400) / 3600), 2, '0'), 'h: ',
+                        LPAD(FLOOR((avg_seconds % 3600) / 60), 2, '0'), 'm: ',
+                        LPAD(FLOOR(avg_seconds % 60), 2, '0'), 's'
+                    ) AS avgTime,
+                    amount
+                FROM AggregatedData
+                ORDER BY STEP ASC;
+        ";
     }
     $result = $JobDB->query($query);
 
@@ -178,16 +169,16 @@ function getNormalSteps($indate, $outdate, $einheit)
 
 function getPayments($indate, $outdate, $einheit)
     {
-        
+
     $JobDB = DBFactory::getJobDB();
 
     if($einheit != "Alle"){
-        $query = "	
+        $query = "
                     SELECT
                         CONCAT(FLOOR(SUM(TIME_TO_SEC(notOverdue)) / 86400), 'd: ',
                             LPAD(FLOOR((SUM(TIME_TO_SEC(notOverdue)) % 86400) / 3600), 2, '0'), 'h: ',
                             LPAD(FLOOR((SUM(TIME_TO_SEC(notOverdue)) % 3600) / 60), 2, '0'), 'm: ',
-                            LPAD(FLOOR(SUM(TIME_TO_SEC(notOverdue)) % 60), 2, '0'), 's') AS sumNichtFaellig, 
+                            LPAD(FLOOR(SUM(TIME_TO_SEC(notOverdue)) % 60), 2, '0'), 's') AS sumNichtFaellig,
                         CONCAT(FLOOR(AVG(TIME_TO_SEC(notOverdue)) / 86400), 'd: ',
                             LPAD(FLOOR((AVG(TIME_TO_SEC(notOverdue)) % 86400) / 3600), 2, '0'), 'h: ',
                             LPAD(FLOOR((AVG(TIME_TO_SEC(notOverdue)) % 3600) / 60), 2, '0'), 'm: ',
@@ -196,21 +187,21 @@ function getPayments($indate, $outdate, $einheit)
                         CONCAT(FLOOR(SUM(TIME_TO_SEC(overdue)) / 86400), 'd: ',
                             LPAD(FLOOR((SUM(TIME_TO_SEC(overdue)) % 86400) / 3600), 2, '0'), 'h: ',
                             LPAD(FLOOR((SUM(TIME_TO_SEC(overdue)) % 3600) / 60), 2, '0'), 'm: ',
-                            LPAD(FLOOR(SUM(TIME_TO_SEC(overdue)) % 60), 2, '0'), 's') AS sumFaellig, 
+                            LPAD(FLOOR(SUM(TIME_TO_SEC(overdue)) % 60), 2, '0'), 's') AS sumFaellig,
                         CONCAT(FLOOR(AVG(TIME_TO_SEC(overdue)) / 86400), 'd: ',
                             LPAD(FLOOR((AVG(TIME_TO_SEC(overdue)) % 86400) / 3600), 2, '0'), 'h: ',
                             LPAD(FLOOR((AVG(TIME_TO_SEC(overdue)) % 3600) / 60), 2, '0'), 'm: ',
                             LPAD(FLOOR(AVG(TIME_TO_SEC(overdue)) % 60), 2, '0'), 's') AS avgFaellig,
                         COUNT(overdue) AS amountFaellig
-                    FROM (	
-                        SELECT r.DOKUMENTENID, r.VORGANGZL , r.RECHNUNGSFAELLIGKEIT, j.startdate, j.enddate, r.STATUS,
-                            CASE 
-                                WHEN r.RECHNUNGSFAELLIGKEIT < j.startdate THEN 
+                    FROM (
+                        SELECT
+                            CASE
+                                WHEN r.RECHNUNGSFAELLIGKEIT < j.startdate THEN
                                         TIMEDIFF(j.enddate, j.startdate)
                                 ELSE NULL
                                 END as notOverdue,
                             CASE
-                                WHEN r.RECHNUNGSFAELLIGKEIT > j.startdate THEN 
+                                WHEN r.RECHNUNGSFAELLIGKEIT > j.startdate THEN
                                     TIMEDIFF(r.RECHNUNGSFAELLIGKEIT, j.startdate)
                                 ELSE NULL
                                 END AS overdue
@@ -223,12 +214,12 @@ function getPayments($indate, $outdate, $einheit)
                     ) AS allPayments
                 ";
     }else{
-        $query = "	
+        $query = "
                     SELECT
                         CONCAT(FLOOR(SUM(TIME_TO_SEC(notOverdue)) / 86400), 'd: ',
                             LPAD(FLOOR((SUM(TIME_TO_SEC(notOverdue)) % 86400) / 3600), 2, '0'), 'h: ',
                             LPAD(FLOOR((SUM(TIME_TO_SEC(notOverdue)) % 3600) / 60), 2, '0'), 'm: ',
-                            LPAD(FLOOR(SUM(TIME_TO_SEC(notOverdue)) % 60), 2, '0'), 's') AS sumNichtFaellig, 
+                            LPAD(FLOOR(SUM(TIME_TO_SEC(notOverdue)) % 60), 2, '0'), 's') AS sumNichtFaellig,
                         CONCAT(FLOOR(AVG(TIME_TO_SEC(notOverdue)) / 86400), 'd: ',
                             LPAD(FLOOR((AVG(TIME_TO_SEC(notOverdue)) % 86400) / 3600), 2, '0'), 'h: ',
                             LPAD(FLOOR((AVG(TIME_TO_SEC(notOverdue)) % 3600) / 60), 2, '0'), 'm: ',
@@ -237,21 +228,21 @@ function getPayments($indate, $outdate, $einheit)
                         CONCAT(FLOOR(SUM(TIME_TO_SEC(overdue)) / 86400), 'd: ',
                             LPAD(FLOOR((SUM(TIME_TO_SEC(overdue)) % 86400) / 3600), 2, '0'), 'h: ',
                             LPAD(FLOOR((SUM(TIME_TO_SEC(overdue)) % 3600) / 60), 2, '0'), 'm: ',
-                            LPAD(FLOOR(SUM(TIME_TO_SEC(overdue)) % 60), 2, '0'), 's') AS sumFaellig, 
+                            LPAD(FLOOR(SUM(TIME_TO_SEC(overdue)) % 60), 2, '0'), 's') AS sumFaellig,
                         CONCAT(FLOOR(AVG(TIME_TO_SEC(overdue)) / 86400), 'd: ',
                             LPAD(FLOOR((AVG(TIME_TO_SEC(overdue)) % 86400) / 3600), 2, '0'), 'h: ',
                             LPAD(FLOOR((AVG(TIME_TO_SEC(overdue)) % 3600) / 60), 2, '0'), 'm: ',
                             LPAD(FLOOR(AVG(TIME_TO_SEC(overdue)) % 60), 2, '0'), 's') AS avgFaellig,
                         COUNT(overdue) AS amountFaellig
-                    FROM (	
-                        SELECT r.DOKUMENTENID, r.VORGANGZL , r.RECHNUNGSFAELLIGKEIT, j.startdate, j.enddate, r.STATUS,
-                            CASE 
-                                WHEN r.RECHNUNGSFAELLIGKEIT < j.startdate THEN 
+                    FROM (
+                        SELECT
+                            CASE
+                                WHEN r.RECHNUNGSFAELLIGKEIT < j.startdate THEN
                                         TIMEDIFF(j.enddate, j.startdate)
                                 ELSE NULL
                                 END as notOverdue,
                             CASE
-                                WHEN r.RECHNUNGSFAELLIGKEIT > j.startdate THEN 
+                                WHEN r.RECHNUNGSFAELLIGKEIT > j.startdate THEN
                                     TIMEDIFF(r.RECHNUNGSFAELLIGKEIT, j.startdate)
                                 ELSE NULL
                                 END AS overdue

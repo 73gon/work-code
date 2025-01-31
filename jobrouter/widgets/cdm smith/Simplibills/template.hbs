@@ -1,23 +1,24 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" type="text/css">
 <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
 
-<script> 
-let invisLabel = JSON.parse(document.getElementById("simplidents_invisLabel").innerHTML);
-let invisIncident = JSON.parse(document.getElementById("simplidents_invisIncident").innerHTML);
-let invisEinheit = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML);
+<script>
+let invisLabel= JSON.parse(document.getElementById("simplibills_invisLabel").innerHTML);
+let invisIncident= JSON.parse(document.getElementById("simplibills_invisIncident").innerHTML);
+let invisEinheit = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML).einheit;
+let invisEinheitsnummer = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML).einheitsnummer;
 
 
-simplidentsWidget();
-$j('#simplidents_outerBox').parent().toggleClass('simplidents_background', true);
+simplibillsWidget();
+$j('#simplibills_outerBox').parent().toggleClass('simplibills_background', true);
 
-function simplidentsWidget(){
-	let outerBox = document.getElementById("simplidents_outerBox");
+function simplibillsWidget(){
+	let outerBox = document.getElementById("simplibills_outerBox");
 
     let dropDown = document.createElement("select");
-    dropDown.id = "simplidents_dropDown";
-    dropDown.setAttribute("class", "simplidents_dropDown");
+    dropDown.id = "simplibills_dropDown";
+    dropDown.setAttribute("class", "simplibills_dropDown");
     dropDown.addEventListener("change", function() {
-        update1();
+        simplibillsUpdate();
     });
     for (let i = 0; i < invisEinheit.length; i++) {
         let option = document.createElement("option");
@@ -26,48 +27,48 @@ function simplidentsWidget(){
         dropDown.appendChild(option);
     }
     outerBox.appendChild(dropDown);
-    
     let gridContainer = document.createElement("div");
-        gridContainer.id = "simplidents_gridContainer";
-        gridContainer.setAttribute("class", "simplidents_gridContainer");
+        gridContainer.id = "simplibills_gridContainer";
+        gridContainer.setAttribute("class", "simplibills_gridContainer");
     outerBox.appendChild(gridContainer);
-    
-    createTable();
+    simplibillsCreateTable();
 }
 
-function createTable(){
-    let gridContainer = document.getElementById("simplidents_gridContainer");
-    gridContainer.innerHTML = '';
+function simplibillsCreateTable(){
+    let gridContainer = document.getElementById("simplibills_gridContainer");
+        gridContainer.innerHTML = "";
     let gridBoxLeft = document.createElement("div");
-    gridBoxLeft.setAttribute("class", "simplidents_gridBox");
+        gridBoxLeft.setAttribute("class", "simplibills_gridBox");
     gridContainer.appendChild(gridBoxLeft);
     let gridBoxRight = document.createElement("div");
-        gridBoxRight.setAttribute("class", "simplidents_gridBox");
+        gridBoxRight.setAttribute("class", "simplibills_gridBox");
     gridContainer.appendChild(gridBoxRight);
     for(let i = 0; i < invisLabel.length; i++){
         let label = document.createElement("div");
-            label.setAttribute("class", "simplidents_label");
+            label.setAttribute("class", "simplibills_label");
             label.innerHTML = invisLabel[i];
         gridBoxLeft.appendChild(label);
         let incident = document.createElement("div");
-            incident.setAttribute("class", "simplidents_incident");
+            incident.setAttribute("class", "simplibills_incident");
             incident.innerHTML = invisIncident[i];
         gridBoxRight.appendChild(incident);
     }
 }
 
-function update1() {
-    console.log("update1");
-    einheit = document.getElementById("simplidents_dropDown").value;
+function simplibillsUpdate() {
+    einheit = document.getElementById("simplibills_dropDown").value;
+    let einheitIndex = invisEinheit.indexOf(einheit);
+    let einheitsnummer = invisEinheitsnummer[einheitIndex];
 
     $j.ajax({
-        url: "dashboard/MyWidgets/Simplidents/query.php",
+        url: "dashboard/MyWidgets/Simplibills/query.php",
         type: "GET",
-        data: { einheit: einheit },
+        data: { einheit: einheitsnummer },
         dataType: "text",
         success: function (data) {
             invisIncident = JSON.parse(data);
-            createTable();
+            console.log(invisIncident);
+            simplibillsCreateTable();
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(textStatus, errorThrown);
@@ -79,12 +80,12 @@ function update1() {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-#simplidents_outerBox{
+#simplibills_outerBox{
     width: 100%;
     font-family: 'Poppins';
 }
 
-.simplidents_dropDown{
+.simplibills_dropDown{
     width: 100%;
     padding: 5px;
     font-size: 16px;
@@ -94,43 +95,43 @@ function update1() {
     color: #FFCC0D;
 }
 
-.simplidents_background{
+.simplibills_background{
     background-color: #3B3E4D;
     color: #FFCC0D;
     border: none;
 }
 
-.simplidents_gridContainer{
+.simplibills_gridContainer{
     display: grid;
     grid-template-columns: 70% 30%;
 }
 
-.simplidents_gridBox{
+.simplibills_gridBox{
     padding: 10px;
     font-size: 16px;
     line-height: 1.75;
 }
 
-.simplidents_label{
+.simplibills_label{
     border-bottom: 1px solid #252730;
     white-space: nowrap;
     overflow: hidden;
 	text-overflow: ellipsis;
 }
 
-.simplidents_incident{
+.simplibills_incident{
     text-align: right;
     border-bottom: 1px solid #252730;
     overflow: hidden;
 	text-overflow: ellipsis;
 }
 
-[id^="simplidents_invis"]{
+[id^="simplibills_invis"]{
     display: none;
 }
 </style>
 
-<div id="simplidents_invisIncident">{{incidents}}</div>
-<div id="simplidents_invisLabel">{{labels}}</div>
-<div id="simplidents_invisEinheit">{{einheit}}</div>
-<div id="simplidents_outerBox"></div>
+<div id="simplibills_invisIncident">{{incidents}}</div>
+<div id="simplibills_invisLabel">{{labels}}</div>
+<div id="simplibills_invisEinheit">{{einheit}}</div>
+<div id="simplibills_outerBox"></div>

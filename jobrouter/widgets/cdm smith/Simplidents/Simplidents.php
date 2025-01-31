@@ -3,12 +3,12 @@ namespace dashboard\MyWidgets\Simplidents;
 use JobRouter\Api\Dashboard\v1\Widget;
 
 class Simplidents extends Widget{
-	
-	
+
+
     public function getTitle(){
         return 'Aktuelle Vorgaenge';
     }
-	
+
 	public function getDimensions() {
 
         return [
@@ -28,13 +28,13 @@ class Simplidents extends Widget{
             'incidents' => $this->getIncidents(),
             'labels' => json_encode([
                 "Total",
-                "Erfassung", 
+                "Erfassung",
                 "Pruefung",
-                "Freigabe", 
-                "Buchhaltung DE", 
-                "Buchhaltung IFSC", 
+                "Freigabe",
+                "Buchhaltung DE",
+                "Buchhaltung IFSC",
                 "Einkauf",
-                "ausstehene Zahlungen", 
+                "ausstehene Zahlungen",
                 "Lieferantenanlage",
                 "Lieferantenanlage IFSC",
                 "Lieferantenanlage Compliance",
@@ -43,14 +43,14 @@ class Simplidents extends Widget{
             'einheit' => $this->getEinheit()
         ];
     }
-	
+
 	public function getIncidents(){
         $JobDB = $this->getJobDB();
-        $temp = "   
+        $temp = "
                     SELECT j.STEP, COUNT(j.STEP) AS STEP_COUNT, j.steplabel
                     FROM JRINCIDENTS j
                     INNER JOIN JRINCIDENT i ON j.processid = i.processid
-                    LEFT JOIN RE_HEAD r ON j.process_step_id = r.step_id 
+                    LEFT JOIN RE_HEAD r ON j.process_step_id = r.step_id
                     WHERE j.processname = 'RECHNUNGSBEARBEITUNG'
                     AND (j.STATUS = 0 OR j.STATUS = 1)
                     AND i.status = 0
@@ -101,7 +101,7 @@ class Simplidents extends Widget{
                 default:
                     break;
             }
-        }	
+        }
         array_unshift($incidents, (string)array_sum($incidents));
 
 	    return json_encode($incidents);
@@ -109,11 +109,11 @@ class Simplidents extends Widget{
 
     public function getEinheit(){
         $JobDB = $this->getJobDB();
-        $query = "  
-                    SELECT r.EINHEITSNUMMER
+        $query = "
+                    SELECT r.EINHEITSNAME, r.EINHEITSNUMMER
                     FROM JRINCIDENTS j
                     INNER JOIN JRINCIDENT i ON j.processid = i.processid
-                    LEFT JOIN RE_HEAD r ON j.process_step_id = r.step_id 
+                    LEFT JOIN RE_HEAD r ON j.process_step_id = r.step_id
                     WHERE j.processname = 'RECHNUNGSBEARBEITUNG'
                     AND (j.STATUS = 0 OR j.STATUS = 1)
                     AND i.status = 0
@@ -122,11 +122,16 @@ class Simplidents extends Widget{
                     GROUP BY r.EINHEITSNUMMER
                 ";
         $result = $JobDB->query($query);
-        $einheit = [];
+        $einheit = [
+            'einheit' => [],
+            'einheitsnummer' => []
+        ];
         while($row = $JobDB->fetchRow($result)){
-            $einheit[] = $row["EINHEITSNUMMER"];
+            $einheit['einheit'][] = $row["EINHEITSNAME"] . ' | ' . $row["EINHEITSNUMMER"];
+            $einheit['einheitsnummer'][] = $row["EINHEITSNUMMER"];
         }
-        array_unshift($einheit, "Alle");
+        array_unshift($einheit['einheit'], "Alle");
+        array_unshift($einheit['einheitsnummer'], "Alle");
         return json_encode($einheit);
     }
 }
