@@ -229,6 +229,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     $index++;
                 }
             }
+            $this->setResubmission(1, "s");
             $this->markActivityAsCompleted();
         }
     }
@@ -890,4 +891,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.1.1
+//Version 1.1.2

@@ -9,7 +9,7 @@ class Simplidone extends Widget
 
     public function getTitle()
     {
-        return 'Dauer gezahlter Rechnungen';
+        return 'Durchschnittliche Bearbeitungsdauer';
     }
 
     public function getDimensions()
