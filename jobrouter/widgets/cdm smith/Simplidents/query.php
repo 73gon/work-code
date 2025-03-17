@@ -28,7 +28,7 @@ function getIncidents($einheit){
     $result = $JobDB->query($temp);
 
 
-    $incidents = array_fill(0, 11, 0);
+    $incidents = array_fill(0, 12, 0);
     while($row = $JobDB->fetchRow($result)){
         switch ($row["STEP"]) {
             case "1":
@@ -50,21 +50,23 @@ function getIncidents($einheit){
             case "5":
                 $incidents[5] = $row["STEP_COUNT"];
                 break;
-            case "802":
             case "807":
-                $incidents[6] = (String)((int)$incidents[5] + (int)$row["STEP_COUNT"]);
+                $incidents[6] = $row["STEP_COUNT"];
+                break;
+            case "802":
+                $incidents[7] = (String)((int)$incidents[5] + (int)$row["STEP_COUNT"]);
                 break;
             case "30":
-                $incidents[7] = $row["STEP_COUNT"];
-                break;
-            case "40":
                 $incidents[8] = $row["STEP_COUNT"];
                 break;
-            case "50":
+            case "40":
                 $incidents[9] = $row["STEP_COUNT"];
                 break;
-            case "15":
+            case "50":
                 $incidents[10] = $row["STEP_COUNT"];
+                break;
+            case "15":
+                $incidents[11] = $row["STEP_COUNT"];
                 break;
             default:
                 break;

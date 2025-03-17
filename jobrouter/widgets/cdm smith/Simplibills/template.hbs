@@ -4,8 +4,8 @@
 <script>
 let invisLabel= JSON.parse(document.getElementById("simplibills_invisLabel").innerHTML);
 let invisIncident= JSON.parse(document.getElementById("simplibills_invisIncident").innerHTML);
-let invisEinheit = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML).einheit;
-let invisEinheitsnummer = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML).einheitsnummer;
+let invisEinheit = JSON.parse(document.getElementById("simplibills_invisEinheit").innerHTML).einheit;
+let invisEinheitsnummer = JSON.parse(document.getElementById("simplibills_invisEinheit").innerHTML).einheitsnummer;
 
 
 simplibillsWidget();
@@ -13,6 +13,10 @@ $j('#simplibills_outerBox').parent().toggleClass('simplibills_background', true)
 
 function simplibillsWidget(){
 	let outerBox = document.getElementById("simplibills_outerBox");
+
+    let dropDownContainer = document.createElement("div");
+    dropDownContainer.setAttribute("class", "simplibills_dropDownContainer");
+    outerBox.appendChild(dropDownContainer);
 
     let dropDown = document.createElement("select");
     dropDown.id = "simplibills_dropDown";
@@ -26,7 +30,13 @@ function simplibillsWidget(){
         option.text = invisEinheit[i];
         dropDown.appendChild(option);
     }
-    outerBox.appendChild(dropDown);
+    dropDownContainer.appendChild(dropDown);
+
+    let loader = document.createElement("div");
+    loader.setAttribute("class", "simplibills_loader");
+    loader.style.opacity = '0';
+    dropDownContainer.appendChild(loader)
+
     let gridContainer = document.createElement("div");
         gridContainer.id = "simplibills_gridContainer";
         gridContainer.setAttribute("class", "simplibills_gridContainer");
@@ -56,6 +66,9 @@ function simplibillsCreateTable(){
 }
 
 function simplibillsUpdate() {
+    let loader = document.getElementsByClassName("simplibills_loader")[0];
+    loader.style.opacity = '100';
+
     einheit = document.getElementById("simplibills_dropDown").value;
     let einheitIndex = invisEinheit.indexOf(einheit);
     let einheitsnummer = invisEinheitsnummer[einheitIndex];
@@ -69,6 +82,7 @@ function simplibillsUpdate() {
             invisIncident = JSON.parse(data);
             console.log(invisIncident);
             simplibillsCreateTable();
+            loader.style.opacity = '0';
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(textStatus, errorThrown);
@@ -85,12 +99,22 @@ function simplibillsUpdate() {
     font-family: 'Poppins';
 }
 
+.simplibills_dropDownContainer{
+    display: flex;
+    justify-content: space-between;
+    padding-top: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 10px;
+}
+
 .simplibills_dropDown{
     width: 100%;
     padding: 5px;
     font-size: 16px;
     line-height: 1.75;
-    border: none;
+    border: 1px solid #242730;
+    border-radius: 5px;
     background-color: #242730;
     color: #FFCC0D;
 }
@@ -124,6 +148,21 @@ function simplibillsUpdate() {
     border-bottom: 1px solid #252730;
     overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.simplibills_loader {
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid #FFCC0D;
+    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+    animation: spin 1s linear infinite;
+    margin: auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 [id^="simplibills_invis"]{

@@ -18,12 +18,13 @@ class Simplidone extends Widget
         return [
             'minHeight' => 4,
             'minWidth' => 3,
-            'maxHeight' => 4,
-            'maxWidth' => 3,
+            'maxHeight' => 5,
+            'maxWidth' => 5,
         ];
     }
 
-    public function isAuthorized(){
+    public function isAuthorized()
+    {
         return $this->getUser()->isInJobFunction('Widgets');
     }
 
@@ -39,6 +40,7 @@ class Simplidone extends Widget
                 "Freigabe",
                 "Buchhaltung DE",
                 "Buchhaltung IFSC",
+                "Fuhrpark",
                 "Einkauf",
                 "Lieferantenanlage",
                 "Lieferantenanlage IFSC",
@@ -58,9 +60,9 @@ class Simplidone extends Widget
 
         $incidents = array_merge($normalSteps, $payments);
 
-        $sum = array_fill(0, count($incidents[0]), 0);
-        for ($i = 0; $i < count($incidents); $i++) {
-            $sum[0] += $incidents[$i][0];
+        $sum = array_fill(0, count($payments[0]), 0);
+        for ($i = 0; $i < count($payments); $i++) {
+            $sum[0] += $payments[$i][0];
         }
 
         array_unshift($incidents, $sum);
@@ -92,72 +94,43 @@ class Simplidone extends Widget
                     FROM JRINCIDENTS j
                     INNER JOIN RE_HEAD h ON j.process_step_id = h.step_id
                     INNER JOIN RECHNUGNEN r ON h.DOKUMENTENID = r.DOKUMENTENID
-                    WHERE j.STEP IN (1, 2, 3, 4, 17, 5, 30, 40, 50, 15)
+                    WHERE j.STEP IN (1, 2, 3, 4, 17, 7, 5, 30, 40, 50, 15)
+                    AND (
+                            (j.STEP = 15 AND r.STATUS = 'erledigt')
+                            OR
+                            (j.STEP != 15 AND r.STATUS = 'gezahlt')
+                        )
                     AND j.processname = 'RECHNUNGSBEARBEITUNG'
                     AND j.indate IS NOT NULL
                     AND j.outdate IS NOT NULL
                     GROUP BY j.STEP, r.DOKUMENTENID
-                ),
-                AggregatedData AS (
-                    SELECT STEP, SUM(TIME_TO_SEC(duration)) AS total_seconds, AVG(TIME_TO_SEC(duration)) AS avg_seconds, COUNT(STEP) AS amount
-                    FROM ProcessedData
-                    GROUP BY STEP
                 )
-                SELECT
-                    STEP AS step,
-                    CONCAT(
-                        FLOOR(total_seconds / 86400), 'd: ',
-                        LPAD(FLOOR((total_seconds % 86400) / 3600), 2, '0'), 'h: ',
-                        LPAD(FLOOR((total_seconds % 3600) / 60), 2, '0'), 'm: ',
-                        LPAD(FLOOR(total_seconds % 60), 2, '0'), 's'
-                    ) AS sumTime,
-                    CONCAT(
-                        FLOOR(avg_seconds / 86400), 'd: ',
-                        LPAD(FLOOR((avg_seconds % 86400) / 3600), 2, '0'), 'h: ',
-                        LPAD(FLOOR((avg_seconds % 3600) / 60), 2, '0'), 'm: ',
-                        LPAD(FLOOR(avg_seconds % 60), 2, '0'), 's'
-                    ) AS avgTime,
-                    amount
-                FROM AggregatedData
+                SELECT STEP, SUM(TIME_TO_SEC(duration)) AS total_seconds, AVG(TIME_TO_SEC(duration)) AS avg_seconds, COUNT(STEP) AS amount
+                FROM ProcessedData
+                GROUP BY STEP
                 ORDER BY STEP ASC;
         ";
         $result = $JobDB->query($query);
 
-        $incidents = array_fill(0, 10, array_fill(0, 3, 0));
+        $incidents = array_fill(0, 11, array_fill(0, 3, 0));
+        $stepMap = [
+            "1" => 0,
+            "2" => 1,
+            "3" => 2,
+            "4" => 3,
+            "17" => 4,
+            "7" => 5,
+            "5" => 6,
+            "30" => 7,
+            "40" => 8,
+            "50" => 9,
+            "15" => 10
+        ];
+
         while ($row = $JobDB->fetchRow($result)) {
-            switch ($row["step"]) {
-                case "1":
-                    $incidents[0] = [$row["amount"], $row["sumTime"], $row["avgTime"]];
-                    break;
-                case "2":
-                    $incidents[1] = [$row["amount"], $row["sumTime"], $row["avgTime"]];
-                    break;
-                case "3":
-                    $incidents[2] = [$row["amount"], $row["sumTime"], $row["avgTime"]];
-                    break;
-                case "4":
-                    $incidents[3] = [$row["amount"], $row["sumTime"], $row["avgTime"]];
-                    break;
-                case "17":
-                    $incidents[4] = [$row["amount"], $row["sumTime"], $row["avgTime"]];
-                    break;
-                case "5":
-                    $incidents[5] = [$row["amount"], $row["sumTime"], $row["avgTime"]];
-                    break;
-                case "30":
-                    $incidents[6] = [$row["amount"], $row["sumTime"], $row["avgTime"]];
-                    break;
-                case "40":
-                    $incidents[7] = [$row["amount"], $row["sumTime"], $row["avgTime"]];
-                    break;
-                case "50":
-                    $incidents[8] = [$row["amount"], $row["sumTime"], $row["avgTime"]];
-                    break;
-                case "15":
-                    $incidents[9] = [$row["amount"], $row["sumTime"], $row["avgTime"]];
-                    break;
-                default:
-                    break;
+            if (isset($stepMap[$row["STEP"]])) {
+                $index = $stepMap[$row["STEP"]];
+                $incidents[$index] = [$row["amount"], $this->calculateTime($row["total_seconds"]), $this->calculateTime($row["avg_seconds"])];
             }
         }
         return array_values($incidents);
@@ -169,54 +142,48 @@ class Simplidone extends Widget
         $JobDB = $this->getJobDB();
         $query = "
                 SELECT
-                    CONCAT(FLOOR(SUM(TIME_TO_SEC(notOverdue)) / 86400), 'd: ',
-                        LPAD(FLOOR((SUM(TIME_TO_SEC(notOverdue)) % 86400) / 3600), 2, '0'), 'h: ',
-                        LPAD(FLOOR((SUM(TIME_TO_SEC(notOverdue)) % 3600) / 60), 2, '0'), 'm: ',
-                        LPAD(FLOOR(SUM(TIME_TO_SEC(notOverdue)) % 60), 2, '0'), 's') AS sumNichtFaellig,
-                    CONCAT(FLOOR(AVG(TIME_TO_SEC(notOverdue)) / 86400), 'd: ',
-                        LPAD(FLOOR((AVG(TIME_TO_SEC(notOverdue)) % 86400) / 3600), 2, '0'), 'h: ',
-                        LPAD(FLOOR((AVG(TIME_TO_SEC(notOverdue)) % 3600) / 60), 2, '0'), 'm: ',
-                        LPAD(FLOOR(AVG(TIME_TO_SEC(notOverdue)) % 60), 2, '0'), 's') AS avgNichtFaellig,
-                    COUNT(notOverdue) AS amountNichtFaellig,
-                    CONCAT(FLOOR(SUM(TIME_TO_SEC(overdue)) / 86400), 'd: ',
-                        LPAD(FLOOR((SUM(TIME_TO_SEC(overdue)) % 86400) / 3600), 2, '0'), 'h: ',
-                        LPAD(FLOOR((SUM(TIME_TO_SEC(overdue)) % 3600) / 60), 2, '0'), 'm: ',
-                        LPAD(FLOOR(SUM(TIME_TO_SEC(overdue)) % 60), 2, '0'), 's') AS sumFaellig,
-                    CONCAT(FLOOR(AVG(TIME_TO_SEC(overdue)) / 86400), 'd: ',
-                        LPAD(FLOOR((AVG(TIME_TO_SEC(overdue)) % 86400) / 3600), 2, '0'), 'h: ',
-                        LPAD(FLOOR((AVG(TIME_TO_SEC(overdue)) % 3600) / 60), 2, '0'), 'm: ',
-                        LPAD(FLOOR(AVG(TIME_TO_SEC(overdue)) % 60), 2, '0'), 's') AS avgFaellig,
-                    COUNT(overdue) AS amountFaellig
-                FROM (
-                    SELECT
-                        CASE
-                            WHEN r.RECHNUNGSFAELLIGKEIT < j.startdate THEN
-                                    TIMEDIFF(j.enddate, j.startdate)
-                            ELSE NULL
-                            END as notOverdue,
-                        CASE
-                            WHEN r.RECHNUNGSFAELLIGKEIT > j.startdate THEN
-                                TIMEDIFF(r.RECHNUNGSFAELLIGKEIT, j.startdate)
-                            ELSE NULL
-                            END AS overdue
-                    FROM RECHNUGNEN r
-                    LEFT JOIN JRINCIDENT j ON r.VORGANGZL = j.incident
-                    AND (r.VORGANGZL AND r.RECHNUNGSFAELLIGKEIT) IS NOT NULL
-                    GROUP BY r.DOKUMENTENID
-                ) AS allPayments
+                    CASE
+                        WHEN r.RECHNUNGSFAELLIGKEIT >= j.enddate THEN
+                                TIMESTAMPDIFF(SECOND, j2.startdate, j.enddate)
+                        ELSE NULL
+                        END as notOverdue,
+                    CASE
+                        WHEN r.RECHNUNGSFAELLIGKEIT < j.enddate THEN
+                            TIMESTAMPDIFF(SECOND, r.RECHNUNGSFAELLIGKEIT, j.enddate)
+                        ELSE NULL
+                        END AS overdue
+                FROM RECHNUGNEN r
+                LEFT JOIN JRINCIDENT j ON r.VORGANGZL = j.incident
+                LEFT JOIN JRINCIDENT j2 ON r.VORGANGSNUMMER = j2.incident
+                WHERE j.processname = 'RECHNUNGSBEARBEITUNG'
+                AND (r.VORGANGZL AND r.RECHNUNGSFAELLIGKEIT) IS NOT NULL
+                AND r.STATUS = 'gezahlt'
+                GROUP BY r.DOKUMENTENID
         ";
         $result = $JobDB->query($query);
 
-        $payments = array(["0", "0d: 0h: 0m: 0s", "0d: 0h: 0m: 0s"], ["0", "0d: 0h: 0m: 0s", "0d: 0h: 0m: 0s"]);
+        $overdue = $notOverdue = ['sum' => 0, 'avg' => 0, 'amount' => 0];
+
         while ($row = $JobDB->fetchRow($result)) {
-            if ($row["amountFaellig"] != "0") {
-                $payments[0] = [$row["amountFaellig"], $row["sumFaellig"], $row["avgFaellig"]];
-            }
-            if ($row["amountNichtFaellig"] != "0") {
-                $payments[1] = [$row["amountNichtFaellig"], $row["sumNichtFaellig"], $row["avgNichtFaellig"]];
+            foreach (['notOverdue', 'overdue'] as $key) {
+                if ($row[$key] !== null) {
+                    ${$key}['sum'] += $row[$key];
+                    ${$key}['amount']++;
+                }
             }
         }
-        return array_values($payments);
+        $notOverdue['avg'] = $notOverdue['amount'] == 0 ? 0 : $notOverdue['sum'] / $notOverdue['amount'];
+        $overdue['avg'] = $overdue['amount'] == 0 ? 0 : $overdue['sum'] / $overdue['amount'];
+
+        return [
+            [$notOverdue['amount'], $this->calculateTime($notOverdue['sum']), $this->calculateTime($notOverdue['avg'])],
+            [$overdue['amount'], $this->calculateTime($overdue['sum']),  $this->calculateTime($overdue['avg'])]
+        ];
+    }
+
+    function calculateTime($time)
+    {
+        return sprintf("%dd: %dh: %dm", $time / 86400, $time % 86400 / 3600, $time % 3600 / 60);
     }
 
     function addTimes($times)
@@ -224,76 +191,30 @@ class Simplidone extends Widget
         $totalSeconds = 0;
 
         foreach ($times as $time) {
-            list($days, $hours, $minutes, $seconds) = sscanf($time, "%dd: %dh: %dm: %ds");
-            $totalSeconds += $seconds + $minutes * 60 + $hours * 3600 + $days * 86400;
+            list($days, $hours, $minutes) = sscanf($time, "%dd: %dh: %dm");
+            $totalSeconds += $minutes * 60 + $hours * 3600 + $days * 86400;
         }
 
-        $days = floor($totalSeconds / 86400);
-        $totalSeconds %= 86400;
-        $hours = floor($totalSeconds / 3600);
-        $totalSeconds %= 3600;
-        $minutes = floor($totalSeconds / 60);
-        $seconds = $totalSeconds % 60;
+        $days = intdiv($totalSeconds, 86400);
+        $hours = intdiv($totalSeconds % 86400, 3600);
+        $minutes = intdiv($totalSeconds % 3600, 60);
 
-        return sprintf("%dd: %dh: %dm: %ds", $days, $hours, $minutes, $seconds);
+        return sprintf("%dd: %dh: %dm", $days, $hours, $minutes);
     }
 
-    public function getEinheit(){
+    public function getEinheit()
+    {
         $JobDB = $this->getJobDB();
-        $query1 = "
-                WITH filtered_rechnungen AS (
-                    SELECT r.DOKUMENTENID, h.EINHEITSNUMMER, h.EINHEITSNAME
-                    FROM RECHNUGNEN r
-                    INNER JOIN RE_HEAD h ON r.DOKUMENTENID = h.DOKUMENTENID
-                    INNER JOIN JRINCIDENTS j ON h.step_id = j.process_step_id
-                        AND j.STEP IN (1, 2, 3, 4, 17, 5, 30, 40, 50, 15)
-                        AND j.processname = 'RECHNUNGSBEARBEITUNG'
-                    WHERE h.EINHEITSNUMMER IS NOT NULL
-                    AND h.EINHEITSNUMMER != ''
-                ),
-                grouped_rechnungen AS (
-                    SELECT DOKUMENTENID, EINHEITSNUMMER, EINHEITSNAME, COUNT(*) AS cnt
-                    FROM filtered_rechnungen
-                    GROUP BY DOKUMENTENID, EINHEITSNUMMER
-                )
-                SELECT EINHEITSNUMMER, EINHEITSNAME
-                FROM grouped_rechnungen
-                WHERE cnt = 1 OR cnt > 1
-                GROUP BY EINHEITSNUMMER;
-        ";
-        $result = $JobDB->query($query1);
-        $einheit1 = [
-            'einheit' => [],
-            'einheitsnummer' => []
+        $query = "SELECT NAME, CODE FROM EINHEIT";
+        $result = $JobDB->query($query);
+        $einheit = [
+            'einheit' => ["Alle"],
+            'einheitsnummer' => ["Alle"]
         ];
-        while($row = $JobDB->fetchRow($result)){
-            $einheit1['einheit'][] = $row["EINHEITSNAME"] . " | " . $row["EINHEITSNUMMER"];
-            $einheit1['einheitsnummer'][] = $row["EINHEITSNUMMER"];
+        while ($row = $JobDB->fetchRow($result)) {
+            $einheit['einheit'][] = "{$row['NAME']} | {$row['CODE']}";
+            $einheit['einheitsnummer'][] = $row['CODE'];
         }
-
-        $query2 = "
-                    SELECT r.EINHEIT, h.EINHEITSNAME
-                    FROM RECHNUGNEN r
-                    INNER JOIN RE_HEAD h ON r.DOKUMENTENID = h.DOKUMENTENID
-                    INNER JOIN JRINCIDENT j ON r.VORGANGZL = j.incident
-                    AND (r.VORGANGZL AND r.RECHNUNGSFAELLIGKEIT) IS NOT NULL
-                    WHERE r.EINHEIT IS NOT NULL AND r.EINHEIT != ''
-                    GROUP BY r.EINHEIT
-
-                ";
-        $result = $JobDB->query($query2);
-        $einheit2 = [
-            'einheit' => [],
-            'einheitsnummer' => []
-        ];
-        while($row = $JobDB->fetchRow($result)){
-            $einheit1['einheit'][] = $row["EINHEITSNAME"] . " | " . $row["EINHEIT"];
-            $einheit1['einheitsnummer'][] = $row["EINHEIT"];
-        }
-        $einheit = array_unique(array_merge($einheit1, $einheit2));
-        sort($einheit);
-
-        array_unshift($einheit, "Alle");
         return json_encode($einheit);
     }
 }

@@ -6,14 +6,18 @@
 <script>
 let invisLabel = JSON.parse(document.getElementById("simplidone_invisLabel").innerHTML);
 let invisIncident = JSON.parse(document.getElementById("simplidone_invisIncident").innerHTML);
-let invisEinheit = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML).einheit;
-let invisEinheitsnummer = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML).einheitsnummer;
+let invisEinheit = JSON.parse(document.getElementById("simplidone_invisEinheit").innerHTML).einheit;
+let invisEinheitsnummer = JSON.parse(document.getElementById("simplidone_invisEinheit").innerHTML).einheitsnummer;
 
 simplidoneWidget();
 $j('#simplidone_outerBox').parent().toggleClass('simplidone_background', true);
 
 function simplidoneWidget() {
     let outerBox = document.getElementById("simplidone_outerBox");
+
+    let dateRange = document.createElement("div");
+    dateRange.setAttribute("class", "simplidone_dateRange");
+    outerBox.appendChild(dateRange);
 
     let dropDown = document.createElement("select");
     dropDown.id = "simplidone_dropDown";
@@ -27,11 +31,12 @@ function simplidoneWidget() {
         option.text = invisEinheit[i];
         dropDown.appendChild(option);
     }
-    outerBox.appendChild(dropDown);
+    dateRange.appendChild(dropDown);
 
-    let dateRange = document.createElement("div");
-    dateRange.setAttribute("class", "simplidone_dateRange");
-    outerBox.appendChild(dateRange);
+    let loader = document.createElement("div");
+    loader.setAttribute("class", "simplidone_loader");
+    loader.style.opacity = '0';
+    dateRange.appendChild(loader);
 
     let labelFrom = document.createElement("label");
     dateRange.appendChild(labelFrom);
@@ -189,6 +194,9 @@ function simplidoneCreateTable(){
 }
 
 function simplidoneUpdate() {
+    let loader = document.getElementsByClassName("simplidone_loader")[0];
+    loader.style.opacity = '100';
+
     indate = document.getElementById("simplidone_dateFrom").value;
     outdate = document.getElementById("simplidone_dateTo").value;
     einheit = document.getElementById("simplidone_dropDown").value;
@@ -213,6 +221,7 @@ function simplidoneUpdate() {
         success: function (data) {
             invisIncident = JSON.parse(data);
             simplidoneCreateTable();
+            loader.style.opacity = '0';
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(textStatus, errorThrown);
@@ -230,13 +239,14 @@ function simplidoneUpdate() {
     }
 
     .simplidone_dropDown{
-    width: 100%;
-    padding: 5px;
-    font-size: 16px;
-    line-height: 1.75;
-    border: none;
-    background-color: #242730;
-    color: #FFCC0D;
+        width: 100%;
+        padding: 5px;
+        font-size: 16px;
+        line-height: 1.75;
+        border: 1px solid #252730;
+        border-radius: 5px;
+        background-color: #242730;
+        color: #FFCC0D;
     }
 
     .simplidone_background {
@@ -247,9 +257,10 @@ function simplidoneUpdate() {
 
     .simplidone_dateRange {
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-between;
         text-align: right;
         margin-right: 10px;
+        margin-left: 10px;
         font-size: 16px;
         margin-top: 5px;
         margin-bottom: 5px;
@@ -319,6 +330,21 @@ function simplidoneUpdate() {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    .simplidone_loader {
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-top: 3px solid #FFCC0D;
+        border-radius: 50%;
+        width: 15px;
+        height: 15px;
+        animation: spin 1s linear infinite;
+        margin: auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 
     [id^="simplidone_invis"] {

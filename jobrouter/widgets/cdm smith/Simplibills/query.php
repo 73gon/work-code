@@ -6,7 +6,8 @@ $einheit = $_GET['einheit'];
 
 $incidents = getIncidents($einheit);
 echo $incidents;
-function getIncidents($einheit) {
+function getIncidents($einheit)
+{
     $bearbeitung = getBearbeitung($einheit);
     $gebucht_zahlung = getGebuchtAndZahlungsfreigabe($einheit);
 
@@ -17,7 +18,8 @@ function getIncidents($einheit) {
     return json_encode($incidents);
 }
 
-function getGebuchtAndZahlungsfreigabe($einheit){
+function getGebuchtAndZahlungsfreigabe($einheit)
+{
     $JobDB = DBFactory::getJobDB();
     $temp = "
             WITH MaxRevisions AS (
@@ -44,10 +46,10 @@ function getGebuchtAndZahlungsfreigabe($einheit){
                 COUNT(*) AS COUNTROW
             FROM FilteredRows
     ";
-    if($einheit != "Alle"){
-        $temp = $temp."WHERE EINHEIT = '".$einheit."' GROUP BY STATUS";
-    }else{
-        $temp = $temp."GROUP BY STATUS";
+    if ($einheit != "Alle") {
+        $temp = $temp . "WHERE EINHEIT = '" . $einheit . "' GROUP BY STATUS";
+    } else {
+        $temp = $temp . "GROUP BY STATUS";
     }
 
     $result = $JobDB->query($temp);
@@ -60,7 +62,8 @@ function getGebuchtAndZahlungsfreigabe($einheit){
     return array_values($gebucht_zahlung);
 }
 
-function getBearbeitung($einheit){
+function getBearbeitung($einheit)
+{
     $JobDB = DBFactory::getJobDB();
     $temp = "
             WITH MaxRevisions AS (
@@ -106,15 +109,27 @@ function getBearbeitung($einheit){
                 COUNT(s.STEP) AS COUNTROW
             FROM StepsData s
     ";
-    if($einheit != "Alle"){
-        $temp = $temp."WHERE s.EINHEITSNUMMER = '".$einheit."' GROUP BY s.STEP";
-    }else{
-        $temp = $temp."GROUP BY s.STEP";
+    if ($einheit != "Alle") {
+        $temp = $temp . "WHERE s.EINHEITSNUMMER = '" . $einheit . "' GROUP BY s.STEP";
+    } else {
+        $temp = $temp . "GROUP BY s.STEP";
     }
     $result = $JobDB->query($temp);
 
-    $bearbeitung = array_fill(0, 9, 0);
-    $stepMapping = [ "1" => 0, "2" => 1, "3" => 2, "4" => 3, "7" => 3, "5" => 4, "17" => 5, "30" => 6, "40" => 7, "50" => 8];
+    $bearbeitung = array_fill(0, 10, 0);
+    $stepMapping = [
+        "1" => 0,
+        "2" => 1,
+        "3" => 2,
+        "4" => 3,
+        "7" => 4,
+        "5" => 5,
+        "17" => 6,
+        "30" => 7,
+        "40" => 8,
+        "50" => 9
+    ];
+
 
     while ($row = $JobDB->fetchRow($result)) {
         $step = $row["STEP"];
@@ -125,4 +140,3 @@ function getBearbeitung($einheit){
     }
     return $bearbeitung;
 }
-?>

@@ -14,6 +14,10 @@ $j('#simplidents_outerBox').parent().toggleClass('simplidents_background', true)
 function simplidentsWidget(){
 	let outerBox = document.getElementById("simplidents_outerBox");
 
+    let dropDownContainer = document.createElement("div");
+    dropDownContainer.setAttribute("class", "simplidents_dropDownContainer");
+    outerBox.appendChild(dropDownContainer);
+
     let dropDown = document.createElement("select");
     dropDown.id = "simplidents_dropDown";
     dropDown.setAttribute("class", "simplidents_dropDown");
@@ -25,7 +29,12 @@ function simplidentsWidget(){
         option.text = invisEinheit[i];
         dropDown.appendChild(option);
     }
-    outerBox.appendChild(dropDown);
+    dropDownContainer.appendChild(dropDown);
+
+    let loader = document.createElement("div");
+    loader.setAttribute("class", "simplidents_loader");
+    loader.style.opacity = '0';
+    dropDownContainer.appendChild(loader);
 
     let gridContainer = document.createElement("div");
         gridContainer.id = "simplidents_gridContainer";
@@ -57,6 +66,9 @@ function simplidentsCreateTable(){
 }
 
 function simplidentsUpdate() {
+    let loader = document.getElementsByClassName("simplidents_loader")[0];
+    loader.style.opacity = '100';
+
     einheit = document.getElementById("simplidents_dropDown").value;
     let einheitIndex = invisEinheit.indexOf(einheit);
     let einheitsnummer = invisEinheitsnummer[einheitIndex];
@@ -69,6 +81,7 @@ function simplidentsUpdate() {
         success: function (data) {
             invisIncident = JSON.parse(data);
             simplidentsCreateTable();
+            loader.style.opacity = '0';
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(textStatus, errorThrown);
@@ -85,12 +98,22 @@ function simplidentsUpdate() {
     font-family: 'Poppins';
 }
 
+.simplidents_dropDownContainer{
+    display: flex;
+    justify-content: space-between;
+    padding-top: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 10px;
+}
+
 .simplidents_dropDown{
     width: 100%;
     padding: 5px;
     font-size: 16px;
     line-height: 1.75;
-    border: none;
+    border: 1px solid #242730;
+    border-radius: 5px;
     background-color: #242730;
     color: #FFCC0D;
 }
@@ -124,6 +147,21 @@ function simplidentsUpdate() {
     border-bottom: 1px solid #252730;
     overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.simplidents_loader {
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid #FFCC0D;
+    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+    animation: spin 1s linear infinite;
+    margin: auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 [id^="simplidents_invis"]{
