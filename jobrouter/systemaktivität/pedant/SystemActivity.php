@@ -492,7 +492,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'vendorCountry' => $dataItem["vendorCountry"],
             'vendorDeliveryPeriod' => $dataItem["deliveryPeriod"],
             'vendorAccountNumber' => $dataItem["accountNumber"],
-            'vendorInternalNumber' => $dataItem["vendorEntity"]["internalNumber"]
+            'vendorInternalNumber' => $dataItem["vendorEntity"]["internalNumber"],
+            'vendorCompanyRegistrationNumber' => $dataItem['KVKNumber']
         ];
 
         foreach ($attributes2 as $attribute) {
@@ -801,7 +802,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => COUNTRY, 'value' => 'vendorCountry'],
                 ['name' => DELIVERYPERIOD, 'value' => 'vendorDeliveryPeriod'],
                 ['name' => ACCOUNTNUMBER, 'value' => 'vendorAccountNumber'],
-                ['name' => INTERNALNUMBER, 'value' => 'vendorInternalNumber']
+                ['name' => INTERNALNUMBER, 'value' => 'vendorInternalNumber'],
+                ['name' => COMPANYREGISTRATIONNUMBER, 'value' => 'vendorCompanyRegistrationNumber'],
             ];
         }
 
@@ -891,4 +893,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.1.2
+//Version 1.2
