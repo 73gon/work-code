@@ -6,6 +6,7 @@ let invisLabel= JSON.parse(document.getElementById("simplibills_invisLabel").inn
 let invisIncident= JSON.parse(document.getElementById("simplibills_invisIncident").innerHTML);
 let invisEinheit = JSON.parse(document.getElementById("simplibills_invisEinheit").innerHTML).einheit;
 let invisEinheitsnummer = JSON.parse(document.getElementById("simplibills_invisEinheit").innerHTML).einheitsnummer;
+let username = '';
 
 
 simplibillsWidget();
@@ -32,10 +33,25 @@ function simplibillsWidget(){
     }
     dropDownContainer.appendChild(dropDown);
 
-    let loader = document.createElement("div");
-    loader.setAttribute("class", "simplibills_loader");
-    loader.style.opacity = '0';
-    dropDownContainer.appendChild(loader)
+    let inputWrapper = document.createElement("div");
+    inputWrapper.setAttribute("class", "simplibills_inputWrapper");
+
+    let usernameInput = document.createElement("input");
+    usernameInput.type = "text";
+    usernameInput.id = "simplibills_username";
+    usernameInput.placeholder = "Username";
+    inputWrapper.appendChild(usernameInput);
+
+    let sendButton = document.createElement("button");
+    sendButton.id = "simplibills_sendButton";
+    sendButton.setAttribute("class", "fa-solid fa-paper-plane");
+    sendButton.addEventListener("click", function(){
+        username = usernameInput.value;
+        simplibillsUpdate();
+    });
+    inputWrapper.appendChild(sendButton);
+
+    dropDownContainer.appendChild(inputWrapper);
 
     let gridContainer = document.createElement("div");
         gridContainer.id = "simplibills_gridContainer";
@@ -66,23 +82,26 @@ function simplibillsCreateTable(){
 }
 
 function simplibillsUpdate() {
-    let loader = document.getElementsByClassName("simplibills_loader")[0];
+    let outerBox = document.getElementById("simplibills_outerBox");
+    outerBox.style.opacity = '0.5';
+    let loader = document.getElementById("simplibills_loader");
     loader.style.opacity = '100';
 
     einheit = document.getElementById("simplibills_dropDown").value;
     let einheitIndex = invisEinheit.indexOf(einheit);
     let einheitsnummer = invisEinheitsnummer[einheitIndex];
+    username = document.getElementById("simplibills_username").value;
 
     $j.ajax({
         url: "dashboard/MyWidgets/Simplibills/query.php",
         type: "GET",
-        data: { einheit: einheitsnummer },
+        data: { einheit: einheitsnummer, username: username },
         dataType: "text",
         success: function (data) {
             invisIncident = JSON.parse(data);
-            console.log(invisIncident);
             simplibillsCreateTable();
             loader.style.opacity = '0';
+            outerBox.style.opacity = '100';
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(textStatus, errorThrown);
@@ -109,7 +128,7 @@ function simplibillsUpdate() {
 }
 
 .simplibills_dropDown{
-    width: 100%;
+    width: 80%;
     padding: 5px;
     font-size: 16px;
     line-height: 1.75;
@@ -117,6 +136,31 @@ function simplibillsUpdate() {
     border-radius: 5px;
     background-color: #242730;
     color: #FFCC0D;
+}
+
+.simplibills_inputWrapper {
+    display: flex;
+    gap: 8px;
+    border: 2px solid #242730;
+    border-radius: 5px;
+    background-color: #242730;
+    color: #FFCC0D;
+}
+
+#simplibills_username {
+    width: 100%;
+    font-size: 16px;
+    line-height: 1.75;
+    border: none;
+    background: none;
+}
+
+#simplibills_sendButton {
+    font-size: 16px;
+    line-height: 1.75;
+    border: none;
+    background: none;
+    cursor: pointer;
 }
 
 .simplibills_background{
@@ -150,14 +194,19 @@ function simplibillsUpdate() {
 	text-overflow: ellipsis;
 }
 
-.simplibills_loader {
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-top: 3px solid #FFCC0D;
+#simplibills_loader {
+    position: absolute;
+    top: 45%;
+    left: 45%;
+    transform: translate(-50%, -50%);
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-top: 5px solid #FFCC0D;
     border-radius: 50%;
-    width: 15px;
-    height: 15px;
+    width: 30px;
+    height: 30px;
     animation: spin 1s linear infinite;
-    margin: auto;
+    margin: 0;
+    opacity: 0;
 }
 
 @keyframes spin {
@@ -173,4 +222,5 @@ function simplibillsUpdate() {
 <div id="simplibills_invisIncident">{{incidents}}</div>
 <div id="simplibills_invisLabel">{{labels}}</div>
 <div id="simplibills_invisEinheit">{{einheit}}</div>
+<div id="simplibills_loader"></div>
 <div id="simplibills_outerBox"></div>

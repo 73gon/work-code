@@ -3,12 +3,13 @@
 require_once('../../../includes/central.php');
 
 $einheit = $_GET['einheit'];
+$username = $_GET['username'];
 
-$incidents = getIncidents($einheit);
+$incidents = getIncidents($einheit, $username);
 echo $incidents;
-function getIncidents($einheit)
+function getIncidents($einheit, $username)
 {
-    $bearbeitung = getBearbeitung($einheit);
+    $bearbeitung = getBearbeitung($einheit, $username);
     $gebucht_zahlung = getGebuchtAndZahlungsfreigabe($einheit);
 
     $incidents = array_merge($bearbeitung, $gebucht_zahlung);
@@ -22,29 +23,19 @@ function getGebuchtAndZahlungsfreigabe($einheit)
 {
     $JobDB = DBFactory::getJobDB();
     $temp = "
-            WITH MaxRevisions AS (
-                SELECT
-                    DOKUMENTENID,
-                    MAX(documentrevision_id) AS MaxRevisionID
+            WITH LatestRevisions AS (
+                SELECT documentrevision_id, DOKUMENTENID, STATUS, RECHNUNGSFAELLIGKEIT, EINHEIT
                 FROM RECHNUGNEN
-                GROUP BY DOKUMENTENID
-            ),
-            FilteredRows AS (
-                SELECT
-                    r.DOKUMENTENID,
-                    r.STATUS,
-                    r.RECHNUNGSFAELLIGKEIT
-                FROM RECHNUGNEN r
-                INNER JOIN MaxRevisions m
-                    ON r.DOKUMENTENID = m.DOKUMENTENID
-                AND r.documentrevision_id = m.MaxRevisionID
-                WHERE r.RECHNUNGSFAELLIGKEIT < CURDATE()
-                AND (r.STATUS = 'Gebucht' OR r.STATUS = 'Zahlungsfreigabe')
+                WHERE RECHNUNGSFAELLIGKEIT < CURDATE()
+                AND (STATUS = 'Gebucht' OR STATUS = 'Zahlungsfreigabe')
+                AND documentrevision_id = (
+                    SELECT MAX(documentrevision_id)
+                    FROM RECHNUGNEN AS Sub
+                    WHERE Sub.DOKUMENTENID = RECHNUGNEN.DOKUMENTENID
+                )
             )
-            SELECT
-                STATUS,
-                COUNT(*) AS COUNTROW
-            FROM FilteredRows
+            SELECT STATUS, COUNT(*) AS COUNTROW
+            FROM LatestRevisions
     ";
     if ($einheit != "Alle") {
         $temp = $temp . "WHERE EINHEIT = '" . $einheit . "' GROUP BY STATUS";
@@ -62,58 +53,38 @@ function getGebuchtAndZahlungsfreigabe($einheit)
     return array_values($gebucht_zahlung);
 }
 
-function getBearbeitung($einheit)
+function getBearbeitung($einheit, $username)
 {
     $JobDB = DBFactory::getJobDB();
-    $temp = "
-            WITH MaxRevisions AS (
-                SELECT
-                    DOKUMENTENID,
-                    MAX(documentrevision_id) AS MaxRevisionID
-                FROM RECHNUGNEN
-                GROUP BY DOKUMENTENID
-            ),
-            FilteredRows AS (
-                SELECT
-                    r.documentrevision_id,
-                    r.DOKUMENTENID,
-                    r.STATUS,
-                    r.RECHNUNGSFAELLIGKEIT
-                FROM RECHNUGNEN r
-                INNER JOIN MaxRevisions m
-                    ON r.DOKUMENTENID = m.DOKUMENTENID
-                AND r.documentrevision_id = m.MaxRevisionID
-                WHERE r.STATUS = 'Bearbeitung'
-            ),
-            StepsData AS (
-                SELECT
-                    fr.DOKUMENTENID,
-                    h.STEP,
-                    h.FAELLIGKEIT,
-                    j.STEPLABEL,
-                    h.EINHEITSNUMMER
-                FROM FilteredRows fr
-                LEFT JOIN RE_HEAD h ON fr.DOKUMENTENID = h.DOKUMENTENID
-                LEFT JOIN JRINCIDENTS j
-                    ON h.step_id = j.process_step_id
-                AND j.processname = 'RECHNUNGSBEARBEITUNG'
-                AND (j.STATUS = 0 OR j.STATUS = 1)
-                INNER JOIN JRINCIDENT i
-                    ON j.processid = i.processid
-                AND i.`status` = 0
-                WHERE h.FAELLIGKEIT < CURDATE()
-            )
-            SELECT
-                s.STEP AS STEP,
-                s.STEPLABEL,
-                COUNT(s.STEP) AS COUNTROW
-            FROM StepsData s
+
+    $where = "
+            @documentrevision_id = MaxRevisionID
+            AND h.FAELLIGKEIT < CURDATE()
+            AND r.STATUS = 'Bearbeitung'
     ";
-    if ($einheit != "Alle") {
-        $temp = $temp . "WHERE s.EINHEITSNUMMER = '" . $einheit . "' GROUP BY s.STEP";
-    } else {
-        $temp = $temp . "GROUP BY s.STEP";
+
+    if (!empty($username)) {
+        $where .= " AND j.username LIKE '" . $username . "%'";
     }
+
+    if ($einheit != "Alle") {
+        $where .= " AND h.EINHEITSNUMMER = '" . $einheit . "'";
+    }
+    
+    $temp = "
+            WITH RankedRows AS (
+                SELECT documentrevision_id, DOKUMENTENID, STATUS, MAX(documentrevision_id) OVER (PARTITION BY DOKUMENTENID) AS MaxRevisionID
+                FROM RECHNUGNEN
+            )
+            SELECT h.STEP AS STEP, j.STEPLABEL, COUNT(h.STEP) AS COUNTROW
+            FROM RankedRows r
+            LEFT JOIN RE_HEAD h ON r.DOKUMENTENID = h.DOKUMENTENID
+            LEFT JOIN JRINCIDENTS j ON h.step_id = j.process_step_id AND j.processname = 'RECHNUNGSBEARBEITUNG' AND j.STATUS IN (0, 1)
+            INNER JOIN JRINCIDENT i ON j.processid = i.processid AND i.`status`= 0
+            WHERE $where
+            GROUP BY h.STEP
+    ";
+
     $result = $JobDB->query($temp);
 
     $bearbeitung = array_fill(0, 10, 0);

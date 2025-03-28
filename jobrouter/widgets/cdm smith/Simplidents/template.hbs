@@ -6,6 +6,7 @@ let invisLabel = JSON.parse(document.getElementById("simplidents_invisLabel").in
 let invisIncident = JSON.parse(document.getElementById("simplidents_invisIncident").innerHTML);
 let invisEinheit = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML).einheit;
 let invisEinheitsnummer = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML).einheitsnummer;
+let username = '';
 
 
 simplidentsWidget();
@@ -31,10 +32,25 @@ function simplidentsWidget(){
     }
     dropDownContainer.appendChild(dropDown);
 
-    let loader = document.createElement("div");
-    loader.setAttribute("class", "simplidents_loader");
-    loader.style.opacity = '0';
-    dropDownContainer.appendChild(loader);
+    let inputWrapper = document.createElement("div");
+    inputWrapper.setAttribute("class", "simplidents_inputWrapper");
+
+    let usernameInput = document.createElement("input");
+    usernameInput.type = "text";
+    usernameInput.id = "simplidents_username";
+    usernameInput.placeholder = "Username";
+    inputWrapper.appendChild(usernameInput);
+
+    let sendButton = document.createElement("button");
+    sendButton.id = "simplidents_sendButton";
+    sendButton.setAttribute("class", "fa-solid fa-paper-plane");
+    sendButton.addEventListener("click", function(){
+        username = usernameInput.value;
+        simplidentsUpdate();
+    });
+    inputWrapper.appendChild(sendButton);
+
+    dropDownContainer.appendChild(inputWrapper);
 
     let gridContainer = document.createElement("div");
         gridContainer.id = "simplidents_gridContainer";
@@ -66,22 +82,38 @@ function simplidentsCreateTable(){
 }
 
 function simplidentsUpdate() {
-    let loader = document.getElementsByClassName("simplidents_loader")[0];
+    let loader = document.getElementById("simplidents_loader");
     loader.style.opacity = '100';
+    let outerBox = document.getElementById("simplidents_outerBox");
+    outerBox.style.opacity = '0.5';
 
     einheit = document.getElementById("simplidents_dropDown").value;
     let einheitIndex = invisEinheit.indexOf(einheit);
     let einheitsnummer = invisEinheitsnummer[einheitIndex];
+    username = document.getElementById("simplidents_username").value;
 
     $j.ajax({
         url: "dashboard/MyWidgets/Simplidents/query.php",
         type: "GET",
-        data: { einheit: einheitsnummer },
+        data: { einheit: einheitsnummer, username: username },
         dataType: "text",
         success: function (data) {
-            invisIncident = JSON.parse(data);
-            simplidentsCreateTable();
             loader.style.opacity = '0';
+            outerBox.style.opacity = '100';
+            if (!data){
+                let toast = document.createElement("div");
+                toast.setAttribute("id", "simplidents_toast");
+                toast.innerText = "User existiert nicht!";
+                outerBox.appendChild(toast);
+                setTimeout(function(){
+                    outerBox.removeChild(toast);
+                }, 3000);
+            }else{
+                invisIncident = JSON.parse(data);
+                simplidentsCreateTable();
+            }
+
+
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(textStatus, errorThrown);
@@ -98,6 +130,38 @@ function simplidentsUpdate() {
     font-family: 'Poppins';
 }
 
+#simplidents_toast {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background-color: #d9534f;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    z-index: 9999;
+    opacity: 0;
+    animation: fadeInOut 3s forwards;
+}
+
+@keyframes fadeInOut {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    10% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    90% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+
 .simplidents_dropDownContainer{
     display: flex;
     justify-content: space-between;
@@ -108,7 +172,7 @@ function simplidentsUpdate() {
 }
 
 .simplidents_dropDown{
-    width: 100%;
+    width: 80%;
     padding: 5px;
     font-size: 16px;
     line-height: 1.75;
@@ -116,6 +180,31 @@ function simplidentsUpdate() {
     border-radius: 5px;
     background-color: #242730;
     color: #FFCC0D;
+}
+
+.simplidents_inputWrapper {
+    display: flex;
+    gap: 8px;
+    border: 2px solid #242730;
+    border-radius: 5px;
+    background-color: #242730;
+    color: #FFCC0D;
+}
+
+#simplidents_username {
+    width: 100%;
+    font-size: 16px;
+    line-height: 1.75;
+    border: none;
+    background: none;
+}
+
+#simplidents_sendButton {
+    font-size: 16px;
+    line-height: 1.75;
+    border: none;
+    background: none;
+    cursor: pointer;
 }
 
 .simplidents_background{
@@ -149,14 +238,19 @@ function simplidentsUpdate() {
 	text-overflow: ellipsis;
 }
 
-.simplidents_loader {
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-top: 3px solid #FFCC0D;
+#simplidents_loader {
+    position: absolute;
+    top: 45%;
+    left: 45%;
+    transform: translate(-50%, -50%);
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-top: 5px solid #FFCC0D;
     border-radius: 50%;
-    width: 15px;
-    height: 15px;
+    width: 30px;
+    height: 30px;
     animation: spin 1s linear infinite;
-    margin: auto;
+    margin: 0;
+    opacity: 0;
 }
 
 @keyframes spin {
@@ -172,4 +266,5 @@ function simplidentsUpdate() {
 <div id="simplidents_invisIncident">{{incidents}}</div>
 <div id="simplidents_invisLabel">{{labels}}</div>
 <div id="simplidents_invisEinheit">{{einheit}}</div>
+<div id="simplidents_loader"></div>
 <div id="simplidents_outerBox"></div>

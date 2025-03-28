@@ -3,28 +3,47 @@
 require_once('../../../includes/central.php');
 
 $einheit = $_GET['einheit'];
+$username = $_GET['username'];
 
-$incidents = getIncidents($einheit);
+$incidents = getIncidents($einheit, $username);
+error_log($incidents) ;
 echo $incidents;
 
-function getIncidents($einheit){
+function getIncidents($einheit, $username){
     $JobDB = DBFactory::getJobDB();
+
+    if (!empty($username)) {
+        $query = "SELECT * FROM JRUSERS WHERE username = '$username'";
+        $result = $JobDB->query($query);
+        if ($result->num_rows == 0) {
+            return false;
+        }
+    }
+
+    $where = "
+                j.processname = 'RECHNUNGSBEARBEITUNG'
+                AND (j.STATUS = 0 OR j.STATUS = 1)
+                AND i.status = 0
+                AND j.STEP IN (1, 2, 3, 4, 17, 5, 807, 802, 30, 40, 50, 15)
+            ";
+
+    if (!empty($username)) {
+        $where .= " AND j.username LIKE '" . $username . "%'";
+    }
+
+    if ($einheit != "Alle") {
+        $where .= " AND r.EINHEITSNUMMER = '" . $einheit . "'";
+    }
 
     $temp = "
                 SELECT j.STEP, COUNT(j.STEP) AS STEP_COUNT, j.steplabel
                 FROM JRINCIDENTS j
                 INNER JOIN JRINCIDENT i ON j.processid = i.processid
                 LEFT JOIN RE_HEAD r ON j.process_step_id = r.step_id
-                WHERE j.processname = 'RECHNUNGSBEARBEITUNG'
-                AND (j.STATUS = 0 OR j.STATUS = 1)
-                AND i.status = 0
-                AND j.STEP IN (1, 2, 3, 4, 17, 5, 807, 802, 30, 40, 50, 15)
-            ";
-    if($einheit != "Alle"){
-        $temp = $temp."AND r.EINHEITSNUMMER = '".$einheit."' GROUP BY j.STEP";
-    }else{
-        $temp = $temp."GROUP BY j.STEP";
-    }
+                WHERE $where
+                GROUP BY j.STEP
+    ";
+
     $result = $JobDB->query($temp);
 
 

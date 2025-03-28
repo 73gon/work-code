@@ -109,7 +109,11 @@ class Simplibills extends Widget
                 WHERE documentrevision_id = MaxRevisionID
                 AND h.FAELLIGKEIT < CURDATE()
                 AND r.STATUS = 'Bearbeitung'
-                GROUP BY h.STEP
+                GROUP BY h.STEP,
+                    CASE
+                        WHEN h.ZAHLMETHODE = 'Kreditkarte' THEN 'Buchhaltung Kreditkarte'
+                        ELSE 'Buchhaltung'
+                    END
         ";
         $result = $JobDB->query($query);
 

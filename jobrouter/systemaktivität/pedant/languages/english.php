@@ -1,5 +1,4 @@
 <?php
-
 define('PEDANT', 'Pedant');
 define('READ_DESC', 'This systemactivity can be used to upload a file on pedant and check it on availability and correctness');
 define('READ', 'Invoice pick out');
@@ -117,3 +116,4 @@ define('ZUGFERD', 'ZUGFeRD Edit');
 define('MAXFILESIZE', 'Max Filesize');
 define('WORKFLOWDETAILS', 'Workflowdetails');
 define('DIREKT', 'Direct');
+define('COMPANYREGISTRATIONNUMBER', 'Company Registration Number');

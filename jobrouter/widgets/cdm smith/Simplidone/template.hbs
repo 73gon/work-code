@@ -8,6 +8,7 @@ let invisLabel = JSON.parse(document.getElementById("simplidone_invisLabel").inn
 let invisIncident = JSON.parse(document.getElementById("simplidone_invisIncident").innerHTML);
 let invisEinheit = JSON.parse(document.getElementById("simplidone_invisEinheit").innerHTML).einheit;
 let invisEinheitsnummer = JSON.parse(document.getElementById("simplidone_invisEinheit").innerHTML).einheitsnummer;
+let username = '';
 
 simplidoneWidget();
 $j('#simplidone_outerBox').parent().toggleClass('simplidone_background', true);
@@ -33,13 +34,25 @@ function simplidoneWidget() {
     }
     dateRange.appendChild(dropDown);
 
-    let loader = document.createElement("div");
-    loader.setAttribute("class", "simplidone_loader");
-    loader.style.opacity = '0';
-    dateRange.appendChild(loader);
+    let inputWrapper = document.createElement("div");
+    inputWrapper.setAttribute("class", "simplidone_inputWrapper");
 
-    let labelFrom = document.createElement("label");
-    dateRange.appendChild(labelFrom);
+    let usernameInput = document.createElement("input");
+    usernameInput.type = "text";
+    usernameInput.id = "simplidone_username";
+    usernameInput.placeholder = "Username";
+    inputWrapper.appendChild(usernameInput);
+
+    let sendButton = document.createElement("button");
+    sendButton.id = "simplidone_sendButton";
+    sendButton.setAttribute("class", "fa-solid fa-paper-plane");
+    sendButton.addEventListener("click", function(){
+        username = usernameInput.value;
+        simplidoneUpdate();
+    });
+    inputWrapper.appendChild(sendButton);
+
+    dateRange.appendChild(inputWrapper);
 
     let dateFromWrapper = document.createElement("div");
     dateFromWrapper.setAttribute("class", "simplidone_dateWrapper");
@@ -62,9 +75,6 @@ function simplidoneWidget() {
     dateFromWrapper.appendChild(deleteFromButton);
 
     dateRange.appendChild(dateFromWrapper);
-
-    let labelTo = document.createElement("label");
-    dateRange.appendChild(labelTo);
 
     let dateToWrapper = document.createElement("div");
     dateToWrapper.setAttribute("class", "simplidone_dateWrapper");
@@ -194,8 +204,10 @@ function simplidoneCreateTable(){
 }
 
 function simplidoneUpdate() {
-    let loader = document.getElementsByClassName("simplidone_loader")[0];
+    let loader = document.getElementById("simplidone_loader");
     loader.style.opacity = '100';
+    let outerBox = document.getElementById("simplidone_outerBox");
+    outerBox.style.opacity = '0.5';
 
     indate = document.getElementById("simplidone_dateFrom").value;
     outdate = document.getElementById("simplidone_dateTo").value;
@@ -213,15 +225,18 @@ function simplidoneUpdate() {
         outdate = parts[2] + "-" + parts[1] + "-" + parts[0];
     }
 
+    username = document.getElementById("simplidone_username").value;
+
     $j.ajax({
         url: "dashboard/MyWidgets/Simplidone/query.php",
         type: "GET",
-        data: { einheit: einheitsnummer, indate: indate, outdate: outdate },
+        data: { einheit: einheitsnummer, indate: indate, outdate: outdate, username: username },
         dataType: "text",
         success: function (data) {
             invisIncident = JSON.parse(data);
             simplidoneCreateTable();
             loader.style.opacity = '0';
+            outerBox.style.opacity = '100';
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(textStatus, errorThrown);
@@ -239,7 +254,7 @@ function simplidoneUpdate() {
     }
 
     .simplidone_dropDown{
-        width: 100%;
+        width: 50%;
         padding: 5px;
         font-size: 16px;
         line-height: 1.75;
@@ -247,6 +262,30 @@ function simplidoneUpdate() {
         border-radius: 5px;
         background-color: #242730;
         color: #FFCC0D;
+    }
+
+    .simplidone_inputWrapper {
+        display: flex;
+        border: 2px solid #242730;
+        border-radius: 5px;
+        background-color: #242730;
+        color: #FFCC0D;
+    }
+
+    #simplidone_username {
+        width: 100%;
+        font-size: 16px;
+        line-height: 1.75;
+        border: none;
+        background: none;
+    }
+
+    #simplidone_sendButton {
+        font-size: 16px;
+        line-height: 1.75;
+        border: none;
+        background: none;
+        cursor: pointer;
     }
 
     .simplidone_background {
@@ -258,17 +297,13 @@ function simplidoneUpdate() {
     .simplidone_dateRange {
         display: flex;
         justify-content: space-between;
+        gap: 10px;
         text-align: right;
-        margin-right: 10px;
-        margin-left: 10px;
+        padding-left: 10px;
+         padding-right: 10px;
         font-size: 16px;
-        margin-top: 5px;
-        margin-bottom: 5px;
-    }
-
-    .simplidone_dateRange label {
-        margin-right: 10px;
-        margin-left: 10px;
+        padding-top: 5px;
+        padding-bottom: 5px;
     }
 
     .simplidone_dateWrapper input {
@@ -277,7 +312,6 @@ function simplidoneUpdate() {
         border-radius: 5px;
         background: #252730;
         text-align: center;
-        padding: 2px;
     }
 
     .simplidone_dateWrapper button {
@@ -294,7 +328,6 @@ function simplidoneUpdate() {
         border-radius: 5px;
         background: #252730;
         text-align: center;
-        padding: 2px;
     }
 
     .simplidone_dateWrapper input::placeholder {
@@ -332,14 +365,19 @@ function simplidoneUpdate() {
         text-overflow: ellipsis;
     }
 
-    .simplidone_loader {
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-top: 3px solid #FFCC0D;
+    #simplidone_loader {
+        position: absolute;
+        top: 45%;
+        left: 45%;
+        transform: translate(-50%, -50%);
+        border: 5px solid rgba(255, 255, 255, 0.3);
+        border-top: 5px solid #FFCC0D;
         border-radius: 50%;
-        width: 15px;
-        height: 15px;
+        width: 30px;
+        height: 30px;
         animation: spin 1s linear infinite;
-        margin: auto;
+        margin: 0;
+        opacity: 0;
     }
 
     @keyframes spin {
@@ -355,4 +393,5 @@ function simplidoneUpdate() {
 <div id="simplidone_invisIncident">{{incidents}}</div>
 <div id="simplidone_invisLabel">{{labels}}</div>
 <div id="simplidone_invisEinheit">{{einheit}}</div>
+<div id="simplidone_loader"></div>
 <div id="simplidone_outerBox"></div>

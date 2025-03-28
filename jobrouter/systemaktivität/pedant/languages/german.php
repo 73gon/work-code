@@ -115,3 +115,4 @@ define('ZUGFERD', 'ZUGFeRD bearbeiten');
 define('MAXFILESIZE', 'Maximale Dateigröße');
 define('WORKFLOWDETAILS', 'Workflowdetails');
 define('DIREKT', 'Direkt');
+define('COMPANYREGISTRATIONNUMBER', 'Handelsregisternummer');
