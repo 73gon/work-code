@@ -37,13 +37,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         if (!$this->getSystemActivityVar('FILEID')) {
-                $this->uploadFile();
+            $this->uploadFile();
         }
     }
 
-    protected function pedantData()
+    protected function importVendorCSV()
     {
-        $this->postVendorDetails();
+        $this->importVendor();
         $this->markActivityAsCompleted();
     }
 
@@ -58,14 +58,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         list($startTime, $endTime) = array_map('intval', explode(',', $worktime));
         list($currentHour, $currentDayOfWeek) = [(int) (new DateTime())->format('G'), (int) (new DateTime())->format('w')];
 
-        if($weekend){
+        if ($weekend) {
             if ($currentHour >= $startTime && $currentHour < $endTime) {
                 $this->setResubmission($interval, 'm');
             } else {
                 $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
                 $this->setResubmission($hoursToStart, 'h');
             }
-        }else{
+        } else {
             if ($currentDayOfWeek >= 1 && $currentDayOfWeek <= 5) {
                 if ($currentHour >= $startTime && $currentHour < $endTime) {
                     $this->setResubmission($interval, 'm');
@@ -75,7 +75,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 }
             } else {
                 $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
-                if ($currentDayOfWeek == 6) {$hoursToStart += 24;}
+                if ($currentDayOfWeek == 6) {
+                    $hoursToStart += 24;
+                }
                 $this->setResubmission($hoursToStart, 'h');
             }
         }
@@ -95,8 +97,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         $url = ($this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL) .
-               (strtolower($fileExtension) == 'xml' ? "/v2/external/documents/invoices/upload" :
-               ($this->resolveInputParameter('zugferd') == '1' ? "/v1/external/documents/invoices/upload" : "/v2/external/documents/invoices/upload"));
+            (strtolower($fileExtension) == 'xml' ? "/v2/external/documents/invoices/upload" : ($this->resolveInputParameter('zugferd') == '1' ? "/v1/external/documents/invoices/upload" : "/v2/external/documents/invoices/upload"));
 
         $validFlags = ['normal', 'check_extraction', 'skip_review', 'force_skip'];
 
@@ -127,10 +128,10 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_POSTFIELDS => [
-            'file' => new CURLFILE($file),
-            'recipientInternalNumber' => $this->resolveInputParameter('internalNumber'),
-            'action' => $action,
-            'note' => $this->resolveInputParameter('note'),
+                'file' => new CURLFILE($file),
+                'recipientInternalNumber' => $this->resolveInputParameter('internalNumber'),
+                'action' => $action,
+                'note' => $this->resolveInputParameter('note'),
             ],
             CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->resolveInputParameter('api_key')],
             CURLOPT_SSL_VERIFYHOST => 0,
@@ -159,7 +160,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     protected function checkFile()
     {
         if (!empty($this->resolveInputParameter('vendorTable'))) {
-            $this->postVendorDetails();
+            $this->importVendor();
         }
 
         $baseURL = $this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL;
@@ -214,18 +215,26 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         if ($check === true) {
-            if($type = "e_invoice"){
+            if ($type = "e_invoice") {
                 $pdfPath = $this->getSystemActivityVar('PDFPATH');
-                if (file_exists($pdfPath)) {unlink($pdfPath);}
+                if (file_exists($pdfPath)) {
+                    unlink($pdfPath);
+                }
 
                 $reportPath = $this->getSystemActivityVar('REPORTPATH');
-                if (file_exists($reportPath)) {unlink($reportPath);}
+                if (file_exists($reportPath)) {
+                    unlink($reportPath);
+                }
 
                 $index = 0;
                 while (true) {
                     $attachmentPath = $this->getSystemActivityVar('ATTACHMENTPATH' . $index);
-                    if (!$attachmentPath) {break;}
-                    if (file_exists($attachmentPath)) {unlink($attachmentPath);}
+                    if (!$attachmentPath) {
+                        break;
+                    }
+                    if (file_exists($attachmentPath)) {
+                        unlink($attachmentPath);
+                    }
                     $index++;
                 }
             }
@@ -234,11 +243,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
     }
 
-    protected function postVendorDetails()
+    protected function importVendor()
     {
         $table = $this->resolveInputParameter('vendorTable');
         $listfields = $this->resolveInputParameterListValues('postVendor');
-        $fields = ['internalVendorNumber', 'vendorProfileName', 'company', 'street', 'zipCode', 'city', 'country', 'iban', 'taxNumber', 'vatNumber', 'recipientNumber', 'kvk', 'currency'];
+        $fields = ['internalVendorNumber', 'vendorProfileName', 'company', 'street', 'zipCode', 'city', 'country', 'iban', 'taxNumber', 'vatNumber', 'recipientNumber', 'kvk', 'currency', 'blocked'];
 
         $list = array();
         foreach ($listfields as $listindex => $listvalue) {
@@ -246,7 +255,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
         ksort($list);
 
-        if (empty($table)) {return;}
+        if (empty($table)) {
+            return;
+        }
 
         $JobDB = $this->getJobDB();
 
@@ -254,7 +265,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $lastKey = null;
         foreach ($list as $listindex => $listvalue) {
             if (!empty($listvalue)) {
-            $lastKey = $listindex;
+                $lastKey = $listindex;
             }
         }
 
@@ -274,7 +285,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         while ($row = $JobDB->fetchRow($result)) {
             $data = [];
             foreach ($fields as $index => $field) {
-                    $data[$field] = isset($row[$fields[$index]]) && !empty($row[$fields[$index]]) ? $row[$fields[$index]] : '';
+                $data[$field] = isset($row[$fields[$index]]) && !empty($row[$fields[$index]]) ? $row[$fields[$index]] : '';
             }
             $payloads[] = $data;
         }
@@ -290,11 +301,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $csvData[] = $rowData;
         }
 
-        $csvFilePath = __DIR__ . '/' .$this->outputFileName;
+        $csvFilePath = __DIR__ . '/' . $this->outputFileName;
         $csvFile = fopen($csvFilePath, 'w');
 
         foreach ($csvData as $row) {
-            fputcsv($csvFile, $row);
+            fputcsv($csvFile, $ );
         }
 
         fclose($csvFile);
@@ -326,9 +337,10 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 'recipientNumber' => 'recipientNumber',
                 'kvk' => 'kvk',
                 'currency' => 'currrency',
-                'file'=> new CURLFILE($csvFilePath)
+                'blocked' => 'blocked',
+                'file' => new CURLFILE($csvFilePath)
             ),
-            CURLOPT_HTTPHEADER => array('x-api-key: ' .$this->resolveInputParameter('api_key')),
+            CURLOPT_HTTPHEADER => array('x-api-key: ' . $this->resolveInputParameter('api_key')),
             CURLOPT_SSL_VERIFYHOST => 0,
             CURLOPT_SSL_VERIFYPEER => 0
         ));
@@ -354,17 +366,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         foreach ([$url_invoice, $url_einvoice] as $url) {
             curl_setopt_array($curl, array(
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'GET',
-            CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->resolveInputParameter('api_key')],
-            CURLOPT_SSL_VERIFYHOST => 0,
-            CURLOPT_SSL_VERIFYPEER => 0
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 0,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'GET',
+                CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->resolveInputParameter('api_key')],
+                CURLOPT_SSL_VERIFYHOST => 0,
+                CURLOPT_SSL_VERIFYPEER => 0
             ));
             $response = curl_exec($curl);
 
@@ -378,37 +390,38 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $formattedTime = $currentTime->format('Y-m-d H:i:s');
 
             foreach ($ids as $id) {
-            $dbType = $this->getDatabaseType();
-            if ($dbType === "MySQL") {
-                $query = "
+                $dbType = $this->getDatabaseType();
+                if ($dbType === "MySQL") {
+                    $query = "
                 UPDATE jrincidents j
                 JOIN $table_head t ON t.step_id = j.process_step_id
                 SET j.resubmission_date = '$formattedTime'
                 WHERE t.step = $stepID AND t.T_FILEID = '$id';
                 ";
-            } elseif ($dbType === "MSSQL") {
-                $query = "
+                } elseif ($dbType === "MSSQL") {
+                    $query = "
                 UPDATE j
                 SET j.resubmission_date = '$formattedTime'
                 FROM jrincidents AS j
                 JOIN $table_head AS t ON t.step_id = j.process_step_id
                 WHERE t.step = $stepID AND t.T_FILEID = '$id';
                 ";
-            } else {
-                throw new Exception("Unsupported database type");
-            }
-            try {
-                $jobDB = $this->getJobDB();
-                $jobDB->exec($query);
-            } catch (Exception $e) {
-                throw new Exception("Failed to execute query: " . $e->getMessage());
-            }
+                } else {
+                    throw new Exception("Unsupported database type");
+                }
+                try {
+                    $jobDB = $this->getJobDB();
+                    $jobDB->exec($query);
+                } catch (Exception $e) {
+                    throw new Exception("Failed to execute query: " . $e->getMessage());
+                }
             }
         }
         curl_close($curl);
     }
 
-    public function getDatabaseType() {
+    public function getDatabaseType()
+    {
         $jobDB = $this->getJobDB();
         try {
             $result = $jobDB->query("SELECT VERSION()");
@@ -416,15 +429,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             if (is_string($row[0]["VERSION()"])) {
                 return "MySQL";
             }
-        } catch (Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             $result = $jobDB->query("SELECT @@VERSION");
             $row = $jobDB->fetchAll($result);
             if (is_string(reset($row[0]))) {
-                    return "MSSQL";
+                return "MSSQL";
             }
-        } catch (Exception $e) {}
+        } catch (Exception $e) {
+        }
         throw new Exception("Database could not be detected");
     }
 
@@ -478,6 +493,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'vendorZipCode' => $eInvoiceFields['vendorPostalAddressPostCode'],
             'vendorCity' => $eInvoiceFields['vendorPostalAddressCity'],
             'vendorCountry' => $eInvoiceFields['vendorPostalAddressCountryCode'],
+            'vendorEmail' => $eInvoiceFields['vendorContactEmailAddress'],
             'vendorDeliveryPeriod' => '',
             'vendorAccountNumber' => '',
             'vendorInternalNumber' => $vendorEntity['internalNumber']
@@ -492,6 +508,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'vendorCountry' => $dataItem["vendorCountry"],
             'vendorDeliveryPeriod' => $dataItem["deliveryPeriod"],
             'vendorAccountNumber' => $dataItem["accountNumber"],
+            'vendorEmail' => $dataItem["vendorEmail"],
             'vendorInternalNumber' => $dataItem["vendorEntity"]["internalNumber"],
             'vendorCompanyRegistrationNumber' => $dataItem['KVKNumber']
         ];
@@ -588,14 +605,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'rejectionCode' => $type == "e_invoice" ? '' : ($dataItem['rejectionType']['code'] ?? null),
             'rejectionType' => $type == "e_invoice" ? '' : ($dataItem['rejectionType']['type'] ?? null)
         ];
-        if($type == "e_invoice"){
+        if ($type == "e_invoice") {
             $violations = [];
             foreach ($dataItem['violations'] as $violation) {
                 $messages = implode(', ', $violation['messages']);
                 $violations[] = $violation['level'] . ': ' . $messages;
             }
             $values5['violations'] = implode(" --- ", $violations);
-        }else{
+        } else {
             $values5['violations'] = '';
         }
 
@@ -606,7 +623,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $attributes6 = $this->resolveOutputParameterListAttributes('attachments'); //attachments
 
-        if($type == "e_invoice"){
+        if ($type == "e_invoice") {
             //pdf
             $urlPDF = $dataItem['eInvoicePdfPath'];
             $tempPath = $this->getTempPath();
@@ -646,7 +663,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $dataReport = curl_exec($ch);
             curl_close($ch);
 
-            $eInvoiceReport= $savePath . "/" . $tempFileName . "_REPORT_.xml";
+            $eInvoiceReport = $savePath . "/" . $tempFileName . "_REPORT_.xml";
             file_put_contents($eInvoiceReport, $dataReport);
             $this->setSystemActivityVar('REPORTPATH', $eInvoiceReport);
 
@@ -669,7 +686,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 if ($dataAttachment !== false) {
                     $attachmentPath = $savePath . "/" . $tempFileName . "_ATTACHMENT_" . ($index + 1) . ".pdf";
                     file_put_contents($attachmentPath, $dataAttachment);
-                    $this->setSystemActivityVar('ATTACHMENTPATH' .$index, $attachmentPath);
+                    $this->setSystemActivityVar('ATTACHMENTPATH' . $index, $attachmentPath);
                     $attachmentFiles[] = $attachmentPath;
                 }
             }
@@ -683,7 +700,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             foreach ($attachmentFiles as $i => $attachmentPath) {
                 $values6['e_invoiceAttachments'][] = $attachmentPath;
             }
-        }else{
+        } else {
             $values6 = [
                 'e_invoicePDF' => '',
                 'e_invoiceReport' => '',
@@ -717,7 +734,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             'vatRatePerLine' => []
         ];
 
-        if($type == "e_invoice"){
+        if ($type == "e_invoice") {
             $invoiceLine = $eInvoiceFields['invoiceLine'] ?? [];
 
             foreach ($invoiceLine as $line) {
@@ -804,6 +821,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => ACCOUNTNUMBER, 'value' => 'vendorAccountNumber'],
                 ['name' => INTERNALNUMBER, 'value' => 'vendorInternalNumber'],
                 ['name' => COMPANYREGISTRATIONNUMBER, 'value' => 'vendorCompanyRegistrationNumber'],
+                ['name' => EMAIL, 'value' => 'vendorEmail']
             ];
         }
 

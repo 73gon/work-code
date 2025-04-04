@@ -34,7 +34,7 @@
                     <list id='workflowDetails' name='WORKFLOWDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
                 </outputParameters>
 			</function>
-            <function id='pedantData' name='DATA' description='DATA_DESC'>
+            <function id='importVendorCSV' name='DATA' description='DATA_DESC'>
                 <inputParameters>
                     <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>

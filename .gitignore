@@ -3,9 +3,10 @@
 /jobrouter/widgets/.DS_Store
 /jobrouter/systemaktivität/.DS_Store
 /jobrouter/widgets/cdm smith/.DS_Store
-/jobrouter/widgets/cdm smith/1.0/.DS_Store
-/jobrouter/widgets/cdm smith/1.1/.DS_Store
 /jobrouter/widgets/Eingang/.DS_Store
 /jobrouter/widgets/Liste/.DS_Store
 /jobrouter/systemaktivität/pedant/.DS_Store
-/jobrouter/systemaktivität/pedant/JobRouterStub.php 
+/jobrouter/systemaktivität/pedant/SystemActivityStub.php
+/jobrouter/widgets/cdm smith/Simplibills/WidgetsStub.php
+/jobrouter/widgets/cdm smith/Simplidone/WidgetsStub.php
+/jobrouter/widgets/cdm smith/Simplidents/WidgetsStub.php

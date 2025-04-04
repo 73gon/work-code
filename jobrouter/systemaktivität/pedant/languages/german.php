@@ -116,3 +116,4 @@ define('MAXFILESIZE', 'Maximale Dateigröße');
 define('WORKFLOWDETAILS', 'Workflowdetails');
 define('DIREKT', 'Direkt');
 define('COMPANYREGISTRATIONNUMBER', 'Handelsregisternummer');
+define('EMAIL', 'E-Mail');
