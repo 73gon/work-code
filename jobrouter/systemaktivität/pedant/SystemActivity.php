@@ -305,7 +305,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $csvFile = fopen($csvFilePath, 'w');
 
         foreach ($csvData as $row) {
-            fputcsv($csvFile, $ );
+            fputcsv($csvFile, $row);
         }
 
         fclose($csvFile);
@@ -911,4 +911,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.2
+//Version 1.3
