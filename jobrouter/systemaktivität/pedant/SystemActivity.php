@@ -800,7 +800,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => VAT, 'value' => '10'],
                 ['name' => RECIPIENTNUMBER, 'value' => '11'],
                 ['name' => KVK, 'value' => '12'],
-                ['name' => CURRENCY, 'value' => '13']
+                ['name' => CURRENCY, 'value' => '13'],
+                ['name'=> BLOCKED, 'value'=> '14'],
             ];
         }
 
@@ -923,4 +924,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.3
+//Version 1.4
