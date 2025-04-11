@@ -285,8 +285,20 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         while ($row = $JobDB->fetchRow($result)) {
             $data = [];
             foreach ($fields as $index => $field) {
-                $data[$field] = isset($row[$fields[$index]]) && !empty($row[$fields[$index]]) ? $row[$fields[$index]] : '';
+                $value = isset($row[$fields[$index]]) ? $row[$fields[$index]] : '';
+
+                if ($field === 'blocked') {
+                    $truthy = ['yes', 'true', 'ja', '1'];
+
+                    $value = $row[$fields[$index]] ?? '';
+                    $normalized = is_string($value) ? strtolower(trim($value)) : strval($value);
+
+                    $data[$field] = in_array($normalized, $truthy) ? '1' : '0';
+                } else {
+                    $data[$field] = !empty($value) ? $value : '';
+                }
             }
+
             $payloads[] = $data;
         }
 
