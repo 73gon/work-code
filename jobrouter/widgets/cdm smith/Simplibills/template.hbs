@@ -98,10 +98,20 @@ function simplibillsUpdate() {
         data: { einheit: einheitsnummer, username: username },
         dataType: "text",
         success: function (data) {
-            invisIncident = JSON.parse(data);
-            simplibillsCreateTable();
             loader.style.opacity = '0';
             outerBox.style.opacity = '100';
+            if (!data){
+                let toast = document.createElement("div");
+                toast.setAttribute("id", "simplibills_toast");
+                toast.innerText = "User existiert nicht!";
+                outerBox.appendChild(toast);
+                setTimeout(function(){
+                    outerBox.removeChild(toast);
+                }, 3000);
+            }else{
+                invisIncident = JSON.parse(data);
+                simplibillsCreateTable();
+            }
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(textStatus, errorThrown);
@@ -116,6 +126,19 @@ function simplibillsUpdate() {
 #simplibills_outerBox{
     width: 100%;
     font-family: 'Poppins';
+}
+
+#simplibills_toast {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background-color: #d9534f;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    z-index: 9999;
+    opacity: 0;
+    animation: fadeInOut 3s forwards;
 }
 
 .simplibills_dropDownContainer{

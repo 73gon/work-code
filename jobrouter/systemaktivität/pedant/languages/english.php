@@ -118,3 +118,4 @@ define('WORKFLOWDETAILS', 'Workflowdetails');
 define('DIREKT', 'Direct');
 define('COMPANYREGISTRATIONNUMBER', 'Company Registration Number');
 define('EMAIL', 'E-Mail');
+define('BLOCKED', 'Blocked');

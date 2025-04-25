@@ -9,6 +9,15 @@ $incidents = getIncidents($einheit, $username);
 echo $incidents;
 function getIncidents($einheit, $username)
 {
+    $JobDB = DBFactory::getJobDB();
+    if (!empty($username)) {
+        $query = "SELECT * FROM JRUSERS WHERE username = '$username'";
+        $result = $JobDB->query($query);
+        if ($result->num_rows == 0) {
+            return false;
+        }
+    }
+
     $bearbeitung = getBearbeitung($einheit, $username);
     $gebucht_zahlung = getGebuchtAndZahlungsfreigabe($einheit);
 
@@ -70,19 +79,29 @@ function getBearbeitung($einheit, $username)
     if ($einheit != "Alle") {
         $where .= " AND h.EINHEITSNUMMER = '" . $einheit . "'";
     }
-    
+
     $temp = "
             WITH RankedRows AS (
                 SELECT documentrevision_id, DOKUMENTENID, STATUS, MAX(documentrevision_id) OVER (PARTITION BY DOKUMENTENID) AS MaxRevisionID
                 FROM RECHNUGNEN
             )
-            SELECT h.STEP AS STEP, j.STEPLABEL, COUNT(h.STEP) AS COUNTROW
+            SELECT j.STEPLABEL, COUNT(j.STEP) AS COUNTROW,
+                CASE
+                    WHEN h.STEP = 4 AND h.ZAHLMETHODE = 'KREDITKARTE' THEN 444
+                    ELSE h.STEP
+                END AS STEP
             FROM RankedRows r
             LEFT JOIN RE_HEAD h ON r.DOKUMENTENID = h.DOKUMENTENID
-            LEFT JOIN JRINCIDENTS j ON h.step_id = j.process_step_id AND j.processname = 'RECHNUNGSBEARBEITUNG' AND j.STATUS IN (0, 1)
-            INNER JOIN JRINCIDENT i ON j.processid = i.processid AND i.`status`= 0
+            LEFT JOIN JRINCIDENTS j ON h.step_id = j.process_step_id
+                AND j.processname = 'RECHNUNGSBEARBEITUNG'
+                AND j.STATUS IN (0, 1)
+            INNER JOIN JRINCIDENT i ON j.processid = i.processid AND i.status = 0
             WHERE $where
-            GROUP BY h.STEP
+            GROUP BY h.STEP,
+                CASE
+                    WHEN h.ZAHLMETHODE = 'Kreditkarte' THEN 444
+                    ELSE 4
+                END
     ";
 
     $result = $JobDB->query($temp);

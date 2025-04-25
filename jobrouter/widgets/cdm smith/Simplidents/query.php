@@ -6,10 +6,10 @@ $einheit = $_GET['einheit'];
 $username = $_GET['username'];
 
 $incidents = getIncidents($einheit, $username);
-error_log($incidents) ;
 echo $incidents;
 
-function getIncidents($einheit, $username){
+function getIncidents($einheit, $username)
+{
     $JobDB = DBFactory::getJobDB();
 
     if (!empty($username)) {
@@ -42,13 +42,13 @@ function getIncidents($einheit, $username){
                 LEFT JOIN RE_HEAD r ON j.process_step_id = r.step_id
                 WHERE $where
                 GROUP BY j.STEP
-    ";
+            ";
 
     $result = $JobDB->query($temp);
 
 
     $incidents = array_fill(0, 12, 0);
-    while($row = $JobDB->fetchRow($result)){
+    while ($row = $JobDB->fetchRow($result)) {
         switch ($row["STEP"]) {
             case "1":
                 $incidents[0] = $row["STEP_COUNT"];
@@ -61,7 +61,7 @@ function getIncidents($einheit, $username){
                 break;
             case "4":
             case "7":
-                $incidents[3] = (String)((int)$incidents[3] + (int)$row["STEP_COUNT"]);
+                $incidents[3] = (string)((int)$incidents[3] + (int)$row["STEP_COUNT"]);
                 break;
             case "17":
                 $incidents[4] = $row["STEP_COUNT"];
@@ -73,7 +73,7 @@ function getIncidents($einheit, $username){
                 $incidents[6] = $row["STEP_COUNT"];
                 break;
             case "802":
-                $incidents[7] = (String)((int)$incidents[5] + (int)$row["STEP_COUNT"]);
+                $incidents[7] = (string)((int)$incidents[5] + (int)$row["STEP_COUNT"]);
                 break;
             case "30":
                 $incidents[8] = $row["STEP_COUNT"];
@@ -95,4 +95,3 @@ function getIncidents($einheit, $username){
 
     return json_encode($incidents);
 }
-?>

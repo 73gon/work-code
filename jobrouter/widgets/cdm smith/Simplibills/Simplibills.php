@@ -40,6 +40,7 @@ class Simplibills extends Widget
                 "Pruefung",
                 "Freigabe",
                 "Buchhaltung DE",
+                "Buchhaltung Kredikarte",
                 "Fuhrpark",
                 "Einkauf",
                 "Buchhaltung IFSC",
@@ -97,38 +98,45 @@ class Simplibills extends Widget
     {
         $JobDB = $this->getJobDB();
         $query = "
-                WITH RankedRows AS (
-                    SELECT documentrevision_id, DOKUMENTENID, STATUS, MAX(documentrevision_id) OVER (PARTITION BY DOKUMENTENID) AS MaxRevisionID
-                    FROM RECHNUGNEN
-                )
-                SELECT h.STEP AS STEP, j.STEPLABEL, COUNT(h.STEP) AS COUNTROW
-                FROM RankedRows r
-                LEFT JOIN RE_HEAD h ON r.DOKUMENTENID = h.DOKUMENTENID
-                LEFT JOIN JRINCIDENTS j ON h.step_id = j.process_step_id AND j.processname = 'RECHNUNGSBEARBEITUNG' AND j.STATUS IN (0, 1)
-                INNER JOIN JRINCIDENT i ON j.processid = i.processid AND i.`status`= 0
-                WHERE documentrevision_id = MaxRevisionID
-                AND h.FAELLIGKEIT < CURDATE()
-                AND r.STATUS = 'Bearbeitung'
-                GROUP BY h.STEP,
-                    CASE
-                        WHEN h.ZAHLMETHODE = 'Kreditkarte' THEN 'Buchhaltung Kreditkarte'
-                        ELSE 'Buchhaltung'
-                    END
-        ";
+                    WITH RankedRows AS (
+                        SELECT documentrevision_id, DOKUMENTENID, STATUS, MAX(documentrevision_id) OVER (PARTITION BY DOKUMENTENID) AS MaxRevisionID
+                        FROM RECHNUGNEN
+                    )
+                    SELECT j.STEPLABEL, COUNT(j.STEP) AS COUNTROW,
+                        CASE
+                            WHEN h.STEP = 4 AND h.ZAHLMETHODE = 'KREDITKARTE' THEN 444
+                            ELSE h.STEP
+                        END AS STEP
+                    FROM RankedRows r
+                    LEFT JOIN RE_HEAD h ON r.DOKUMENTENID = h.DOKUMENTENID
+                    LEFT JOIN JRINCIDENTS j ON h.step_id = j.process_step_id
+                        AND j.processname = 'RECHNUNGSBEARBEITUNG'
+                        AND j.STATUS IN (0, 1)
+                    INNER JOIN JRINCIDENT i ON j.processid = i.processid AND i.status = 0
+                    WHERE r.documentrevision_id = r.MaxRevisionID
+                        AND h.FAELLIGKEIT < CURDATE()
+                        AND r.STATUS = 'Bearbeitung'
+                    GROUP BY h.STEP,
+                        CASE
+                            WHEN h.STEP = 4 AND h.ZAHLMETHODE = 'Kreditkarte' THEN 444
+                            ELSE 4
+                        END
+                ";
         $result = $JobDB->query($query);
 
-        $bearbeitung = array_fill(0, 10, 0);
+        $bearbeitung = array_fill(0, 11, 0);
         $stepMapping = [
             "1" => 0,
             "2" => 1,
             "3" => 2,
             "4" => 3,
-            "7" => 4,
-            "5" => 5,
-            "17" => 6,
-            "30" => 7,
-            "40" => 8,
-            "50" => 9
+            "444" => 4,
+            "7" => 5,
+            "5" => 6,
+            "17" => 7,
+            "30" => 8,
+            "40" => 9,
+            "50" => 10
         ];
 
         while ($row = $JobDB->fetchRow($result)) {

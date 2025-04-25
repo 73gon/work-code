@@ -17,6 +17,15 @@ $all = getIncidents($indate, $outdate, $einheit, $username);
 echo $all;
 function getIncidents($indate, $outdate, $einheit, $username)
 {
+    $JobDB = DBFactory::getJobDB();
+    if (!empty($username)) {
+        $query = "SELECT * FROM JRUSERS WHERE username = '$username'";
+        $result = $JobDB->query($query);
+        if ($result->num_rows == 0) {
+            return false;
+        }
+    }
+
     $normalSteps = getNormalSteps($indate, $outdate, $einheit, $username);
     $payments = getPayments($indate, $outdate, $einheit);
 
@@ -74,33 +83,38 @@ function getNormalSteps($indate, $outdate, $einheit, $username)
 
     $query = "
                 WITH ProcessedData AS (
-                    SELECT j.STEP, TIMEDIFF(MAX(j.outdate), MIN(j.indate)) AS duration, COUNT(*) AS step_count
+                    SELECT TIMEDIFF(MAX(j.outdate), MIN(j.indate)) AS duration, COUNT(*) AS step_count,
+                        CASE
+                            WHEN j.STEP = 4 AND h.ZAHLMETHODE = 'Kreditkarte' THEN 444
+                            ELSE j.STEP
+                        END AS STEP
                     FROM JRINCIDENTS j
-                        INNER JOIN RE_HEAD h ON j.process_step_id = h.step_id
-                        INNER JOIN RECHNUGNEN r ON h.DOKUMENTENID = r.DOKUMENTENID
-                        WHERE $where
-                        GROUP BY j.STEP, r.DOKUMENTENID
-                    )
-                    SELECT STEP, SUM(TIME_TO_SEC(duration)) AS total_seconds, AVG(TIME_TO_SEC(duration)) AS avg_seconds, COUNT(STEP) AS amount
-                    FROM ProcessedData
-                    GROUP BY STEP
-                    ORDER BY STEP ASC;
+                    INNER JOIN RE_HEAD h ON j.process_step_id = h.step_id
+                    INNER JOIN RECHNUGNEN r ON h.DOKUMENTENID = r.DOKUMENTENID
+                    WHERE $where
+                    GROUP BY j.STEP, r.DOKUMENTENID
+                )
+                SELECT STEP, SUM(TIME_TO_SEC(duration)) AS total_seconds, AVG(TIME_TO_SEC(duration)) AS avg_seconds, COUNT(STEP) AS amount
+                FROM ProcessedData
+                GROUP BY STEP
+                ORDER BY STEP ASC;
             ";
     $result = $JobDB->query($query);
 
-    $incidents = array_fill(0, 11, array_fill(0, 3, 0));
+    $incidents = array_fill(0, 12, array_fill(0, 3, 0));
     $stepMap = [
         "1" => 0,
         "2" => 1,
         "3" => 2,
         "4" => 3,
-        "17" => 4,
-        "7" => 5,
-        "5" => 6,
-        "30" => 7,
-        "40" => 8,
-        "50" => 9,
-        "15" => 10
+        "444" => 4,
+        "17" => 5,
+        "7" => 6,
+        "5" => 7,
+        "30" => 8,
+        "40" => 9,
+        "50" => 10,
+        "15" => 11
     ];
 
     while ($row = $JobDB->fetchRow($result)) {
