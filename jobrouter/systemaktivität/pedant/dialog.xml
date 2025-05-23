@@ -18,7 +18,7 @@
 					<field id='incident' name='INCIDENT' worktable='no' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='maxFileSize' name='MAXFILESIZE' worktable='yes' subtable='no' fixed='yes' datatype='int' required='no'/>
                     <field id="vendorTable" name="VENDORTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no"/>
-                    <list id="postVendor" name="POSTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
+                    <list id="importVendor" name="IMPORTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
                 </inputParameters>
                 <outputParameters>
 					<field id='fileID' name='FILEID' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
@@ -34,12 +34,22 @@
                     <list id='workflowDetails' name='WORKFLOWDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
                 </outputParameters>
 			</function>
-            <function id='importVendorCSV' name='DATA' description='DATA_DESC'>
+            <function id='importVendorCSV' name='IMPORTVENDORCSV' description='IMPORTVENDORCSV_DESC'>
                 <inputParameters>
                     <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
                     <field id="vendorTable" name="VENDORTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
-                    <list id="postVendor" name="POSTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
+                    <list id="importVendor" name="IMPORTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
+                </inputParameters>
+                <outputParameters>
+                </outputParameters>
+            </function>
+            <function id='importRecipientCSV' name='IMPORTRECIPIENTCSV' description='IMPORTRECIPIENTCSV_DESC'>
+                <inputParameters>
+                    <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
+                    <field id="recipientTable" name="RECIPIENTTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
+                    <list id="importRecipient" name="IMPORTRECIPIENT" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
                 </inputParameters>
                 <outputParameters>
                 </outputParameters>

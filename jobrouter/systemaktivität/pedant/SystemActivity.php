@@ -1,7 +1,8 @@
 <?php
 class pedantSystemActivity extends AbstractSystemActivityAPI
 {
-    private $outputFileName = "pedantOutput.csv";
+    private $recipientOutputFileName = "pedantOutput.csv";
+    private $vendorOutputFileName = "pedantVendorOutput.csv";
     private $demoURL  = "https://api.demo.pedant.ai";
     private $productiveURL = "https://api.pedant.ai";
     private $maxFileSize = 20;
@@ -44,6 +45,12 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     protected function importVendorCSV()
     {
         $this->importVendor();
+        $this->markActivityAsCompleted();
+    }
+
+    protected function importRecipientCSV()
+    {
+        $this->importRecipient();
         $this->markActivityAsCompleted();
     }
 
@@ -246,7 +253,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     protected function importVendor()
     {
         $table = $this->resolveInputParameter('vendorTable');
-        $listfields = $this->resolveInputParameterListValues('postVendor');
+        $listfields = $this->resolveInputParameterListValues('importVendor');
         $fields = ['internalVendorNumber', 'vendorProfileName', 'company', 'street', 'zipCode', 'city', 'country', 'iban', 'taxNumber', 'vatNumber', 'recipientNumber', 'kvk', 'currency', 'blocked'];
 
         $list = array();
@@ -293,7 +300,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     $value = $row[$fields[$index]] ?? '';
                     $normalized = is_string($value) ? strtolower(trim($value)) : strval($value);
 
-                    $data[$field] = in_array($normalized, $truthy) ? '1' : '0';
+                    $data[$field] = in_array($normalized, $truthy) ? 'TRUE' : 'FALSE';
                 } else {
                     $data[$field] = !empty($value) ? $value : '';
                 }
@@ -313,7 +320,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $csvData[] = $rowData;
         }
 
-        $csvFilePath = __DIR__ . '/' . $this->outputFileName;
+        $csvFilePath = __DIR__ . '/' . $this->vendorOutputFileName;
         $csvFile = fopen($csvFilePath, 'w');
 
         foreach ($csvData as $row) {
@@ -350,6 +357,113 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 'kvk' => 'kvk',
                 'currency' => 'currrency',
                 'blocked' => 'blocked',
+                'file' => new CURLFILE($csvFilePath)
+            ),
+            CURLOPT_HTTPHEADER => array('x-api-key: ' . $this->resolveInputParameter('api_key')),
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0
+        ));
+
+        curl_exec($curl);
+
+        $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        if ($httpcode != 200) {
+            throw new JobRouterException('Error occurred during vendor update. HTTP Error Code: ' . $httpcode);
+        }
+
+        curl_close($curl);
+        unlink($csvFilePath);
+    }
+
+    protected function importRecipient()
+    {
+        $table = $this->resolveInputParameter('recipientTable');
+        $listfields = $this->resolveInputParameterListValues('importRecipient');
+        $fields = ['internalRecipientNumber', 'recipientProfileName', 'country', 'city', 'zipCode', 'street', 'company', 'vatNumber'];
+
+        $list = array();
+        foreach ($listfields as $listindex => $listvalue) {
+            $list[$listindex] = $listvalue;
+        }
+        ksort($list);
+
+        if (empty($table)) {
+            return;
+        }
+
+        $JobDB = $this->getJobDB();
+
+        $temp = "SELECT ";
+        $lastKey = null;
+        foreach ($list as $listindex => $listvalue) {
+            if (!empty($listvalue)) {
+                $lastKey = $listindex;
+            }
+        }
+
+        foreach ($list as $listindex => $listvalue) {
+            if (!empty($listvalue)) {
+                $temp .= $listvalue . " AS " . $fields[$listindex - 1];
+                if ($listindex !== $lastKey) {
+                    $temp .= ", ";
+                }
+            }
+        }
+
+        $temp .= " FROM " . $table;
+        $result = $JobDB->query($temp);
+        $payload = [];
+
+        while ($row = $JobDB->fetchRow($result)) {
+            $data = [];
+            foreach ($fields as $index => $field) {
+                $value = isset($row[$fields[$index]]) ? $row[$fields[$index]] : '';
+                $data[$field] = !empty($value) ? $value : '';
+            }
+            $payloads[] = $data;
+        }
+
+        $csvData = [$fields];
+
+        foreach ($payloads as $payload) {
+            $rowData = [];
+            foreach ($fields as $field) {
+                $rowData[] = isset($payload[$field]) ? $payload[$field] : '';
+            }
+            $csvData[] = $rowData;
+        }
+
+        $csvFilePath = __DIR__ . '/' . $this->recipientOutputFileName;
+        $csvFile = fopen($csvFilePath, 'w');
+
+        foreach ($csvData as $row) {
+            fputcsv($csvFile, $row);
+        }
+
+        fclose($csvFile);
+
+        $url = $this->resolveInputParameter('demo') == '1' ? "$this->demoURL/v2/external/entities/recipient-groups/import" : 'https://entity.api.pedant.ai/v2/external/entities/recipient-groups/import';
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => array(
+                'internalNumber' => 'internalRecipientNumber',
+                'profileName' => 'recipientProfileName',
+                'country' => 'country',
+                'city' => 'city',
+                'zipCode' => 'zipCode',
+                'street' => 'street',
+                'name' => 'company',
+                'vatNumber' => 'vatNumber',
                 'file' => new CURLFILE($csvFilePath)
             ),
             CURLOPT_HTTPHEADER => array('x-api-key: ' . $this->resolveInputParameter('api_key')),
@@ -785,7 +899,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
     public function getUDL($udl, $elementID)
     {
-        if ($elementID == 'postVendor') {
+        if ($elementID == 'importVendor') {
             return [
                 ['name' => '-', 'value' => ''],
                 ['name' => INTERNALNUMBER, 'value' => '1'],
@@ -801,7 +915,21 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => RECIPIENTNUMBER, 'value' => '11'],
                 ['name' => KVK, 'value' => '12'],
                 ['name' => CURRENCY, 'value' => '13'],
-                ['name'=> BLOCKED, 'value'=> '14'],
+                ['name' => BLOCKED, 'value' => '14'],
+            ];
+        }
+
+        if ($elementID == 'importRecipient') {
+            return [
+                ['name' => '-', 'value' => ''],
+                ['name' => INTERNALNUMBER, 'value' => '1'],
+                ['name' => PROFILNAME, 'value' => '2'],
+                ['name' => COUNTRY, 'value' => '3'],
+                ['name' => CITY, 'value' => '4'],
+                ['name' => ZIPCODE, 'value' => '5'],
+                ['name' => STREET, 'value' => '6'],
+                ['name' => RECIPIENTNAME, 'value' => '7'],
+                ['name' => VAT, 'value' => '8'],
             ];
         }
 
@@ -924,4 +1052,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.4
+//Version 1.5
