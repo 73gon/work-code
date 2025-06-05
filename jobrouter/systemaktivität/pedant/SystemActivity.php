@@ -1,7 +1,7 @@
 <?php
 class pedantSystemActivity extends AbstractSystemActivityAPI
 {
-    private $recipientOutputFileName = "pedantOutput.csv";
+    private $recipientOutputFileName = "pedantRecipientOutput.csv";
     private $vendorOutputFileName = "pedantVendorOutput.csv";
     private $demoURL  = "https://api.demo.pedant.ai";
     private $productiveURL = "https://api.pedant.ai";
@@ -1056,4 +1056,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.5
+//Version 1.6.1
