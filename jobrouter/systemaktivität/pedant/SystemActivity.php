@@ -254,7 +254,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     {
         $table = $this->resolveInputParameter('vendorTable');
         $listfields = $this->resolveInputParameterListValues('importVendor');
-        $fields = ['internalVendorNumber', 'vendorProfileName', 'company', 'street', 'zipCode', 'city', 'country', 'iban', 'taxNumber', 'vatNumber', 'recipientNumber', 'kvk', 'currency', 'blocked'];
+        $fields = ['internalVendorNumber', 'vendorProfileName', 'company', 'street', 'zipCode', 'city', 'country', 'iban', 'taxNumber', 'vatNumber', 'recipientNumber', 'kvk', 'currency', 'blocked', 'sortCode', 'accountNumber'];
 
         $list = array();
         foreach ($listfields as $listindex => $listvalue) {
@@ -357,6 +357,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 'kvk' => 'kvk',
                 'currency' => 'currrency',
                 'blocked' => 'blocked',
+                'sortCode' => 'sortCode',
+                'accountNumber' => 'accountNumber',
                 'file' => new CURLFILE($csvFilePath)
             ),
             CURLOPT_HTTPHEADER => array('x-api-key: ' . $this->resolveInputParameter('api_key')),
@@ -916,6 +918,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => KVK, 'value' => '12'],
                 ['name' => CURRENCY, 'value' => '13'],
                 ['name' => BLOCKED, 'value' => '14'],
+                ['name' => SORTCODE, 'value' => '15'],
+                ['name' => ACCOUNTNUMBER, 'value' => '16'],
             ];
         }
 

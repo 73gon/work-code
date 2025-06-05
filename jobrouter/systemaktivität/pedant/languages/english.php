@@ -122,3 +122,4 @@ define('EMAIL', 'E-Mail');
 define('BLOCKED', 'Blocked');
 define('IMPORTRECIPIENT', 'Recipientconfiguration');
 define('RECIPIENTTABLE', 'Recipienttable');
+define('SORTCODE', 'Sortcode');
