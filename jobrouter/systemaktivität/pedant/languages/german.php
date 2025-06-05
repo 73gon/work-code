@@ -122,4 +122,4 @@ define('EMAIL', 'E-Mail');
 define('BLOCKED', 'Blockiert');
 define('IMPORTRECIPIENT', 'Empfänger-Konfiguration');
 define('RECIPIENTTABLE', 'Empfängertabelle');
-define('SORTCODE', 'Sortcode');
+define('SORTCODE', 'Bankleitzahl');
