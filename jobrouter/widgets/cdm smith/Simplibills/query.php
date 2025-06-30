@@ -13,8 +13,12 @@ function getIncidents($einheit, $username)
     if (!empty($username)) {
         $query = "SELECT * FROM JRUSERS WHERE username = '$username'";
         $result = $JobDB->query($query);
-        if ($result->num_rows == 0) {
-            return false;
+        $count = 0;
+        while ($row = $JobDB->fetchRow($result)) {
+            $count++;
+        }
+        if ($count === 0) {
+            return "false";
         }
     }
 
@@ -67,7 +71,7 @@ function getBearbeitung($einheit, $username)
     $JobDB = DBFactory::getJobDB();
 
     $where = "
-            @documentrevision_id = MaxRevisionID
+            r.documentrevision_id = r.MaxRevisionID
             AND h.FAELLIGKEIT < CURDATE()
             AND r.STATUS = 'Bearbeitung'
     ";
@@ -106,7 +110,7 @@ function getBearbeitung($einheit, $username)
 
     $result = $JobDB->query($temp);
 
-    $bearbeitung = array_fill(0, 10, 0);
+    $bearbeitung = array_fill(0, 11, 0);
     $stepMapping = [
         "1" => 0,
         "2" => 1,
@@ -128,5 +132,6 @@ function getBearbeitung($einheit, $username)
             $bearbeitung[$index] += (int) $row["COUNTROW"];
         }
     }
+
     return $bearbeitung;
 }

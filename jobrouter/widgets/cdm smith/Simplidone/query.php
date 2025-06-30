@@ -21,8 +21,12 @@ function getIncidents($indate, $outdate, $einheit, $username)
     if (!empty($username)) {
         $query = "SELECT * FROM JRUSERS WHERE username = '$username'";
         $result = $JobDB->query($query);
-        if ($result->num_rows == 0) {
-            return false;
+        $count = 0;
+        while ($row = $JobDB->fetchRow($result)) {
+            $count++;
+        }
+        if ($count === 0) {
+            return "false";
         }
     }
 
@@ -82,48 +86,68 @@ function getNormalSteps($indate, $outdate, $einheit, $username)
     }
 
     $query = "
-                WITH ProcessedData AS (
-                    SELECT TIMEDIFF(MAX(j.outdate), MIN(j.indate)) AS duration, COUNT(*) AS step_count,
-                        CASE
-                            WHEN j.STEP = 4 AND h.ZAHLMETHODE = 'Kreditkarte' THEN 444
-                            ELSE j.STEP
-                        END AS STEP
-                    FROM JRINCIDENTS j
-                    INNER JOIN RE_HEAD h ON j.process_step_id = h.step_id
-                    INNER JOIN RECHNUGNEN r ON h.DOKUMENTENID = r.DOKUMENTENID
-                    WHERE $where
-                    GROUP BY j.STEP, r.DOKUMENTENID
-                )
-                SELECT STEP, SUM(TIME_TO_SEC(duration)) AS total_seconds, AVG(TIME_TO_SEC(duration)) AS avg_seconds, COUNT(STEP) AS amount
-                FROM ProcessedData
-                GROUP BY STEP
-                ORDER BY STEP ASC;
-            ";
+            SELECT j.indate, j.outdate,
+              CASE
+                WHEN j.STEP = 4 AND h.ZAHLMETHODE = 'Kreditkarte' THEN 444
+                ELSE j.STEP
+              END AS STEP
+            FROM JRINCIDENTS j
+            INNER JOIN RE_HEAD h ON j.process_step_id = h.step_id
+            INNER JOIN RECHNUGNEN r ON h.DOKUMENTENID = r.DOKUMENTENID
+            WHERE $where
+            GROUP BY j.STEP, r.DOKUMENTENID
+        ";
     $result = $JobDB->query($query);
 
-    $incidents = array_fill(0, 12, array_fill(0, 3, 0));
+    $stepData = [];
     $stepMap = [
-        "1" => 0,
-        "2" => 1,
-        "3" => 2,
-        "4" => 3,
-        "444" => 4,
-        "17" => 5,
-        "7" => 6,
-        "5" => 7,
-        "30" => 8,
-        "40" => 9,
-        "50" => 10,
-        "15" => 11
+        "1" => 0, "2" => 1, "3" => 2, "4" => 3, "444" => 4, "17" => 5,
+        "7" => 6, "5" => 7, "30" => 8, "40" => 9, "50" => 10, "15" => 11
     ];
 
+    foreach ($stepMap as $step => $index) {
+        $stepData[$index] = ['total_seconds' => 0, 'count' => 0];
+    }
+
+    $defaultTimeZone = new DateTimeZone('Europe/Berlin');
+
     while ($row = $JobDB->fetchRow($result)) {
-        if (isset($stepMap[$row["STEP"]])) {
-            $index = $stepMap[$row["STEP"]];
-            $incidents[$index] = [$row["amount"], calculateTime($row["total_seconds"]), calculateTime($row["avg_seconds"])];
+        $step = $row["STEP"];
+        if (isset($stepMap[$step])) {
+            $index = $stepMap[$step];
+            try {
+                $inDateTime = new DateTime($row['indate'], $defaultTimeZone);
+                $outDateTime = new DateTime($row['outdate'], $defaultTimeZone);
+
+                $businessSeconds = calculateBusinessSeconds($inDateTime, $outDateTime);
+
+                $stepData[$index]['total_seconds'] += $businessSeconds;
+                $stepData[$index]['count']++;
+            } catch (\Exception $e) {
+                continue;
+            }
         }
     }
-    return array_values($incidents);
+
+    $incidents = array_fill(0, 12, array_fill(0, 3, 0));
+
+    foreach ($stepData as $index => $data) {
+        $count = $data['count'];
+        $totalSeconds = $data['total_seconds'];
+
+        if ($count > 0) {
+            $avgSeconds = $totalSeconds / $count;
+            $incidents[$index] = [
+                $count,
+                calculateTime($totalSeconds),
+                calculateTime($avgSeconds)
+            ];
+        } else {
+             $incidents[$index] = [0, "0d: 0h: 0m", "0d: 0h: 0m"];
+        }
+    }
+
+    return $incidents;
 }
 
 function getPayments($indate, $outdate, $einheit)
@@ -213,10 +237,47 @@ function addTimes($times)
     $minutes = floor($totalSeconds / 60);
     $seconds = $totalSeconds % 60;
 
-    return sprintf("%dd: %dh: %dm: %ds", $days, $hours, $minutes, $seconds);
+    return sprintf("%dd: %dh: %dm", $days, $hours, $minutes);
 }
+
+function calculateBusinessSeconds(DateTime $start, DateTime $end): int
+{
+    if ($end <= $start) {
+        return 0;
+    }
+
+    $businessSeconds = 0;
+    $current = clone $start;
+
+    while ($current < $end) {
+        $dayOfWeek = (int)$current->format('N');
+
+        $nextDay = (clone $current)->modify('+1 day')->setTime(0, 0, 0);
+        $intervalEnd = min($end, $nextDay);
+
+        if ($dayOfWeek < 6) {
+            if ($intervalEnd > $current) {
+                $secondsThisSegment = $intervalEnd->getTimestamp() - $current->getTimestamp();
+                $businessSeconds += max(0, $secondsThisSegment);
+            }
+        }
+        $current = $nextDay;
+         if ($current >= $end) {
+             break;
+         }
+    }
+    return $businessSeconds;
+}
+
 
 function calculateTime($time)
 {
-    return sprintf("%dd: %dh: %dm", $time / 86400, $time % 86400 / 3600, $time % 3600 / 60);
+  $time = round($time);
+  if ($time < 0) $time = 0;
+
+  $days = floor($time / 86400);
+  $hours = floor(($time % 86400) / 3600);
+  $minutes = floor(($time % 3600) / 60);
+
+  return sprintf("%dd: %dh: %dm", $days, $hours, $minutes);
 }

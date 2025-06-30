@@ -15,8 +15,12 @@ function getIncidents($einheit, $username)
     if (!empty($username)) {
         $query = "SELECT * FROM JRUSERS WHERE username = '$username'";
         $result = $JobDB->query($query);
-        if ($result->num_rows == 0) {
-            return false;
+        $count = 0;
+        while ($row = $JobDB->fetchRow($result)) {
+            $count++;
+        }
+        if ($count === 0) {
+            return "false";
         }
     }
 

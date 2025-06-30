@@ -61,6 +61,8 @@ function simplidoneWidget() {
     dateFrom.id = "simplidone_dateFrom";
     dateFrom.placeholder = "Startdatum";
     dateFrom.autocomplete = "off";
+    let currentYear = new Date().getFullYear();
+    dateFrom.value = "01.01." + currentYear;
     dateFrom.addEventListener("change", function () {
         simplidoneUpdate();
     });
@@ -235,10 +237,18 @@ function simplidoneUpdate() {
         success: function (data) {
             loader.style.opacity = '0';
             outerBox.style.opacity = '100';
-            if (!data){
+            if (data === "false"){
                 let toast = document.createElement("div");
                 toast.setAttribute("id", "simplidone_toast");
                 toast.innerText = "User existiert nicht!";
+                outerBox.appendChild(toast);
+                setTimeout(function(){
+                    outerBox.removeChild(toast);
+                }, 3000);
+            }else if (!data){
+                let toast = document.createElement("div");
+                toast.setAttribute("id", "simplidone_toast");
+                toast.innerText = "Keine Daten vorhanden!";
                 outerBox.appendChild(toast);
                 setTimeout(function(){
                     outerBox.removeChild(toast);

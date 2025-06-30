@@ -47,8 +47,8 @@ class Simplibills extends Widget
                 "Lieferantenanlage",
                 "Lieferantenanlage IFSC",
                 "Lieferantenanlage Compliance",
-                "ausstehende Zahlungen",
-                "Gebuchte Rechnungen"
+                "ausstehende Zahlungen (Archivstatus Zahlungsfreigabe)",
+                "Gebuchte Rechnungen (Archivstatus gebucht)",
             ]),
             'einheit' => $this->getEinheit()
         ];
