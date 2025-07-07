@@ -54,6 +54,16 @@
                 <outputParameters>
                 </outputParameters>
             </function>
+            <function id='importCostCenterCSV' name='IMPORTCOSTCENTERCSV' description='IMPORTCOSTCENTERCSV_DESC'>
+                <inputParameters>
+                    <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
+                    <field id="costCenterTable" name="COSTCENTERTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
+                    <list id="importCostCenter" name="IMPORTCOSTCENTER" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
+                </inputParameters>
+                <outputParameters>
+                </outputParameters>
+            </function>
             <function id='fetchData' name='FETCH' description='FETCH_DESC'>
                 <inputParameters>
                     <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>

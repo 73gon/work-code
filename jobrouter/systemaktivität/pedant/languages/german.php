@@ -123,3 +123,7 @@ define('BLOCKED', 'Blockiert');
 define('IMPORTRECIPIENT', 'Empfänger-Konfiguration');
 define('RECIPIENTTABLE', 'Empfängertabelle');
 define('SORTCODE', 'Bankleitzahl');
+define('IMPORTCOSTCENTERCSV', 'Kostenstelle importieren');
+define('IMPORTCOSTCENTERCSV_DESC', 'Diese Systemaktivität kann dazu verwendet werden, eine Datenbank an Kostenstellen hinzuzufügen');
+define('IMPORTCOSTCENTER', 'Kostenstellen-Konfiguration');
+define('COSTCENTERTABLE', 'Kostenstellentabelle');

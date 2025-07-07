@@ -123,3 +123,8 @@ define('BLOCKED', 'Blocked');
 define('IMPORTRECIPIENT', 'Recipientconfiguration');
 define('RECIPIENTTABLE', 'Recipienttable');
 define('SORTCODE', 'Sortcode');
+define('IMPORTCOSTCENTERCSV', 'Import Cost Center');
+define('IMPORTCOSTCENTERCSV_DESC', 'This systemactivity can be used to add a database of cost centers');
+define('IMPORTCOSTCENTER', 'Cost Center Configuration');
+define('COSTCENTERTABLE', 'Cost Center Table');
+
