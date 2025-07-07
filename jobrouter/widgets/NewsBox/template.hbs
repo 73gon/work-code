@@ -1,0 +1,823 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" type="text/css">
+<link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+<script>
+let invisibleNews = document.getElementById("invisibleNews").innerHTML;
+let invisibleCurrentAuthor = document.getElementById("invisiblecurrentAuthor").innerHTML;
+let invisibleCanEdit = document.getElementById("invisibleCanEdit").innerHTML === 'true';
+
+// Parse news data and handle empty case
+let newsData = [];
+try {
+    if (invisibleNews && invisibleNews.trim() !== '') {
+        newsData = JSON.parse(invisibleNews);
+    }
+} catch (e) {
+    console.log('Error parsing news data:', e);
+    newsData = [];
+}
+
+// Ensure newsData is an array
+if (!Array.isArray(newsData)) {
+    newsData = [];
+}
+
+simplifyNewsBoxWidget();
+$j('#newsBox_outerBox').parent().toggleClass('background-red', true);
+
+function simplifyNewsBoxWidget(){
+    let outerBox = document.getElementById("newsBox_outerBox");
+
+    // Show add button only if user can edit
+    const addButton = document.querySelector('.add-news-btn');
+    if (addButton) {
+        addButton.style.display = invisibleCanEdit ? 'block' : 'none';
+    }
+
+    renderNews();
+}
+
+function renderNews() {
+    const newsContainer = document.getElementById('newsContainer');
+    newsContainer.innerHTML = '';
+
+    // Check if there are no news items
+    if (!newsData || newsData.length === 0) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+        emptyState.innerHTML = `
+            <i class="fas fa-newspaper"></i>
+            <h3>Keine Nachrichten vorhanden</h3>
+            <p>Es wurden noch keine Nachrichten erstellt.</p>
+        `;
+        newsContainer.appendChild(emptyState);
+        return;
+    }
+
+    newsData.forEach(news => {
+        const newsItem = createNewsItem(news);
+        newsContainer.appendChild(newsItem);
+    });
+}
+
+function createNewsItem(news) {
+    const newsItem = document.createElement('div');
+    newsItem.className = 'news-item';
+
+    // Build the edit info subtitle if lastEditBy exists
+    let editInfo = '';
+    if (news.lastEditBy && news.lastEditDate) {
+        const editDate = formatDate(news.lastEditDate);
+        editInfo = `<div class="news-edit-info">Zuletzt bearbeitet von ${news.lastEditBy} am ${editDate}</div>`;
+    }
+
+    // Build action buttons only if user can edit
+    let actionButtons = '';
+    if (invisibleCanEdit) {
+        actionButtons = `
+            <div class="news-actions">
+                <button class="action-btn edit-btn" onclick="editNews(${news.id})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn delete-btn" onclick="confirmDelete(${news.id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    newsItem.innerHTML = `
+        <div class="news-header">
+            <div class="news-meta">
+                <span class="news-author">${news.author}</span>
+                <span class="news-date">${formatDate(news.date)}</span>
+            </div>
+            ${actionButtons}
+        </div>
+        <div class="news-content">
+            <h3 class="news-title">${news.title}</h3>
+            <p class="news-message">${news.message}</p>
+            ${editInfo}
+        </div>
+    `;
+    return newsItem;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('de-DE', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+}
+
+function addNews() {
+    showNewsForm();
+}
+
+function editNews(id) {
+    const news = newsData.find(n => n.id === id);
+    if (news) {
+        showNewsForm(news);
+    }
+}
+
+function showNewsForm(news = null) {
+    const isEdit = news !== null;
+    const popup = document.getElementById('newsPopup');
+    const form = document.getElementById('newsForm');
+    const title = document.getElementById('popupTitle');
+    const dateField = document.getElementById('newsDate');
+    const authorField = document.getElementById('newsAuthor');
+
+    title.textContent = isEdit ? 'Nachricht bearbeiten' : 'Neue Nachricht hinzufügen';
+
+    if (isEdit) {
+        authorField.value = news.author;
+        authorField.disabled = true; // Disable author field when editing
+        document.getElementById('newsTitle').value = news.title;
+        document.getElementById('newsMessage').value = news.message;
+        dateField.value = news.date;
+        document.getElementById('newsDeleteDate').value = news.deleteDate || '';
+        form.dataset.editId = news.id;
+    } else {
+        form.reset();
+        // Set current author for new news and disable the field
+        authorField.value = invisibleCurrentAuthor;
+        authorField.disabled = true;
+        // Set current date for new news
+        dateField.value = new Date().toISOString().split('T')[0];
+        document.getElementById('newsDeleteDate').value = '';
+        delete form.dataset.editId;
+    }
+
+    popup.style.display = 'flex';
+}
+
+function hideNewsForm() {
+    document.getElementById('newsPopup').style.display = 'none';
+    document.getElementById('newsForm').reset();
+}
+
+function saveNews() {
+    const form = document.getElementById('newsForm');
+    const author = document.getElementById('newsAuthor').value.trim();
+    const title = document.getElementById('newsTitle').value.trim();
+    const message = document.getElementById('newsMessage').value.trim();
+    const date = document.getElementById('newsDate').value;
+    const deleteDate = document.getElementById('newsDeleteDate').value;
+
+    if (!author || !title || !message || !date) {
+        showToast('Bitte füllen Sie alle Felder aus', 'error');
+        return;
+    }
+
+    const isEdit = form.dataset.editId;
+    const submitButton = document.querySelector('.btn-primary');
+
+    // Disable submit button during request
+    submitButton.disabled = true;
+    submitButton.textContent = isEdit ? 'Wird aktualisiert...' : 'Wird gespeichert...';
+
+    const requestData = {
+        author: author,
+        title: title,
+        message: message,
+        date: date,
+        deleteDate: deleteDate
+    };
+
+    if (isEdit) {
+        requestData.isEdit = 'true';
+        requestData.editId = isEdit;
+        requestData.lastEditBy = invisibleCurrentAuthor; // Add who is editing
+        requestData.lastEditDate = new Date().toISOString().split('T')[0]; // Current date
+    } else {
+        requestData.isNew = 'true';
+    }
+
+    $j.ajax({
+        url: "dashboard/MyWidgets/NewsBox/query.php",
+        type: "POST",
+        data: requestData,
+        dataType: "json",        success: function (response) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Speichern';
+
+            if (response.success) {
+                if (isEdit) {
+                    // Update existing news item in local array
+                    const newsIndex = newsData.findIndex(n => n.id == isEdit);
+                    if (newsIndex !== -1) {
+                        newsData[newsIndex] = {
+                            ...newsData[newsIndex],
+                            author,
+                            title,
+                            message,
+                            date,
+                            deleteDate: deleteDate || null,
+                            lastEditBy: invisibleCurrentAuthor,
+                            lastEditDate: new Date().toISOString().split('T')[0]
+                        };
+                    }
+                    showToast('Nachricht erfolgreich aktualisiert', 'success');                } else {
+                    // Add new news item with the ID returned from backend
+                    const newNews = {
+                        id: response.newId || Date.now(), // Use backend ID or fallback to timestamp
+                        author,
+                        date,
+                        title,
+                        message,
+                        deleteDate: deleteDate || null,
+                        lastEditBy: null,
+                        lastEditDate: null
+                    };
+
+                    if (!Array.isArray(newsData)) {
+                        newsData = [];
+                    }
+
+                    // Add to beginning for newest first
+                    newsData.unshift(newNews);
+                    showToast('Nachricht erfolgreich erstellt', 'success');
+                }
+
+                // Update UI with new data
+                renderNews();
+                hideNewsForm();
+            } else {
+                showToast(response.message || 'Fehler beim Speichern der Nachricht', 'error');
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Speichern';
+            console.log('AJAX Error:', textStatus, errorThrown);
+            showToast('Verbindungsfehler. Bitte versuchen Sie es erneut.', 'error');
+        }
+    });
+}
+
+function confirmDelete(id) {
+    const news = newsData.find(n => n.id === id);
+    if (news) {
+        showDeleteConfirm(news);
+    }
+}
+
+function showDeleteConfirm(news) {
+    const popup = document.getElementById('deletePopup');
+    const newsTitle = document.getElementById('deleteNewsTitle');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+    newsTitle.textContent = news.title;
+    confirmBtn.onclick = () => deleteNews(news.id);
+
+    popup.style.display = 'flex';
+}
+
+function hideDeleteConfirm() {
+    document.getElementById('deletePopup').style.display = 'none';
+}
+
+function deleteNews(id) {
+    const deleteButton = document.getElementById('confirmDeleteBtn');
+    deleteButton.disabled = true;
+    deleteButton.textContent = 'Wird gelöscht...';
+
+    $j.ajax({
+        url: "dashboard/MyWidgets/NewsBox/query.php",
+        type: "POST",
+        data: {
+            isDelete: 'true',
+            deleteId: id
+        },
+        dataType: "json",        success: function (response) {
+            deleteButton.disabled = false;
+            deleteButton.textContent = 'Löschen';
+
+            if (response.success) {
+                // Remove item from local array
+                newsData = newsData.filter(n => n.id !== id);
+
+                // Update UI immediately
+                renderNews();
+                hideDeleteConfirm();
+                showToast('Nachricht erfolgreich gelöscht', 'success');
+            } else {
+                showToast(response.message || 'Fehler beim Löschen der Nachricht', 'error');
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            deleteButton.disabled = false;
+            deleteButton.textContent = 'Löschen';
+            console.log('AJAX Error:', textStatus, errorThrown);
+            showToast('Verbindungsfehler. Bitte versuchen Sie es erneut.', 'error');
+        }
+    });
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+
+    const outerBox = document.getElementById('newsBox_outerBox');
+    outerBox.appendChild(toast);
+
+    // Trigger animation
+    setTimeout(() => {
+        toast.classList.add('toast-show');
+    }, 100);
+
+    // Remove toast after 4 seconds
+    setTimeout(() => {
+        toast.classList.remove('toast-show');
+        setTimeout(() => {
+            if (outerBox.contains(toast)) {
+                outerBox.removeChild(toast);
+            }
+        }, 300);
+    }, 4000);
+}
+
+// Close popups when clicking outside
+window.onclick = function(event) {
+    const newsPopup = document.getElementById('newsPopup');
+    const deletePopup = document.getElementById('deletePopup');
+
+    if (event.target === newsPopup) {
+        hideNewsForm();
+    }
+    if (event.target === deletePopup) {
+        hideDeleteConfirm();
+    }
+}
+
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+.background-red {
+    background-color: #3B3E4D;
+    color: #FFCC0D;
+    border: none;
+}
+
+#newsBox_outerBox {
+    width: 99%;
+    font-family: 'Poppins', sans-serif;
+    font-size: 16px;
+    background-color: #3B3E4D;
+    color: #FFCC0D;
+    padding: 5px 5px 5px 5px;
+    border-radius: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 95%;
+    position: relative;
+}
+
+.news-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.add-news-btn {
+    background-color: #FFCC0D;
+    color: #3B3E4D;
+    border: none;
+    padding: 10px 20px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.add-news-btn:hover {
+    background-color: #FFD700;
+    transform: translateY(-2px);
+}
+
+.add-news-btn i {
+    margin-right: 8px;
+}
+
+.news-item {
+    background-color: #4A4D5C;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-left: 4px solid #FFCC0D;
+    transition: all 0.3s ease;
+}
+
+.news-item:hover {
+    background-color: #525566;
+    transform: translateX(5px);
+}
+
+.news-item .news-header {
+    margin-bottom: 12px;
+}
+
+.news-meta {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.news-author {
+    font-weight: 600;
+    color: #FFCC0D;
+}
+
+.news-date {
+    font-size: 12px;
+    color: #B8BCC8;
+    background-color: #3B3E4D;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.news-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    background: none;
+    border: 1px solid #FFCC0D;
+    color: #FFCC0D;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.action-btn:hover {
+    background-color: #FFCC0D;
+    color: #3B3E4D;
+}
+
+.delete-btn:hover {
+    background-color: #FF6B6B;
+    border-color: #FF6B6B;
+    color: white;
+}
+
+.news-content {
+	margin-top: 8px;
+}
+
+.news-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #FFCC0D;
+    margin: 0 0 5px 0;
+}
+
+.news-message {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #E5E5E5;
+    margin: 0;
+}
+
+.news-edit-info {
+    font-size: 11px;
+    color: #999;
+    font-style: italic;
+    margin-top: 8px;
+    text-align: right;
+}
+
+/* Popup Styles */
+.popup {
+    display: none;
+    position: absolute;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+}
+
+.popup-content {
+    background-color: #3B3E4D;
+    color: #FFCC0D;
+    padding: 25px;
+    border-radius: 12px;
+    width: 85%;
+    max-width: 400px;
+    border: 2px solid #FFCC0D;
+    max-height: 85%;
+    overflow-y: auto;
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #FFCC0D;
+    padding-bottom: 12px;
+}
+
+.popup-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #FFCC0D;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover {
+    color: #FFD700;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.form-group-half {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #FFCC0D;
+}
+
+.newsBox_In, .form-textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #FFCC0D;
+    border-radius: 6px;
+    background-color: #4A4D5C;
+    color: #E5E5E5;
+    font-size: 13px;
+	box-sizing: border-box;
+}
+
+.newsBox_In:disabled {
+    background-color: #3B3E4D;
+    color: #B8BCC8;
+    border-color: #666;
+    cursor: not-allowed;
+}
+
+#newsTitle {
+    background-color: #4A4D5C;
+    color: #E5E5E5;
+    border: 1px solid #FFCC0D;
+}
+
+.form-input:focus, .form-textarea:focus {
+    outline: none;
+    border-color: #FFD700;
+    background-color: #525566;
+}
+
+#newsTitle:focus {
+    outline: none;
+    border-color: #FFD700;
+    background-color: #525566;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.popup-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: #FFCC0D;
+    color: #3B3E4D;
+}
+
+.btn-primary:hover {
+    background-color: #FFD700;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: #FFCC0D;
+    border: 1px solid #FFCC0D;
+}
+
+.btn-secondary:hover {
+    background-color: #FFCC0D;
+    color: #3B3E4D;
+}
+
+.btn-danger {
+    background-color: #FF6B6B;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #FF5252;
+}
+
+.delete-confirm-content {
+    text-align: center;
+}
+
+.delete-confirm-message {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.delete-news-title {
+    font-weight: 600;
+    color: #FFD700;
+    font-style: italic;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #B8BCC8;
+}
+
+.empty-state i {
+    font-size: 48px;
+    margin-bottom: 20px;
+    color: #FFCC0D;
+}
+
+.empty-state h3 {
+    font-size: 20px;
+    margin-bottom: 10px;
+    color: #FFCC0D;
+}
+
+/* Toast Notifications */
+.toast {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #4A4D5C;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1001;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    border-left: 4px solid #FFCC0D;
+    max-width: 300px;
+    word-wrap: break-word;
+}
+
+.toast-show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast-success {
+    border-left-color: #4CAF50;
+    background-color: #2E7D32;
+}
+
+.toast-error {
+    border-left-color: #F44336;
+    background-color: #C62828;
+}
+
+.toast-info {
+    border-left-color: #FFCC0D;
+    background-color: #4A4D5C;
+}
+
+</style>
+
+<div id="invisibleNews" style="display: none;">{{news}}</div>
+<div id="invisiblecurrentAuthor" style="display: none;">{{currentAuthor}}</div>
+<div id="invisibleCanEdit" style="display: none;">{{canEdit}}</div>
+
+<div id="newsBox_outerBox">
+    <div class="news-header">
+        <button class="add-news-btn" onclick="addNews()">
+            <i class="fas fa-plus"></i>
+            Nachricht hinzufügen
+        </button>
+    </div>
+
+    <div id="newsContainer">
+        <!-- News items will be rendered here -->
+    </div>
+</div>
+
+<!-- Add/Edit News Popup -->
+<div id="newsPopup" class="popup">
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3 id="popupTitle" class="popup-title">Neue Nachricht hinzufügen</h3>
+            <button class="close-btn" onclick="hideNewsForm()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="newsForm">
+            <div class="form-row">
+                <div class="form-group form-group-half">
+                    <label for="newsAuthor" class="form-label">Autor</label>
+                    <input type="text" id="newsAuthor" class="newsBox_In" required></input>
+                </div>
+                <div class="form-group form-group-half">
+                    <label for="newsDate" class="form-label">Datum</label>
+                    <input type="date" id="newsDate" class="newsBox_In" required></input>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="newsTitle" class="form-label">Titel</label>
+                <input type="text" id="newsTitle" class="newsBox_In" required></input>
+            </div>
+            <div class="form-group">
+                <label for="newsMessage" class="form-label">Nachricht</label>
+                <textarea id="newsMessage" class="form-textarea" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="newsDeleteDate" class="form-label">Löschen am (optional)</label>
+                <input type="date" id="newsDeleteDate" class="newsBox_In">
+            </div>
+        </form>
+        <div class="popup-actions">
+            <button type="button" class="btn btn-secondary" onclick="hideNewsForm()">Abbrechen</button>
+            <button type="button" class="btn btn-primary" onclick="saveNews()">Speichern</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Popup -->
+<div id="deletePopup" class="popup">
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3 class="popup-title">Löschen bestätigen</h3>
+            <button class="close-btn" onclick="hideDeleteConfirm()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="delete-confirm-content">
+            <p class="delete-confirm-message">Sind Sie sicher, dass Sie diese Nachricht löschen möchten?</p>
+            <p><span class="delete-news-title" id="deleteNewsTitle"></span></p>
+            <div class="popup-actions">
+                <button type="button" class="btn btn-secondary" onclick="hideDeleteConfirm()">Abbrechen</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Löschen</button>
+            </div>
+        </div>
+    </div>
+</div>
