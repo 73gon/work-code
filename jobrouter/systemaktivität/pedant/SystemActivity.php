@@ -3,6 +3,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 {
     private $recipientOutputFileName = "pedantRecipientOutput.csv";
     private $vendorOutputFileName = "pedantVendorOutput.csv";
+    private $costCenterOutputFileName = "pedantCostCenterOutput.csv";
     private $demoURL  = "https://api.demo.pedant.ai";
     private $productiveURL = "https://api.pedant.ai";
     private $maxFileSize = 20;
@@ -33,6 +34,10 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             date_default_timezone_set('Europe/Berlin');
         }
 
+        if (!$this->getSystemActivityVar('UPLOADCOUNTER')) {
+            $this->setSystemActivityVar('UPLOADCOUNTER', 0);
+        }
+
         if ($this->getSystemActivityVar('FILEID')) {
             $this->checkFile();
         }
@@ -51,6 +56,12 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     protected function importRecipientCSV()
     {
         $this->importRecipient();
+        $this->markActivityAsCompleted();
+    }
+
+    protected function importCostCenterCSV()
+    {
+        $this->importCostCenter();
         $this->markActivityAsCompleted();
     }
 
@@ -149,8 +160,15 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $data = json_decode($response, TRUE);
 
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        if ($httpcode != 200 && $httpcode != 201) {
-            throw new JobRouterException('Error occurred during file upload. HTTP Error Code: ' . $httpcode);
+
+        $maxCounter = $this->resolveInputParameter('maxCounter');
+        $counter = $this->getSystemActivityVar('UPLOADCOUNTER');
+
+        if ($counter > $maxCounter && !in_array($httpcode, [200, 201, 404, 503, 502, 500, 0])) {
+            $this->setSystemActivityVar('UPLOADCOUNTER', 0);
+            throw new JobRouterException('Error occurred during upload after maximum retries (' . $counter . '). HTTP Error Code: ' . $httpcode);
+        } else {
+            $this->setSystemActivityVar('UPLOADCOUNTER', ++$counter);
         }
         curl_close($curl);
 
@@ -161,7 +179,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $this->storeOutputParameter('fileID', $fileId);
         $this->storeOutputParameter('invoiceID', $invoiceId);
         $this->setSystemActivityVar('FILEID', $fileId);
-        $this->setSystemActivityVar('COUNTER', 0);
+        $this->setSystemActivityVar('FETCHCOUNTER', 0);
         $this->setSystemActivityVar('TYPE', $type);
     }
     protected function checkFile()
@@ -195,13 +213,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
-        $counter = $this->getSystemActivityVar('COUNTER');
+        $counter = $this->getSystemActivityVar('FETCHCOUNTER');
 
         if ($counter > $maxCounter && !in_array($httpcode, [200, 404, 503, 502, 500, 0])) {
-            $this->setSystemActivityVar('COUNTER', 0);
+            $this->setSystemActivityVar('FETCHCOUNTER', 0);
             throw new JobRouterException('Error occurred during file extraction after maximum retries (' . $counter . '). HTTP Error Code: ' . $httpcode);
         } else {
-            $this->setSystemActivityVar('COUNTER', ++$counter);
+            $this->setSystemActivityVar('FETCHCOUNTER', ++$counter);
         }
 
         curl_close($curl);
@@ -477,7 +495,109 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         if ($httpcode != 200) {
-            throw new JobRouterException('Error occurred during vendor update. HTTP Error Code: ' . $httpcode);
+            throw new JobRouterException('Error occurred during recipient update. HTTP Error Code: ' . $httpcode);
+        }
+
+        curl_close($curl);
+        unlink($csvFilePath);
+    }
+
+    protected function importCostCenter()
+    {
+        $table = $this->resolveInputParameter('costCenterTable');
+        $listfields = $this->resolveInputParameterListValues('importCostCenter');
+        $fields = ['internalNumber', 'profileName', 'recipientName'];
+
+        $list = array();
+        foreach ($listfields as $listindex => $listvalue) {
+            $list[$listindex] = $listvalue;
+        }
+        ksort($list);
+
+        if (empty($table)) {
+            return;
+        }
+
+        $JobDB = $this->getJobDB();
+
+        $temp = "SELECT ";
+        $lastKey = null;
+        foreach ($list as $listindex => $listvalue) {
+            if (!empty($listvalue)) {
+                $lastKey = $listindex;
+            }
+        }
+
+        foreach ($list as $listindex => $listvalue) {
+            if (!empty($listvalue)) {
+                $temp .= $listvalue . " AS " . $fields[$listindex - 1];
+                if ($listindex !== $lastKey) {
+                    $temp .= ", ";
+                }
+            }
+        }
+
+        $temp .= " FROM " . $table;
+        $result = $JobDB->query($temp);
+        $payload = [];
+
+        while ($row = $JobDB->fetchRow($result)) {
+            $data = [];
+            foreach ($fields as $index => $field) {
+                $value = isset($row[$fields[$index]]) ? $row[$fields[$index]] : '';
+                $data[$field] = !empty($value) ? $value : '';
+            }
+            $payloads[] = $data;
+        }
+
+        $csvData = [$fields];
+
+        foreach ($payloads as $payload) {
+            $rowData = [];
+            foreach ($fields as $field) {
+                $rowData[] = isset($payload[$field]) ? $payload[$field] : '';
+            }
+            $csvData[] = $rowData;
+        }
+
+        $csvFilePath = __DIR__ . '/' . $this->costCenterOutputFileName;
+        $csvFile = fopen($csvFilePath, 'w');
+
+        foreach ($csvData as $row) {
+            fputcsv($csvFile, $row);
+        }
+
+        fclose($csvFile);
+
+        $url = $this->resolveInputParameter('demo') == '1' ? "$this->demoURL/v2/external/entities/recipient-groups/import" : 'https://entity.api.pedant.ai/v2/external/entities/recipient-groups/import';
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => array(
+                'internalNumber' => 'internalCostCenterNumber',
+                'profileName' => 'costCenterProfileName',
+                'recipientName' => 'recipientName',
+                'file' => new CURLFILE($csvFilePath)
+            ),
+            CURLOPT_HTTPHEADER => array('x-api-key: ' . $this->resolveInputParameter('api_key')),
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0
+        ));
+
+        curl_exec($curl);
+
+        $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        if ($httpcode != 200) {
+            throw new JobRouterException('Error occurred during costCenter update. HTTP Error Code: ' . $httpcode);
         }
 
         curl_close($curl);
@@ -868,7 +988,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             foreach ($invoiceLine as $line) {
                 $values7['positionNumber'][] = $line['invoiceLineIdentifierId'];
                 $values7['singleNetPrice'][] = $line['priceDetailsItemNetPrice'];
-                $values7['singleNetAmount'][] = $line['invoiceLineNetAmount'];
+                $values7['singleNetAmount'][] = $line['invoiceTotalAmountWithoutVat'];
                 $values7['quantity'][] = $line['invoicedQuantity'];
                 $values7['unitOfMeasureCode'][] = $line['invoicedQuantityUnitOfMeasureCode'];
                 $values7['articleNumber'][] = $line['Artikelnummer'];
@@ -934,6 +1054,15 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => STREET, 'value' => '6'],
                 ['name' => RECIPIENTNAME, 'value' => '7'],
                 ['name' => VAT, 'value' => '8'],
+            ];
+        }
+
+        if ($elementID == 'importCostCenter') {
+            return [
+                ['name' => '-', 'value' => ''],
+                ['name' => INTERNALNUMBER, 'value' => '1'],
+                ['name' => PROFILNAME, 'value' => '2'],
+                ['name' => RECIPIENTNAME, 'value' => '3'],
             ];
         }
 
@@ -1056,4 +1185,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.6.2
+//Version 1.7
