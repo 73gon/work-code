@@ -24,6 +24,7 @@
 					<field id='fileID' name='FILEID' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='invoiceID' name='INVOICEID' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
                     <field id='tempJSON' name='TEMPJSON' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
+                    <field id='counterSummary' name='COUNTERSUMMARY' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no'/>
 					<list id='recipientDetails' name='RECIPIENTDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
 					<list id='vendorDetails' name='VENDORDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
 					<list id='invoiceDetails' name='INVOICEDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>

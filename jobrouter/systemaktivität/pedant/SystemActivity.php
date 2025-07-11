@@ -170,6 +170,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         } else {
             $this->setSystemActivityVar('UPLOADCOUNTER', ++$counter);
         }
+
+        $this->storeOutputParameter('counterSummary', 'Upload attempts: ' . $counter . ', HTTP Code: ' . $httpcode);
+
         curl_close($curl);
 
         $fileId =  $data['files'][0]['fileId'];
@@ -221,6 +224,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         } else {
             $this->setSystemActivityVar('FETCHCOUNTER', ++$counter);
         }
+
+        $this->storeOutputParameter('counterSummary', 'Fetch attempts: ' . $counter . ', HTTP Code: ' . $httpcode);
 
         curl_close($curl);
 
@@ -506,7 +511,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     {
         $table = $this->resolveInputParameter('costCenterTable');
         $listfields = $this->resolveInputParameterListValues('importCostCenter');
-        $fields = ['internalNumber', 'profileName', 'recipientName'];
+        $fields = ['internalCostCenterNumber', 'costCenterProfileName', 'recipientNumber'];
 
         $list = array();
         foreach ($listfields as $listindex => $listvalue) {
@@ -569,7 +574,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         fclose($csvFile);
 
-        $url = $this->resolveInputParameter('demo') == '1' ? "$this->demoURL/v2/external/entities/recipient-groups/import" : 'https://entity.api.pedant.ai/v2/external/entities/recipient-groups/import';
+        $url = $this->resolveInputParameter('demo') == '1' ? "$this->demoURL/v1/external/entities/cost-centers/import" : 'https://entity.api.pedant.ai/v1/external/entities/cost-centers/import';
 
         $curl = curl_init();
 
@@ -584,8 +589,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_POSTFIELDS => array(
                 'internalNumber' => 'internalCostCenterNumber',
-                'profileName' => 'costCenterProfileName',
-                'recipientName' => 'recipientName',
+                'name' => 'costCenterProfileName',
+                'recipientNumber' => 'recipientNumber',
                 'file' => new CURLFILE($csvFilePath)
             ),
             CURLOPT_HTTPHEADER => array('x-api-key: ' . $this->resolveInputParameter('api_key')),
@@ -1185,4 +1190,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.7
+//Version 1.7.1
