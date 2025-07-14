@@ -171,7 +171,10 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $this->setSystemActivityVar('UPLOADCOUNTER', ++$counter);
         }
 
-        $this->storeOutputParameter('counterSummary', 'Upload attempts: ' . $counter . ', HTTP Code: ' . $httpcode);
+        try {
+            $this->storeOutputParameter('counterSummary', "Upload attempts: {$counter}, HTTP Code: {$httpcode}");
+        } catch (Exception $e) {
+        }
 
         curl_close($curl);
 
@@ -232,7 +235,10 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             }
         }
 
-        $this->storeOutputParameter('counterSummary', 'Fetch attempts: ' . $counter . ', HTTP Code: ' . $httpcode);
+        try {
+            $this->storeOutputParameter('counterSummary', "Fetch attempts: {$counter}, HTTP Code: {$httpcode}");
+        } catch (Exception $e) {
+        }
 
         curl_close($curl);
 
@@ -1197,4 +1203,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.7.2
+//Version 1.7.2.1
