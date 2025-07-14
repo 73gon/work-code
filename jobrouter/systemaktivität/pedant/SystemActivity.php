@@ -184,6 +184,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $this->setSystemActivityVar('FILEID', $fileId);
         $this->setSystemActivityVar('FETCHCOUNTER', 0);
         $this->setSystemActivityVar('TYPE', $type);
+        $this->setSystemActivityVar('COUNTER404', 0);
     }
     protected function checkFile()
     {
@@ -217,12 +218,18 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
         $counter = $this->getSystemActivityVar('FETCHCOUNTER');
+        $counter404 = $this->getSystemActivityVar('COUNTER404');
+        $resubTime = $this->resolveInputParameter('intervalOld');
 
         if ($counter > $maxCounter && !in_array($httpcode, [200, 404, 503, 502, 500, 0])) {
             $this->setSystemActivityVar('FETCHCOUNTER', 0);
             throw new JobRouterException('Error occurred during file extraction after maximum retries (' . $counter . '). HTTP Error Code: ' . $httpcode);
         } else {
-            $this->setSystemActivityVar('FETCHCOUNTER', ++$counter);
+            if ($httpcode == 404 && (300 / $resubTime) > $counter404) {
+                $this->setSystemActivityVar('COUNTER404', ++$counter404);
+            } elseif ($httpcode != 200) {
+                $this->setSystemActivityVar('FETCHCOUNTER', ++$counter);
+            }
         }
 
         $this->storeOutputParameter('counterSummary', 'Fetch attempts: ' . $counter . ', HTTP Code: ' . $httpcode);
@@ -1190,4 +1197,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.7.1
+//Version 1.7.2
