@@ -2,9 +2,9 @@
 <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
 
 <script>
-let invisibleNews = document.getElementById("invisibleNews").innerHTML;
-let invisibleCurrentAuthor = document.getElementById("invisiblecurrentAuthor").innerHTML;
-let invisibleCanEdit = document.getElementById("invisibleCanEdit").innerHTML === 'true';
+let invisibleNews = document.getElementById("simplifyNewsBox_invisibleNews").innerHTML;
+let invisibleCurrentAuthor = document.getElementById("simplifyNewsBox_invisiblecurrentAuthor").innerHTML;
+let invisibleCanEdit = document.getElementById("simplifyNewsBox_invisibleCanEdit").innerHTML === 'true';
 
 // Parse news data and handle empty case
 let newsData = [];
@@ -22,29 +22,29 @@ if (!Array.isArray(newsData)) {
     newsData = [];
 }
 
-simplifyNewsBoxWidget();
-$j('#newsBox_outerBox').parent().toggleClass('background-red', true);
+simplifyNewsBox_widget();
+$j('#simplifyNewsBox_outerBox').parent().toggleClass('simplifyNewsBox_background-red', true);
 
-function simplifyNewsBoxWidget(){
-    let outerBox = document.getElementById("newsBox_outerBox");
+function simplifyNewsBox_widget(){
+    let outerBox = document.getElementById("simplifyNewsBox_outerBox");
 
     // Show add button only if user can edit
-    const addButton = document.querySelector('.add-news-btn');
+    const addButton = document.querySelector('.simplifyNewsBox_add-news-btn');
     if (addButton) {
         addButton.style.display = invisibleCanEdit ? 'block' : 'none';
     }
 
-    renderNews();
+    simplifyNewsBox_renderNews();
 }
 
-function renderNews() {
-    const newsContainer = document.getElementById('newsContainer');
+function simplifyNewsBox_renderNews() {
+    const newsContainer = document.getElementById('simplifyNewsBox_newsContainer');
     newsContainer.innerHTML = '';
 
     // Check if there are no news items
     if (!newsData || newsData.length === 0) {
         const emptyState = document.createElement('div');
-        emptyState.className = 'empty-state';
+        emptyState.className = 'simplifyNewsBox_empty-state';
         emptyState.innerHTML = `
             <i class="fas fa-newspaper"></i>
             <h3>Keine Nachrichten vorhanden</h3>
@@ -55,31 +55,31 @@ function renderNews() {
     }
 
     newsData.forEach(news => {
-        const newsItem = createNewsItem(news);
+        const newsItem = simplifyNewsBox_createNewsItem(news);
         newsContainer.appendChild(newsItem);
     });
 }
 
-function createNewsItem(news) {
+function simplifyNewsBox_createNewsItem(news) {
     const newsItem = document.createElement('div');
-    newsItem.className = 'news-item';
+    newsItem.className = 'simplifyNewsBox_news-item';
 
     // Build the edit info subtitle if lastEditBy exists
     let editInfo = '';
     if (news.lastEditBy && news.lastEditDate) {
-        const editDate = formatDate(news.lastEditDate);
-        editInfo = `<div class="news-edit-info">Zuletzt bearbeitet von ${news.lastEditBy} am ${editDate}</div>`;
+        const editDate = simplifyNewsBox_formatDate(news.lastEditDate);
+        editInfo = `<div class="simplifyNewsBox_news-edit-info">Zuletzt bearbeitet von ${news.lastEditBy} am ${editDate}</div>`;
     }
 
     // Build action buttons only if user can edit
     let actionButtons = '';
     if (invisibleCanEdit) {
         actionButtons = `
-            <div class="news-actions">
-                <button class="action-btn edit-btn" onclick="editNews(${news.id})">
+            <div class="simplifyNewsBox_news-actions">
+                <button class="simplifyNewsBox_action-btn simplifyNewsBox_edit-btn" onclick="simplifyNewsBox_editNews(${news.id})">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="action-btn delete-btn" onclick="confirmDelete(${news.id})">
+                <button class="simplifyNewsBox_action-btn simplifyNewsBox_delete-btn" onclick="simplifyNewsBox_confirmDelete(${news.id})">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -87,23 +87,23 @@ function createNewsItem(news) {
     }
 
     newsItem.innerHTML = `
-        <div class="news-header">
-            <div class="news-meta">
-                <span class="news-author">${news.author}</span>
-                <span class="news-date">${formatDate(news.date)}</span>
+        <div class="simplifyNewsBox_news-header">
+            <div class="simplifyNewsBox_news-meta">
+                <span class="simplifyNewsBox_news-author">${news.author}</span>
+                <span class="simplifyNewsBox_news-date">${simplifyNewsBox_formatDate(news.date)}</span>
             </div>
             ${actionButtons}
         </div>
-        <div class="news-content">
-            <h3 class="news-title">${news.title}</h3>
-            <p class="news-message">${news.message}</p>
+        <div class="simplifyNewsBox_news-content">
+            <h3 class="simplifyNewsBox_news-title">${news.title}</h3>
+            <p class="simplifyNewsBox_news-message">${news.message}</p>
             ${editInfo}
         </div>
     `;
     return newsItem;
 }
 
-function formatDate(dateString) {
+function simplifyNewsBox_formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('de-DE', {
         year: 'numeric',
@@ -112,34 +112,30 @@ function formatDate(dateString) {
     });
 }
 
-function addNews() {
-    showNewsForm();
-}
-
-function editNews(id) {
+function simplifyNewsBox_editNews(id) {
     const news = newsData.find(n => n.id === id);
     if (news) {
-        showNewsForm(news);
+        simplifyNewsBox_showNewsForm(news);
     }
 }
 
-function showNewsForm(news = null) {
+function simplifyNewsBox_showNewsForm(news = null) {
     const isEdit = news !== null;
-    const popup = document.getElementById('newsPopup');
-    const form = document.getElementById('newsForm');
-    const title = document.getElementById('popupTitle');
-    const dateField = document.getElementById('newsDate');
-    const authorField = document.getElementById('newsAuthor');
+    const popup = document.getElementById('simplifyNewsBox_newsPopup');
+    const form = document.getElementById('simplifyNewsBox_newsForm');
+    const title = document.getElementById('simplifyNewsBox_popupTitle');
+    const dateField = document.getElementById('simplifyNewsBox_newsDate');
+    const authorField = document.getElementById('simplifyNewsBox_newsAuthor');
 
     title.textContent = isEdit ? 'Nachricht bearbeiten' : 'Neue Nachricht hinzufügen';
 
     if (isEdit) {
         authorField.value = news.author;
         authorField.disabled = true; // Disable author field when editing
-        document.getElementById('newsTitle').value = news.title;
-        document.getElementById('newsMessage').value = news.message;
+        document.getElementById('simplifyNewsBox_newsTitle').value = news.title;
+        document.getElementById('simplifyNewsBox_newsMessage').value = news.message;
         dateField.value = news.date;
-        document.getElementById('newsDeleteDate').value = news.deleteDate || '';
+        document.getElementById('simplifyNewsBox_newsDeleteDate').value = news.deleteDate || '';
         form.dataset.editId = news.id;
     } else {
         form.reset();
@@ -148,33 +144,33 @@ function showNewsForm(news = null) {
         authorField.disabled = true;
         // Set current date for new news
         dateField.value = new Date().toISOString().split('T')[0];
-        document.getElementById('newsDeleteDate').value = '';
+        document.getElementById('simplifyNewsBox_newsDeleteDate').value = '';
         delete form.dataset.editId;
     }
 
     popup.style.display = 'flex';
 }
 
-function hideNewsForm() {
-    document.getElementById('newsPopup').style.display = 'none';
-    document.getElementById('newsForm').reset();
+function simplifyNewsBox_hideNewsForm() {
+    document.getElementById('simplifyNewsBox_newsPopup').style.display = 'none';
+    document.getElementById('simplifyNewsBox_newsForm').reset();
 }
 
-function saveNews() {
-    const form = document.getElementById('newsForm');
-    const author = document.getElementById('newsAuthor').value.trim();
-    const title = document.getElementById('newsTitle').value.trim();
-    const message = document.getElementById('newsMessage').value.trim();
-    const date = document.getElementById('newsDate').value;
-    const deleteDate = document.getElementById('newsDeleteDate').value;
+function simplifyNewsBox_saveNews() {
+    const form = document.getElementById('simplifyNewsBox_newsForm');
+    const author = document.getElementById('simplifyNewsBox_newsAuthor').value.trim();
+    const title = document.getElementById('simplifyNewsBox_newsTitle').value.trim();
+    const message = document.getElementById('simplifyNewsBox_newsMessage').value.trim();
+    const date = document.getElementById('simplifyNewsBox_newsDate').value;
+    const deleteDate = document.getElementById('simplifyNewsBox_newsDeleteDate').value;
 
     if (!author || !title || !message || !date) {
-        showToast('Bitte füllen Sie alle Felder aus', 'error');
+        simplifyNewsBox_showToast('Bitte füllen Sie alle Felder aus', 'error');
         return;
     }
 
     const isEdit = form.dataset.editId;
-    const submitButton = document.querySelector('.btn-primary');
+    const submitButton = document.querySelector('.simplifyNewsBox_btn-primary');
 
     // Disable submit button during request
     submitButton.disabled = true;
@@ -221,7 +217,8 @@ function saveNews() {
                             lastEditDate: new Date().toISOString().split('T')[0]
                         };
                     }
-                    showToast('Nachricht erfolgreich aktualisiert', 'success');                } else {
+                    simplifyNewsBox_showToast('Nachricht erfolgreich aktualisiert', 'success');
+                } else {
                     // Add new news item with the ID returned from backend
                     const newNews = {
                         id: response.newId || Date.now(), // Use backend ID or fallback to timestamp
@@ -240,49 +237,49 @@ function saveNews() {
 
                     // Add to beginning for newest first
                     newsData.unshift(newNews);
-                    showToast('Nachricht erfolgreich erstellt', 'success');
+                    simplifyNewsBox_showToast('Nachricht erfolgreich erstellt', 'success');
                 }
 
                 // Update UI with new data
-                renderNews();
-                hideNewsForm();
+                simplifyNewsBox_renderNews();
+                simplifyNewsBox_hideNewsForm();
             } else {
-                showToast(response.message || 'Fehler beim Speichern der Nachricht', 'error');
+                simplifyNewsBox_showToast(response.message || 'Fehler beim Speichern der Nachricht', 'error');
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
             submitButton.disabled = false;
             submitButton.textContent = 'Speichern';
             console.log('AJAX Error:', textStatus, errorThrown);
-            showToast('Verbindungsfehler. Bitte versuchen Sie es erneut.', 'error');
+            simplifyNewsBox_showToast('Verbindungsfehler. Bitte versuchen Sie es erneut.', 'error');
         }
     });
 }
 
-function confirmDelete(id) {
+function simplifyNewsBox_confirmDelete(id) {
     const news = newsData.find(n => n.id === id);
     if (news) {
-        showDeleteConfirm(news);
+        simplifyNewsBox_showDeleteConfirm(news);
     }
 }
 
-function showDeleteConfirm(news) {
-    const popup = document.getElementById('deletePopup');
-    const newsTitle = document.getElementById('deleteNewsTitle');
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
+function simplifyNewsBox_showDeleteConfirm(news) {
+    const popup = document.getElementById('simplifyNewsBox_deletePopup');
+    const newsTitle = document.getElementById('simplifyNewsBox_deleteNewsTitle');
+    const confirmBtn = document.getElementById('simplifyNewsBox_confirmDeleteBtn');
 
     newsTitle.textContent = news.title;
-    confirmBtn.onclick = () => deleteNews(news.id);
+    confirmBtn.onclick = () => simplifyNewsBox_deleteNews(news.id);
 
     popup.style.display = 'flex';
 }
 
-function hideDeleteConfirm() {
-    document.getElementById('deletePopup').style.display = 'none';
+function simplifyNewsBox_hideDeleteConfirm() {
+    document.getElementById('simplifyNewsBox_deletePopup').style.display = 'none';
 }
 
-function deleteNews(id) {
-    const deleteButton = document.getElementById('confirmDeleteBtn');
+function simplifyNewsBox_deleteNews(id) {
+    const deleteButton = document.getElementById('simplifyNewsBox_confirmDeleteBtn');
     deleteButton.disabled = true;
     deleteButton.textContent = 'Wird gelöscht...';
 
@@ -302,39 +299,40 @@ function deleteNews(id) {
                 newsData = newsData.filter(n => n.id !== id);
 
                 // Update UI immediately
-                renderNews();
-                hideDeleteConfirm();
-                showToast('Nachricht erfolgreich gelöscht', 'success');
+                simplifyNewsBox_renderNews();
+                simplifyNewsBox_hideDeleteConfirm();
+                simplifyNewsBox_showToast('Nachricht erfolgreich gelöscht', 'success');
             } else {
-                showToast(response.message || 'Fehler beim Löschen der Nachricht', 'error');
+                simplifyNewsBox_showToast(response.message || 'Fehler beim Löschen der Nachricht', 'error');
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
             deleteButton.disabled = false;
             deleteButton.textContent = 'Löschen';
             console.log('AJAX Error:', textStatus, errorThrown);
-            showToast('Verbindungsfehler. Bitte versuchen Sie es erneut.', 'error');
+            simplifyNewsBox_showToast('Verbindungsfehler. Bitte versuchen Sie es erneut.', 'error');
         }
     });
 }
 
 // Toast notification function
-function showToast(message, type = 'info') {
+function simplifyNewsBox_showToast(message, type = 'info') {
     const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
+    toast.className = `simplifyNewsBox_toast simplifyNewsBox_toast-${type}`;
     toast.textContent = message;
 
-    const outerBox = document.getElementById('newsBox_outerBox');
+    const outerBox = document.getElementById('simplifyNewsBox_outerBox');
     outerBox.appendChild(toast);
 
     // Trigger animation
     setTimeout(() => {
-        toast.classList.add('toast-show');
+        toast.classList.add('simplifyNewsBox_toast-show');
     }, 100);
 
+    console.log('Toast message:', toast);
     // Remove toast after 4 seconds
     setTimeout(() => {
-        toast.classList.remove('toast-show');
+        toast.classList.remove('simplifyNewsBox_toast-show');
         setTimeout(() => {
             if (outerBox.contains(toast)) {
                 outerBox.removeChild(toast);
@@ -345,14 +343,14 @@ function showToast(message, type = 'info') {
 
 // Close popups when clicking outside
 window.onclick = function(event) {
-    const newsPopup = document.getElementById('newsPopup');
-    const deletePopup = document.getElementById('deletePopup');
+    const newsPopup = document.getElementById('simplifyNewsBox_newsPopup');
+    const deletePopup = document.getElementById('simplifyNewsBox_deletePopup');
 
     if (event.target === newsPopup) {
-        hideNewsForm();
+        simplifyNewsBox_hideNewsForm();
     }
     if (event.target === deletePopup) {
-        hideDeleteConfirm();
+        simplifyNewsBox_hideDeleteConfirm();
     }
 }
 
@@ -361,13 +359,13 @@ window.onclick = function(event) {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-.background-red {
+.simplifyNewsBox_background-red {
     background-color: #3B3E4D;
     color: #FFCC0D;
     border: none;
 }
 
-#newsBox_outerBox {
+#simplifyNewsBox_outerBox {
     width: 99%;
     font-family: 'Poppins', sans-serif;
     font-size: 16px;
@@ -381,14 +379,14 @@ window.onclick = function(event) {
     position: relative;
 }
 
-.news-header {
+.simplifyNewsBox_news-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 4px;
 }
 
-.add-news-btn {
+.simplifyNewsBox_add-news-btn {
     background-color: #FFCC0D;
     color: #3B3E4D;
     border: none;
@@ -401,16 +399,16 @@ window.onclick = function(event) {
     transition: all 0.3s ease;
 }
 
-.add-news-btn:hover {
+.simplifyNewsBox_add-news-btn:hover {
     background-color: #FFD700;
     transform: translateY(-2px);
 }
 
-.add-news-btn i {
+.simplifyNewsBox_add-news-btn i {
     margin-right: 8px;
 }
 
-.news-item {
+.simplifyNewsBox_news-item {
     background-color: #4A4D5C;
     border-radius: 8px;
     padding: 15px;
@@ -419,27 +417,27 @@ window.onclick = function(event) {
     transition: all 0.3s ease;
 }
 
-.news-item:hover {
+.simplifyNewsBox_news-item:hover {
     background-color: #525566;
     transform: translateX(5px);
 }
 
-.news-item .news-header {
+.simplifyNewsBox_news-item .simplifyNewsBox_news-header {
     margin-bottom: 12px;
 }
 
-.news-meta {
+.simplifyNewsBox_news-meta {
     display: flex;
     gap: 15px;
     align-items: center;
 }
 
-.news-author {
+.simplifyNewsBox_news-author {
     font-weight: 600;
     color: #FFCC0D;
 }
 
-.news-date {
+.simplifyNewsBox_news-date {
     font-size: 12px;
     color: #B8BCC8;
     background-color: #3B3E4D;
@@ -447,12 +445,12 @@ window.onclick = function(event) {
     border-radius: 12px;
 }
 
-.news-actions {
+.simplifyNewsBox_news-actions {
     display: flex;
     gap: 8px;
 }
 
-.action-btn {
+.simplifyNewsBox_action-btn {
     background: none;
     border: 1px solid #FFCC0D;
     color: #FFCC0D;
@@ -463,36 +461,36 @@ window.onclick = function(event) {
     font-size: 14px;
 }
 
-.action-btn:hover {
+.simplifyNewsBox_action-btn:hover {
     background-color: #FFCC0D;
     color: #3B3E4D;
 }
 
-.delete-btn:hover {
+.simplifyNewsBox_delete-btn:hover {
     background-color: #FF6B6B;
     border-color: #FF6B6B;
     color: white;
 }
 
-.news-content {
+.simplifyNewsBox_news-content {
 	margin-top: 8px;
 }
 
-.news-title {
+.simplifyNewsBox_news-title {
     font-size: 18px;
     font-weight: 600;
     color: #FFCC0D;
     margin: 0 0 5px 0;
 }
 
-.news-message {
+.simplifyNewsBox_news-message {
     font-size: 14px;
     line-height: 1.6;
     color: #E5E5E5;
     margin: 0;
 }
 
-.news-edit-info {
+.simplifyNewsBox_news-edit-info {
     font-size: 11px;
     color: #999;
     font-style: italic;
@@ -501,7 +499,7 @@ window.onclick = function(event) {
 }
 
 /* Popup Styles */
-.popup {
+.simplifyNewsBox_popup {
     display: none;
     position: absolute;
     z-index: 1000;
@@ -515,7 +513,7 @@ window.onclick = function(event) {
     border-radius: 8px;
 }
 
-.popup-content {
+.simplifyNewsBox_popup-content {
     background-color: #3B3E4D;
     color: #FFCC0D;
     padding: 25px;
@@ -527,7 +525,7 @@ window.onclick = function(event) {
     overflow-y: auto;
 }
 
-.popup-header {
+.simplifyNewsBox_popup-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -536,13 +534,13 @@ window.onclick = function(event) {
     padding-bottom: 12px;
 }
 
-.popup-title {
+.simplifyNewsBox_popup-title {
     font-size: 20px;
     font-weight: 600;
     margin: 0;
 }
 
-.close-btn {
+.simplifyNewsBox_close-btn {
     background: none;
     border: none;
     color: #FFCC0D;
@@ -556,33 +554,33 @@ window.onclick = function(event) {
     justify-content: center;
 }
 
-.close-btn:hover {
+.simplifyNewsBox_close-btn:hover {
     color: #FFD700;
 }
 
-.form-group {
+.simplifyNewsBox_form-group {
     margin-bottom: 15px;
 }
 
-.form-row {
+.simplifyNewsBox_form-row {
     display: flex;
     gap: 12px;
     margin-bottom: 15px;
 }
 
-.form-group-half {
+.simplifyNewsBox_form-group-half {
     flex: 1;
     margin-bottom: 0;
 }
 
-.form-label {
+.simplifyNewsBox_form-label {
     display: block;
     margin-bottom: 8px;
     font-weight: 500;
     color: #FFCC0D;
 }
 
-.newsBox_In, .form-textarea {
+.simplifyNewsBox_newsBox_In, .simplifyNewsBox_form-textarea {
     width: 100%;
     padding: 10px;
     border: 1px solid #FFCC0D;
@@ -593,44 +591,44 @@ window.onclick = function(event) {
 	box-sizing: border-box;
 }
 
-.newsBox_In:disabled {
+.simplifyNewsBox_newsBox_In:disabled {
     background-color: #3B3E4D;
     color: #B8BCC8;
     border-color: #666;
     cursor: not-allowed;
 }
 
-#newsTitle {
+#simplifyNewsBox_newsTitle {
     background-color: #4A4D5C;
     color: #E5E5E5;
     border: 1px solid #FFCC0D;
 }
 
-.form-input:focus, .form-textarea:focus {
+.simplifyNewsBox_form-input:focus, .simplifyNewsBox_form-textarea:focus {
     outline: none;
     border-color: #FFD700;
     background-color: #525566;
 }
 
-#newsTitle:focus {
+#simplifyNewsBox_newsTitle:focus {
     outline: none;
     border-color: #FFD700;
     background-color: #525566;
 }
 
-.form-textarea {
+.simplifyNewsBox_form-textarea {
     resize: vertical;
     min-height: 80px;
 }
 
-.popup-actions {
+.simplifyNewsBox_popup-actions {
     display: flex;
     gap: 12px;
     justify-content: flex-end;
     margin-top: 20px;
 }
 
-.btn {
+.simplifyNewsBox_btn {
     padding: 10px 20px;
     border: none;
     border-radius: 6px;
@@ -641,70 +639,70 @@ window.onclick = function(event) {
     transition: all 0.3s ease;
 }
 
-.btn-primary {
+.simplifyNewsBox_btn-primary {
     background-color: #FFCC0D;
     color: #3B3E4D;
 }
 
-.btn-primary:hover {
+.simplifyNewsBox_btn-primary:hover {
     background-color: #FFD700;
 }
 
-.btn-secondary {
+.simplifyNewsBox_btn-secondary {
     background-color: transparent;
     color: #FFCC0D;
     border: 1px solid #FFCC0D;
 }
 
-.btn-secondary:hover {
+.simplifyNewsBox_btn-secondary:hover {
     background-color: #FFCC0D;
     color: #3B3E4D;
 }
 
-.btn-danger {
+.simplifyNewsBox_btn-danger {
     background-color: #FF6B6B;
     color: white;
 }
 
-.btn-danger:hover {
+.simplifyNewsBox_btn-danger:hover {
     background-color: #FF5252;
 }
 
-.delete-confirm-content {
+.simplifyNewsBox_delete-confirm-content {
     text-align: center;
 }
 
-.delete-confirm-message {
+.simplifyNewsBox_delete-confirm-message {
     font-size: 16px;
     margin-bottom: 10px;
 }
 
-.delete-news-title {
+.simplifyNewsBox_delete-news-title {
     font-weight: 600;
     color: #FFD700;
     font-style: italic;
 }
 
-.empty-state {
+.simplifyNewsBox_empty-state {
     text-align: center;
     padding: 60px 20px;
     color: #B8BCC8;
 }
 
-.empty-state i {
+.simplifyNewsBox_empty-state i {
     font-size: 48px;
     margin-bottom: 20px;
     color: #FFCC0D;
 }
 
-.empty-state h3 {
+.simplifyNewsBox_empty-state h3 {
     font-size: 20px;
     margin-bottom: 10px;
     color: #FFCC0D;
 }
 
 /* Toast Notifications */
-.toast {
+.simplifyNewsBox_toast {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -723,100 +721,100 @@ window.onclick = function(event) {
     word-wrap: break-word;
 }
 
-.toast-show {
+.simplifyNewsBox_toast-show {
     opacity: 1;
     transform: translateX(0);
 }
 
-.toast-success {
+.simplifyNewsBox_toast-success {
     border-left-color: #4CAF50;
     background-color: #2E7D32;
 }
 
-.toast-error {
+.simplifyNewsBox_toast-error {
     border-left-color: #F44336;
     background-color: #C62828;
 }
 
-.toast-info {
+.simplifyNewsBox_toast-info {
     border-left-color: #FFCC0D;
     background-color: #4A4D5C;
 }
 
 </style>
 
-<div id="invisibleNews" style="display: none;">{{news}}</div>
-<div id="invisiblecurrentAuthor" style="display: none;">{{currentAuthor}}</div>
-<div id="invisibleCanEdit" style="display: none;">{{canEdit}}</div>
+<div id="simplifyNewsBox_invisibleNews" style="display: none;">{{news}}</div>
+<div id="simplifyNewsBox_invisiblecurrentAuthor" style="display: none;">{{currentAuthor}}</div>
+<div id="simplifyNewsBox_invisibleCanEdit" style="display: none;">{{canEdit}}</div>
 
-<div id="newsBox_outerBox">
-    <div class="news-header">
-        <button class="add-news-btn" onclick="addNews()">
+<div id="simplifyNewsBox_outerBox">
+    <div class="simplifyNewsBox_news-header">
+        <button class="simplifyNewsBox_add-news-btn" onclick="simplifyNewsBox_ShowNewsForm()">
             <i class="fas fa-plus"></i>
             Nachricht hinzufügen
         </button>
     </div>
 
-    <div id="newsContainer">
+    <div id="simplifyNewsBox_newsContainer">
         <!-- News items will be rendered here -->
     </div>
 </div>
 
 <!-- Add/Edit News Popup -->
-<div id="newsPopup" class="popup">
-    <div class="popup-content">
-        <div class="popup-header">
-            <h3 id="popupTitle" class="popup-title">Neue Nachricht hinzufügen</h3>
-            <button class="close-btn" onclick="hideNewsForm()">
+<div id="simplifyNewsBox_newsPopup" class="simplifyNewsBox_popup">
+    <div class="simplifyNewsBox_popup-content">
+        <div class="simplifyNewsBox_popup-header">
+            <h3 id="simplifyNewsBox_popupTitle" class="simplifyNewsBox_popup-title">Neue Nachricht hinzufügen</h3>
+            <button class="simplifyNewsBox_close-btn" onclick="simplifyNewsBox_hideNewsForm()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <form id="newsForm">
-            <div class="form-row">
-                <div class="form-group form-group-half">
-                    <label for="newsAuthor" class="form-label">Autor</label>
-                    <input type="text" id="newsAuthor" class="newsBox_In" required></input>
+        <form id="simplifyNewsBox_newsForm">
+            <div class="simplifyNewsBox_form-row">
+                <div class="simplifyNewsBox_form-group simplifyNewsBox_form-group-half">
+                    <label for="simplifyNewsBox_newsAuthor" class="simplifyNewsBox_form-label">Autor</label>
+                    <input type="text" id="simplifyNewsBox_newsAuthor" class="simplifyNewsBox_newsBox_In" required></input>
                 </div>
-                <div class="form-group form-group-half">
-                    <label for="newsDate" class="form-label">Datum</label>
-                    <input type="date" id="newsDate" class="newsBox_In" required></input>
+                <div class="simplifyNewsBox_form-group simplifyNewsBox_form-group-half">
+                    <label for="simplifyNewsBox_newsDate" class="simplifyNewsBox_form-label">Datum</label>
+                    <input type="date" id="simplifyNewsBox_newsDate" class="simplifyNewsBox_newsBox_In" required></input>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="newsTitle" class="form-label">Titel</label>
-                <input type="text" id="newsTitle" class="newsBox_In" required></input>
+            <div class="simplifyNewsBox_form-group">
+                <label for="simplifyNewsBox_newsTitle" class="simplifyNewsBox_form-label">Titel</label>
+                <input type="text" id="simplifyNewsBox_newsTitle" class="simplifyNewsBox_newsBox_In" required></input>
             </div>
-            <div class="form-group">
-                <label for="newsMessage" class="form-label">Nachricht</label>
-                <textarea id="newsMessage" class="form-textarea" required></textarea>
+            <div class="simplifyNewsBox_form-group">
+                <label for="simplifyNewsBox_newsMessage" class="simplifyNewsBox_form-label">Nachricht</label>
+                <textarea id="simplifyNewsBox_newsMessage" class="simplifyNewsBox_form-textarea" required></textarea>
             </div>
-            <div class="form-group">
-                <label for="newsDeleteDate" class="form-label">Löschen am (optional)</label>
-                <input type="date" id="newsDeleteDate" class="newsBox_In">
+            <div class="simplifyNewsBox_form-group">
+                <label for="simplifyNewsBox_newsDeleteDate" class="simplifyNewsBox_form-label">Löschen am (optional)</label>
+                <input type="date" id="simplifyNewsBox_newsDeleteDate" class="simplifyNewsBox_newsBox_In">
             </div>
         </form>
-        <div class="popup-actions">
-            <button type="button" class="btn btn-secondary" onclick="hideNewsForm()">Abbrechen</button>
-            <button type="button" class="btn btn-primary" onclick="saveNews()">Speichern</button>
+        <div class="simplifyNewsBox_popup-actions">
+            <button type="button" class="simplifyNewsBox_btn simplifyNewsBox_btn-secondary" onclick="simplifyNewsBox_hideNewsForm()">Abbrechen</button>
+            <button type="button" class="simplifyNewsBox_btn simplifyNewsBox_btn-primary" onclick="simplifyNewsBox_saveNews()">Speichern</button>
         </div>
     </div>
 </div>
 
 <!-- Delete Confirmation Popup -->
-<div id="deletePopup" class="popup">
-    <div class="popup-content">
-        <div class="popup-header">
-            <h3 class="popup-title">Löschen bestätigen</h3>
-            <button class="close-btn" onclick="hideDeleteConfirm()">
+<div id="simplifyNewsBox_deletePopup" class="simplifyNewsBox_popup">
+    <div class="simplifyNewsBox_popup-content">
+        <div class="simplifyNewsBox_popup-header">
+            <h3 class="simplifyNewsBox_popup-title">Löschen bestätigen</h3>
+            <button class="simplifyNewsBox_close-btn" onclick="simplifyNewsBox_hideDeleteConfirm()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <div class="delete-confirm-content">
-            <p class="delete-confirm-message">Sind Sie sicher, dass Sie diese Nachricht löschen möchten?</p>
-            <p><span class="delete-news-title" id="deleteNewsTitle"></span></p>
-            <div class="popup-actions">
-                <button type="button" class="btn btn-secondary" onclick="hideDeleteConfirm()">Abbrechen</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Löschen</button>
+        <div class="simplifyNewsBox_delete-confirm-content">
+            <p class="simplifyNewsBox_delete-confirm-message">Sind Sie sicher, dass Sie diese Nachricht löschen möchten?</p>
+            <p><span class="simplifyNewsBox_delete-news-title" id="simplifyNewsBox_deleteNewsTitle"></span></p>
+            <div class="simplifyNewsBox_popup-actions">
+                <button type="button" class="simplifyNewsBox_btn simplifyNewsBox_btn-secondary" onclick="simplifyNewsBox_hideDeleteConfirm()">Abbrechen</button>
+                <button type="button" class="simplifyNewsBox_btn simplifyNewsBox_btn-danger" id="simplifyNewsBox_confirmDeleteBtn">Löschen</button>
             </div>
         </div>
     </div>

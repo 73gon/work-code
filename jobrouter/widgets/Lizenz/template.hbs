@@ -2,38 +2,420 @@
 <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
 
 <script>
-let invisibleLizenz = document.getElementById("invisibleLizenz").innerHTML;
+let invisibleLizenz = document.getElementById("simplifyLicense_invisibleLizenz").innerHTML;
+let invisibleCanEdit = document.getElementById("simplifyLicense_invisibleCanEdit").innerHTML === 'true';
+
 invisibleLizenz = invisibleLizenz.slice(1, -1);
-invisibleLizenz
-simplifyInfoWidget();
-$j('#lizenz_outerBox').parent().toggleClass('background-red', true);
+let currentView = 'default';
+let emailsData = [];
 
-function simplifyInfoWidget(){
-	let outerBox = document.getElementById("lizenz_outerBox");
+simplifyLicense_simplifyInfoWidget();
+$j('#simplifyLicense_outerBox').parent().toggleClass('simplifyLicense_background-red', true);
 
+function simplifyLicense_simplifyInfoWidget(){
+    let outerBox = document.getElementById("simplifyLicense_outerBox");
+    outerBox.innerHTML = '';
 
-    let innerBox = document.createElement("div");
-        innerBox.id = "indo_innerBox";
-    outerBox.appendChild(innerBox);
-        let logo = document.createElement("div");
-            logo.setAttribute("class", "fa-solid fa-calendar-days");
-            logo.id = "lizenz_logo";
-        innerBox.appendChild(logo);
-        let result = document.createElement("div");
-            result.id = "lizenz_result";
-        innerBox.appendChild(result);
-            let textadding = document.createElement("div");
-                textadding.id = "lizenz_text";
-                textadding.innerHTML = "Lizenz gültig bis";
-            result.appendChild(textadding);
-            let amount = document.createElement('div');
-                amount.id = "lizenz_amount";
-                amount.innerHTML = convertDateFormat(invisibleLizenz);
-            result.appendChild(amount);
-
+    if (currentView === 'default') {
+        simplifyLicense_showDefaultView(outerBox);
+    } else if (currentView === 'config') {
+        simplifyLicense_showConfigView(outerBox);
+    }
 }
 
-function convertDateFormat(inputDate) {
+function simplifyLicense_showDefaultView(outerBox) {
+    let innerBox = document.createElement("div");
+    innerBox.id = "simplifyLicense_innerBox";
+    outerBox.appendChild(innerBox);
+
+    let logo = document.createElement("div");
+    logo.setAttribute("class", "fa-solid fa-calendar-days");
+    logo.id = "simplifyLicense_logo";
+    innerBox.appendChild(logo);
+
+    // Add config button if user can edit
+    if (invisibleCanEdit) {
+        let configBtn = document.createElement("div");
+        configBtn.id = "simplifyLicense_config_btn";
+        configBtn.setAttribute("class", "fa-solid fa-cog");
+        configBtn.onclick = simplifyLicense_showConfigPage;
+        configBtn.title = "E-Mail-Konfiguration";
+        innerBox.appendChild(configBtn);
+    }
+
+    let result = document.createElement("div");
+    result.id = "simplifyLicense_result";
+    innerBox.appendChild(result);
+
+    let textadding = document.createElement("div");
+    textadding.id = "simplifyLicense_text";
+    textadding.innerHTML = "Lizenz gültig bis";
+    result.appendChild(textadding);
+
+    let amount = document.createElement('div');
+    amount.id = "simplifyLicense_amount";
+    amount.innerHTML = simplifyLicense_convertDateFormat(invisibleLizenz);
+    result.appendChild(amount);
+}
+
+function simplifyLicense_showConfigView(outerBox) {
+    let configContainer = document.createElement("div");
+    configContainer.id = "simplifyLicense_config_container";
+    outerBox.appendChild(configContainer);
+
+    // Header with back button and info
+    let header = document.createElement("div");
+    header.id = "simplifyLicense_config_header";
+    header.innerHTML = `
+        <div class="simplifyLicense_config_title">
+            <i class="fa-solid fa-arrow-left simplifyLicense_back_btn" onclick="simplifyLicense_showDefaultPage()"></i>
+            <span>E-Mail-Konfiguration</span>
+            <span class="simplifyLicense_admin_info_inline">
+                <i class="fa-solid fa-info-circle"></i>
+                LizenzAdmin automatisch hinzugefügt
+            </span>
+        </div>
+    `;
+    configContainer.appendChild(header);
+
+    // Add email form
+    let addForm = document.createElement("div");
+    addForm.id = "simplifyLicense_add_email_form";
+    addForm.innerHTML = `
+        <div class="simplifyLicense_form_group">
+            <input type="email" id="simplifyLicense_new_email" placeholder="E-Mail-Adresse eingeben" />
+            <button onclick="simplifyLicense_addEmail()" class="simplifyLicense_btn_add">
+                <i class="fa-solid fa-plus"></i> Hinzufügen
+            </button>
+        </div>
+    `;
+    configContainer.appendChild(addForm);
+
+    // Email list container
+    let emailList = document.createElement("div");
+    emailList.id = "simplifyLicense_email_list";
+    configContainer.appendChild(emailList);
+
+    // Load emails
+    simplifyLicense_loadEmails();
+}
+
+function simplifyLicense_showConfigPage() {
+    currentView = 'config';
+    simplifyLicense_simplifyInfoWidget();
+}
+
+function simplifyLicense_showDefaultPage() {
+    currentView = 'default';
+    simplifyLicense_simplifyInfoWidget();
+}
+
+function simplifyLicense_loadEmails() {
+    $j.ajax({
+        url: "dashboard/MyWidgets/Lizenz/query.php",
+        type: "POST",
+        data: { action: 'getEmails' },
+        dataType: "json",
+        success: function(response) {
+            if (response.success) {
+                emailsData = response.emails;
+                simplifyLicense_renderEmailList();
+            } else {
+                simplifyLicense_showToast('Fehler beim Laden der E-Mails: ' + response.message, 'error');
+            }
+        },
+        error: function() {
+            simplifyLicense_showToast('Verbindungsfehler beim Laden der E-Mails', 'error');
+        }
+    });
+}
+
+function simplifyLicense_renderEmailList() {
+    let emailList = document.getElementById('simplifyLicense_email_list');
+    if (!emailList) return;
+
+    emailList.innerHTML = '';
+
+    if (emailsData.length === 0) {
+        emailList.innerHTML += '<div class="simplifyLicense_no_emails">Keine zusätzlichen E-Mail-Adressen konfiguriert</div>';
+        return;
+    }
+
+    emailsData.forEach(email => {
+        let emailItem = document.createElement('div');
+        emailItem.className = `simplifyLicense_email_item ${email.is_role_based ? 'role_based' : ''}`;
+        emailItem.setAttribute('data-email-id', email.id);
+
+        let actionsHtml = '';
+        if (email.is_role_based) {
+            // Role-based emails: only show toggle and role indicator
+            actionsHtml = `
+                <span class="simplifyLicense_role_indicator" title="Rollenbasierte E-Mail">
+                    <i class="fa-solid fa-user-tie"></i>
+                </span>
+                <button onclick="simplifyLicense_toggleEmailStatus(${email.id}, ${!email.active})" class="simplifyLicense_btn_toggle" title="${email.active ? 'Deaktivieren' : 'Aktivieren'}">
+                    <i class="fa-solid fa-${email.active ? 'toggle-on' : 'toggle-off'}"></i>
+                </button>
+            `;
+        } else {
+            // Regular emails: show all actions
+            actionsHtml = `
+                <button onclick="simplifyLicense_toggleEmailStatus(${email.id}, ${!email.active})" class="simplifyLicense_btn_toggle" title="${email.active ? 'Deaktivieren' : 'Aktivieren'}">
+                    <i class="fa-solid fa-${email.active ? 'toggle-on' : 'toggle-off'}"></i>
+                </button>
+                <button onclick="simplifyLicense_editEmail(${email.id}, \`${email.email}\`); return false;" class="simplifyLicense_btn_edit" title="Bearbeiten">
+                    <i class="fa-solid fa-edit"></i>
+                </button>
+                <button onclick="simplifyLicense_deleteEmail(${email.id})" class="simplifyLicense_btn_delete" title="Löschen">
+                    <i class="fa-solid fa-trash" style="margin-right: 0;padding-right: 10px"></i>
+                </button>
+            `;
+        }
+
+        emailItem.innerHTML = `
+            <div class="simplifyLicense_email_info">
+                <input type="email" class="simplifyLicense_email_address ${email.active ? '' : 'inactive'}"
+                       value="${email.email}" readonly data-email-id="${email.id}" />
+                <span class="simplifyLicense_email_status ${email.active ? 'active' : 'inactive'}">
+                    ${email.active ? 'Aktiv' : 'Inaktiv'}${email.is_role_based ? ' • Rolle' : ''}
+                </span>
+            </div>
+            <div class="simplifyLicense_email_actions">
+                ${actionsHtml}
+            </div>
+        `;
+        emailList.appendChild(emailItem);
+    });
+}
+
+function simplifyLicense_addEmail() {
+    let emailInput = document.getElementById('simplifyLicense_new_email');
+    let email = emailInput.value.trim();
+
+    if (!email) {
+        simplifyLicense_showToast('Bitte geben Sie eine E-Mail-Adresse ein', 'error');
+        return;
+    }
+
+    if (!simplifyLicense_isValidEmail(email)) {
+        simplifyLicense_showToast('Bitte geben Sie eine gültige E-Mail-Adresse ein', 'error');
+        return;
+    }
+
+    $j.ajax({
+        url: "dashboard/MyWidgets/Lizenz/query.php",
+        type: "POST",
+        data: {
+            action: 'addEmail',
+            email: email
+        },
+        dataType: "json",
+        success: function(response) {
+            if (response.success) {
+                emailInput.value = '';
+                simplifyLicense_loadEmails();
+                simplifyLicense_showToast('E-Mail erfolgreich hinzugefügt', 'success');
+            } else {
+                simplifyLicense_showToast(response.message, 'error');
+            }
+        },
+        error: function() {
+            simplifyLicense_showToast('Verbindungsfehler beim Hinzufügen der E-Mail', 'error');
+        }
+    });
+}
+
+function simplifyLicense_editEmail(id, currentEmail) {
+    let email = emailsData.find(e => e.id == id);
+    if (email && email.is_role_based) {
+        simplifyLicense_showToast('Rollenbasierte E-Mails können nicht bearbeitet werden', 'error');
+        return;
+    }
+
+    // Toggle inline editing for the email row
+    let emailItem = document.querySelector(`[data-email-id="${id}"]`);
+    if (!emailItem) {
+        return;
+    }
+
+    let emailInput = emailItem.querySelector('.simplifyLicense_email_address');
+    let actionsDiv = emailItem.querySelector('.simplifyLicense_email_actions');
+
+    if (!emailInput || !actionsDiv) {
+        console.log('Email input or actions div not found');
+        return;
+    }
+
+    // Store original value and make input editable
+    emailInput.setAttribute('data-original-value', emailInput.value);
+    emailInput.removeAttribute('readonly');
+    emailInput.classList.add('editing');
+
+    // Replace actions with save/cancel buttons
+    actionsDiv.innerHTML = `
+        <button onclick="simplifyLicense_saveInlineEmail(${id})" class="simplifyLicense_btn_save_inline" title="Speichern">
+            <i class="fa-solid fa-check"></i>
+        </button>
+        <button onclick="simplifyLicense_cancelInlineEdit(${id})" class="simplifyLicense_btn_cancel_inline" title="Abbrechen">
+            <i class="fa-solid fa-times"></i>
+        </button>
+    `;
+
+    emailInput.focus();
+    emailInput.select();
+}
+
+function simplifyLicense_saveInlineEmail(id) {
+
+    let emailItem = document.querySelector(`[data-email-id="${id}"]`);
+    if (!emailItem) {
+        simplifyLicense_showToast('Fehler: E-Mail-Element nicht gefunden', 'error');
+        return;
+    }
+
+    let emailInput = emailItem.querySelector('.simplifyLicense_email_address');
+    if (!emailInput) {
+
+        simplifyLicense_showToast('Fehler: E-Mail-Eingabefeld nicht gefunden', 'error');
+        return;
+    }
+
+    let newEmail = emailInput.value.trim();
+
+    if (!newEmail) {
+        simplifyLicense_showToast('E-Mail-Adresse darf nicht leer sein', 'error');
+        return;
+    }
+
+    if (!simplifyLicense_isValidEmail(newEmail)) {
+        simplifyLicense_showToast('Bitte geben Sie eine gültige E-Mail-Adresse ein', 'error');
+        return;
+    }
+
+    $j.ajax({
+        url: "dashboard/MyWidgets/Lizenz/query.php",
+        type: "POST",
+        data: {
+            action: 'updateEmail',
+            id: id,
+            email: newEmail,
+            active: 'true'
+        },
+        dataType: "json",
+        success: function(response) {
+            if (response.success) {
+                simplifyLicense_loadEmails();
+                simplifyLicense_showToast('E-Mail erfolgreich aktualisiert', 'success');
+            } else {
+                simplifyLicense_showToast(response.message, 'error');
+            }
+        },
+        error: function() {
+            simplifyLicense_showToast('Verbindungsfehler beim Aktualisieren der E-Mail', 'error');
+        }
+    });
+}
+
+function simplifyLicense_cancelInlineEdit(id) {
+    let emailItem = document.querySelector(`[data-email-id="${id}"]`);
+    if (!emailItem) {
+        return;
+    }
+
+    let emailInput = emailItem.querySelector('.simplifyLicense_email_address');
+    if (emailInput) {
+        // Restore original value and make readonly again
+        let originalValue = emailInput.getAttribute('data-original-value');
+        if (originalValue) {
+            emailInput.value = originalValue;
+        }
+        emailInput.setAttribute('readonly', 'readonly');
+        emailInput.classList.remove('editing');
+    }
+
+    // Reload emails to restore the original buttons
+    simplifyLicense_loadEmails();
+}
+
+function simplifyLicense_toggleEmailStatus(id, newStatus) {
+    let email = emailsData.find(e => e.id === id);
+    if (!email) return;
+
+    $j.ajax({
+        url: "dashboard/MyWidgets/Lizenz/query.php",
+        type: "POST",
+        data: {
+            action: 'updateEmail',
+            id: id,
+            email: email.email,
+            active: newStatus.toString()
+        },
+        dataType: "json",
+        success: function(response) {
+            if (response.success) {
+                simplifyLicense_loadEmails();
+                simplifyLicense_showToast('Status erfolgreich geändert', 'success');
+            } else {
+                simplifyLicense_showToast(response.message, 'error');
+            }
+        },
+        error: function() {
+            simplifyLicense_showToast('Verbindungsfehler beim Ändern des Status', 'error');
+        }
+    });
+}
+
+function simplifyLicense_deleteEmail(id) {
+    $j.ajax({
+        url: "dashboard/MyWidgets/Lizenz/query.php",
+        type: "POST",
+        data: {
+            action: 'deleteEmail',
+            id: id
+        },
+        dataType: "json",
+        success: function(response) {
+            if (response.success) {
+                simplifyLicense_loadEmails();
+                simplifyLicense_showToast('E-Mail erfolgreich gelöscht', 'success');
+            } else {
+                simplifyLicense_showToast(response.message, 'error');
+            }
+        },
+        error: function() {
+            simplifyLicense_showToast('Verbindungsfehler beim Löschen der E-Mail', 'error');
+        }
+    });
+}
+
+function simplifyLicense_isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function simplifyLicense_showToast(message, type = 'info') {
+    let toast = document.createElement('div');
+    toast.className = `simplifyLicense_toast simplifyLicense_toast-${type}`;
+    toast.textContent = message;
+
+    let outerBox = document.getElementById('simplifyLicense_outerBox');
+    outerBox.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('simplifyLicense_toast-show');
+    }, 100);
+
+    setTimeout(() => {
+        toast.classList.remove('simplifyLicense_toast-show');
+        setTimeout(() => {
+            if (outerBox.contains(toast)) {
+                outerBox.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+function simplifyLicense_convertDateFormat(inputDate) {
     var parts = inputDate.split("-");
     return parts[2] + "." + parts[1] + "." + parts[0];
 }
@@ -42,50 +424,420 @@ function convertDateFormat(inputDate) {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-#lizenz_outerBox{
+#simplifyLicense_outerBox{
     width: 100%;
     font-family: 'Poppins';
     font-size: 40px;
+    position: relative;
+    height: 95%;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
-#lizenz_result{
-    align-items: right;
+#simplifyLicense_innerBox {
+    position: relative;
+}
+
+#simplifyLicense_result{
     font-weight: 600;
-    float: right;
-    margin-top: 15px;
+    margin-top: 10px;
     margin-right: 15px;
+    text-align: right;
+    position: absolute;
+    left: 70px;
 }
 
-#lizenz_amount{
+#simplifyLicense_amount{
     font-size: 20px;
     text-align: center;
 }
 
-#lizenz_text{
+#simplifyLicense_text{
     font-size: 13px;
     font-weight: 500;
     text-align: center;
 }
 
-.background-red {
+.simplifyLicense_background-red {
     background-color: #3B3E4D;
     color: #FFCC0D;
     border: none;
 }
 
-#lizenz_logo{
-    padding-top: 48px;
-    padding-left: 18px;
+#simplifyLicense_logo{
+    position: absolute;
+    top: 20px;
+    left: 15px;
     font-size: 30px;
     color: #D7D7D8;
+    z-index: 5;
+    display: block;
 }
 
-#invisibleLizenz{
+#simplifyLicense_config_btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 16px;
+    color: #FFCC0D;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+#simplifyLicense_config_btn:hover {
+    background-color: rgba(255, 204, 13, 0.1);
+    transform: scale(1.1);
+}
+
+/* Configuration Page Styles */
+#simplifyLicense_config_container {
+    padding: 15px;
+    font-size: 14px;
+}
+
+#simplifyLicense_config_header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #FFCC0D;
+    padding-bottom: 10px;
+}
+
+.simplifyLicense_config_title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    flex-wrap: wrap;
+}
+
+.simplifyLicense_admin_info_inline {
+    font-size: 10px;
+    color: #FFCC0D;
+    font-weight: 400;
+    opacity: 0.8;
+    margin-left: auto;
+}
+
+.simplifyLicense_back_btn {
+    cursor: pointer;
+    padding: 8px 0 8px 8px;
+    transition: all 0.3s ease;
+}
+
+.simplifyLicense_back_btn:hover {
+    background-color: rgba(255, 204, 13, 0.1);
+    border-radius: 4px;
+}
+
+#simplifyLicense_add_email_form {
+    margin-bottom: 20px;
+}
+
+.simplifyLicense_form_group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+#simplifyLicense_new_email {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #FFCC0D;
+    border-radius: 4px;
+    background-color: #4A4D5C;
+    color: #E5E5E5;
+    font-size: 13px;
+    font-family: 'Poppins';
+}
+
+#simplifyLicense_new_email:focus {
+    outline: none;
+    border-color: #FFD700;
+    background-color: #525566;
+}
+
+.simplifyLicense_btn_add, .simplifyLicense_btn_edit, .simplifyLicense_btn_delete, .simplifyLicense_btn_toggle {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'Poppins';
+    transition: all 0.3s ease;
+}
+
+.simplifyLicense_btn_add {
+    background-color: #FFCC0D;
+    color: #3B3E4D;
+    font-weight: 500;
+}
+
+.simplifyLicense_btn_add:hover {
+    background-color: #FFD700;
+}
+
+.simplifyLicense_btn_edit {
+    background-color: #4CAF50;
+    color: white;
+    padding: 6px 10px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.simplifyLicense_btn_edit:hover {
+    background-color: #45a049;
+}
+
+.simplifyLicense_btn_delete {
+    background-color: #f44336;
+    color: white;
+    padding: 6px 10px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
+.simplifyLicense_btn_delete:hover {
+    background-color: #da190b;
+}
+
+.simplifyLicense_btn_toggle {
+    background-color: transparent;
+    color: #FFCC0D;
+    border: 1px solid #FFCC0D;
+    padding: 6px 10px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.simplifyLicense_btn_toggle:hover {
+    background-color: #FFCC0D;
+    color: #3B3E4D;
+}
+
+.simplifyLicense_btn_save_inline {
+    background-color: #4CAF50;
+    color: white;
+    padding: 6px 10px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.simplifyLicense_btn_save_inline:hover {
+    background-color: #45a049;
+}
+
+.simplifyLicense_btn_cancel_inline {
+    background-color: #666;
+    color: white;
+    padding: 6px 10px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.simplifyLicense_btn_cancel_inline:hover {
+    background-color: #777;
+}
+
+.admin_info_note {
+    background-color: rgba(255, 204, 13, 0.1);
+    border: 1px solid #FFCC0D;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 15px;
+    font-size: 12px;
+    color: #FFCC0D;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.simplifyLicense_email_actions {
+    display: flex;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+}
+
+#simplifyLicense_email_list {
+    max-height: 300px;
+}
+
+.simplifyLicense_email_item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 8px;
+    background-color: #4A4D5C;
+    border-radius: 6px;
+    border-left: 3px solid #FFCC0D;
+}
+
+.simplifyLicense_email_item.role_based {
+    background-color: #3E4250;
+    border-left-color: #4CAF50;
+}
+
+.simplifyLicense_role_indicator {
+    color: #4CAF50;
+    font-size: 14px;
+    margin-right: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+
+.simplifyLicense_email_info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.simplifyLicense_email_address {
+    font-size: 13px;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #E5E5E5;
+    width: 90%;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.simplifyLicense_email_address:not([readonly]) {
+    background-color: #525566 !important;
+    border: 1px solid #FFCC0D !important;
+    color: #E5E5E5 !important;
+    cursor: text;
+}
+
+.simplifyLicense_email_address:not([readonly]):focus {
+    border-color: #4CAF50 !important;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.3) !important;
+    background-color: #5A5D6E !important;
+}
+
+.simplifyLicense_email_address[readonly] {
+    cursor: default;
+    background: transparent !important;
+    border: none !important;
+}
+
+.simplifyLicense_email_address.inactive {
+    color: #999;
+    text-decoration: line-through;
+}
+
+.simplifyLicense_email_address.editing {
+    background-color: #525566 !important;
+    border: 1px solid #FFCC0D !important;
+    color: #E5E5E5 !important;
+    cursor: text !important;
+}
+
+.simplifyLicense_email_status {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.simplifyLicense_email_status.active {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.simplifyLicense_email_status.inactive {
+    background-color: #f44336;
+    color: white;
+}
+
+.simplifyLicense_email_actions {
+    display: flex;
+    gap: 5px;
+}
+
+.simplifyLicense_no_emails {
+    text-align: center;
+    padding: 30px;
+    color: #999;
+    font-style: italic;
+}
+
+/* Toast Notifications */
+.simplifyLicense_toast {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 10px 15px;
+    border-radius: 4px;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    max-width: 250px;
+    word-wrap: break-word;
+}
+
+.simplifyLicense_toast-show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.simplifyLicense_toast-success {
+    background-color: #4CAF50;
+}
+
+.simplifyLicense_toast-error {
+    background-color: #f44336;
+}
+
+.simplifyLicense_toast-info {
+    background-color: #2196F3;
+}
+
+#simplifyLicense_invisibleLizenz, #simplifyLicense_invisibleCanEdit{
     display: none;
 }
-
-
 </style>
 
-<div id="invisibleLizenz">{{lizenz}}</div>
-<div id="lizenz_outerBox"></div>
+<div id="simplifyLicense_invisibleLizenz">{{lizenz}}</div>
+<div id="simplifyLicense_invisibleCanEdit">{{canEdit}}</div>
+<div id="simplifyLicense_outerBox"></div>

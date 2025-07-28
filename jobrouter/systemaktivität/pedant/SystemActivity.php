@@ -622,6 +622,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         unlink($csvFilePath);
     }
 
+    /**
+     * Fetches invoices from the Pedant API and updates the resubmission date in the database.
+     *
+     * @throws Exception If the database type is unsupported or if the query fails.
+     */
     protected function fetchInvoices()
     {
         $curl = curl_init();
@@ -686,6 +691,12 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         curl_close($curl);
     }
 
+    /**
+     * Determines the database type based on the version query.
+     *
+     * @return string The database type, either "MySQL" or "MSSQL".
+     * @throws Exception If the database type cannot be detected.
+     */
     public function getDatabaseType()
     {
         $jobDB = $this->getJobDB();
@@ -709,6 +720,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         throw new Exception("Database could not be detected");
     }
 
+    /**
+     * Stores the list of invoice details in the system activity.
+     *
+     * @param array $data The data containing invoice details.
+     */
     public function storeList($data)
     {
         $type = $this->getSystemActivityVar('TYPE');
@@ -1037,6 +1053,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
     }
 
+
+    /**
+     * Returns the UDL (User Defined List) for the given element ID.
+     *
+     * @param string $udl The UDL identifier.
+     * @param string $elementID The element ID for which to get the UDL.
+     * @return array The UDL as an array of name-value pairs.
+     */
     public function getUDL($udl, $elementID)
     {
         if ($elementID == 'importVendor') {
