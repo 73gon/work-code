@@ -45,6 +45,9 @@ class NewsBox extends Widget
 
     private function getNews()
     {
+
+        $this->ensureNewsBoxRolesExist();
+
         if (!$this->tableExists('newsBoxWidget')) {
             $this->createNewsBoxTable();
         }
@@ -174,7 +177,35 @@ class NewsBox extends Widget
 
     public function isAuthorized()
     {
-        // nur dem admin und Usern, die in der Rolle 'Mitteilungempänger' sind wird das Widget angeboten!
-        return $this->getUser()->getUsername() == 'admin' || $this->getUser()->isInJobFunction('NewsBoxUser');
+        return $this->getUser()->getUsername() == 'admin' || $this->getUser()->isInJobFunction('NewsBoxUser') || $this->getUser()->isInJobFunction('NewsBoxAdmin');
+    }
+
+    private function ensureNewsBoxRolesExist(): void
+    {
+        try {
+            $JobDB = $this->getJobDB();
+            $roles = [
+                ['role' => 'NewsBoxUser', 'description' => 'User for NewsBox Widget'],
+                ['role' => 'NewsBoxAdmin', 'description' => 'Administrator for NewsBox Widget']
+            ];
+
+            foreach ($roles as $roleData) {
+                $checkQuery = "SELECT COUNT(*) as count FROM jrjobfunctions WHERE jobfunction = " . $JobDB->quote($roleData['role']);
+                $result = $JobDB->query($checkQuery);
+
+                if ($result !== false) {
+                    $row = $JobDB->fetchRow($result);
+                    if ($row['count'] == 0) {
+                        $insertQuery = "INSERT INTO jrjobfunctions (jobfunction, description) VALUES (" .
+                            $JobDB->quote($roleData['role']) . ", " .
+                            $JobDB->quote($roleData['description']) . ")";
+                        $JobDB->exec($insertQuery);
+                        error_log("NewsBox.php: {$roleData['role']} role created in jrjobfunctions table");
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            error_log("NewsBox.php: Fehler beim Überprüfen/Erstellen der NewsBox-Rollen: " . $e->getMessage());
+        }
     }
 }

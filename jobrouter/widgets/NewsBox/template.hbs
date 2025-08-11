@@ -359,9 +359,29 @@ window.onclick = function(event) {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
+:root {
+    --newsbox-bg: #3B3E4D;
+    --newsbox-accent: #FFCC0D;
+    --newsbox-accent-hover: #FFD700;
+    --newsbox-item-bg: #4A4D5C;
+    --newsbox-item-bg-hover: #525566;
+    --newsbox-border: #FFCC0D;
+    --newsbox-date: #B8BCC8;
+    --newsbox-edit-info: #999;
+    --newsbox-btn-danger: #FF6B6B;
+    --newsbox-btn-danger-hover: #FF5252;
+    --newsbox-message: #E5E5E5;
+    --newsbox-toast-success-bg: #2E7D32;
+    --newsbox-toast-success-border: #4CAF50;
+    --newsbox-toast-error-bg: #C62828;
+    --newsbox-toast-error-border: #F44336;
+    --newsbox-toast-info-bg: #4A4D5C;
+    --newsbox-toast-info-border: #FFCC0D;
+}
+
 .simplifyNewsBox_background-red {
-    background-color: #3B3E4D;
-    color: #FFCC0D;
+    background-color: var(--newsbox-bg);
+    color: var(--newsbox-accent);
     border: none;
 }
 
@@ -369,8 +389,8 @@ window.onclick = function(event) {
     width: 99%;
     font-family: 'Poppins', sans-serif;
     font-size: 16px;
-    background-color: #3B3E4D;
-    color: #FFCC0D;
+    background-color: var(--newsbox-bg);
+    color: var(--newsbox-accent);
     padding: 5px 5px 5px 5px;
     border-radius: 8px;
     overflow-y: auto;
@@ -387,8 +407,8 @@ window.onclick = function(event) {
 }
 
 .simplifyNewsBox_add-news-btn {
-    background-color: #FFCC0D;
-    color: #3B3E4D;
+    background-color: var(--newsbox-accent);
+    color: var(--newsbox-bg);
     border: none;
     padding: 10px 20px;
     font-family: 'Poppins', sans-serif;
@@ -400,7 +420,7 @@ window.onclick = function(event) {
 }
 
 .simplifyNewsBox_add-news-btn:hover {
-    background-color: #FFD700;
+    background-color: var(--newsbox-accent-hover);
     transform: translateY(-2px);
 }
 
@@ -409,16 +429,16 @@ window.onclick = function(event) {
 }
 
 .simplifyNewsBox_news-item {
-    background-color: #4A4D5C;
+    background-color: var(--newsbox-item-bg);
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 15px;
-    border-left: 4px solid #FFCC0D;
+    border-left: 4px solid var(--newsbox-border);
     transition: all 0.3s ease;
 }
 
 .simplifyNewsBox_news-item:hover {
-    background-color: #525566;
+    background-color: var(--newsbox-item-bg-hover);
     transform: translateX(5px);
 }
 
@@ -434,13 +454,13 @@ window.onclick = function(event) {
 
 .simplifyNewsBox_news-author {
     font-weight: 600;
-    color: #FFCC0D;
+    color: var(--newsbox-accent);
 }
 
 .simplifyNewsBox_news-date {
     font-size: 12px;
-    color: #B8BCC8;
-    background-color: #3B3E4D;
+    color: var(--newsbox-date);
+    background-color: var(--newsbox-bg);
     padding: 4px 8px;
     border-radius: 12px;
 }
@@ -452,8 +472,8 @@ window.onclick = function(event) {
 
 .simplifyNewsBox_action-btn {
     background: none;
-    border: 1px solid #FFCC0D;
-    color: #FFCC0D;
+    border: 1px solid var(--newsbox-border);
+    color: var(--newsbox-accent);
     padding: 4px 10px;
     border-radius: 4px;
     cursor: pointer;
@@ -462,37 +482,37 @@ window.onclick = function(event) {
 }
 
 .simplifyNewsBox_action-btn:hover {
-    background-color: #FFCC0D;
-    color: #3B3E4D;
+    background-color: var(--newsbox-accent);
+    color: var(--newsbox-bg);
 }
 
 .simplifyNewsBox_delete-btn:hover {
-    background-color: #FF6B6B;
-    border-color: #FF6B6B;
-    color: white;
+    background-color: var(--newsbox-btn-danger);
+    border-color: var(--newsbox-btn-danger);
+    color: #fff;
 }
 
 .simplifyNewsBox_news-content {
-	margin-top: 8px;
+    margin-top: 8px;
 }
 
 .simplifyNewsBox_news-title {
     font-size: 18px;
     font-weight: 600;
-    color: #FFCC0D;
+    color: var(--newsbox-accent);
     margin: 0 0 5px 0;
 }
 
 .simplifyNewsBox_news-message {
     font-size: 14px;
     line-height: 1.6;
-    color: #E5E5E5;
+    color: var(--newsbox-message);
     margin: 0;
 }
 
 .simplifyNewsBox_news-edit-info {
     font-size: 11px;
-    color: #999;
+    color: var(--newsbox-edit-info);
     font-style: italic;
     margin-top: 8px;
     text-align: right;
@@ -514,13 +534,13 @@ window.onclick = function(event) {
 }
 
 .simplifyNewsBox_popup-content {
-    background-color: #3B3E4D;
-    color: #FFCC0D;
+    background-color: var(--newsbox-bg);
+    color: var(--newsbox-accent);
     padding: 25px;
     border-radius: 12px;
     width: 85%;
     max-width: 400px;
-    border: 2px solid #FFCC0D;
+    border: 2px solid var(--newsbox-border);
     max-height: 85%;
     overflow-y: auto;
 }
@@ -530,7 +550,7 @@ window.onclick = function(event) {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    border-bottom: 1px solid #FFCC0D;
+    border-bottom: 1px solid var(--newsbox-border);
     padding-bottom: 12px;
 }
 
@@ -543,7 +563,7 @@ window.onclick = function(event) {
 .simplifyNewsBox_close-btn {
     background: none;
     border: none;
-    color: #FFCC0D;
+    color: var(--newsbox-accent);
     font-size: 24px;
     cursor: pointer;
     padding: 0;
@@ -555,7 +575,7 @@ window.onclick = function(event) {
 }
 
 .simplifyNewsBox_close-btn:hover {
-    color: #FFD700;
+    color: var(--newsbox-accent-hover);
 }
 
 .simplifyNewsBox_form-group {
@@ -577,43 +597,43 @@ window.onclick = function(event) {
     display: block;
     margin-bottom: 8px;
     font-weight: 500;
-    color: #FFCC0D;
+    color: var(--newsbox-accent);
 }
 
 .simplifyNewsBox_newsBox_In, .simplifyNewsBox_form-textarea {
     width: 100%;
     padding: 10px;
-    border: 1px solid #FFCC0D;
+    border: 1px solid var(--newsbox-border);
     border-radius: 6px;
-    background-color: #4A4D5C;
-    color: #E5E5E5;
+    background-color: var(--newsbox-item-bg);
+    color: var(--newsbox-message);
     font-size: 13px;
-	box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 .simplifyNewsBox_newsBox_In:disabled {
-    background-color: #3B3E4D;
-    color: #B8BCC8;
+    background-color: var(--newsbox-bg);
+    color: var(--newsbox-date);
     border-color: #666;
     cursor: not-allowed;
 }
 
 #simplifyNewsBox_newsTitle {
-    background-color: #4A4D5C;
-    color: #E5E5E5;
-    border: 1px solid #FFCC0D;
+    background-color: var(--newsbox-item-bg);
+    color: var(--newsbox-message);
+    border: 1px solid var(--newsbox-border);
 }
 
 .simplifyNewsBox_form-input:focus, .simplifyNewsBox_form-textarea:focus {
     outline: none;
-    border-color: #FFD700;
-    background-color: #525566;
+    border-color: var(--newsbox-accent-hover);
+    background-color: var(--newsbox-item-bg-hover);
 }
 
 #simplifyNewsBox_newsTitle:focus {
     outline: none;
-    border-color: #FFD700;
-    background-color: #525566;
+    border-color: var(--newsbox-accent-hover);
+    background-color: var(--newsbox-item-bg-hover);
 }
 
 .simplifyNewsBox_form-textarea {
@@ -640,32 +660,32 @@ window.onclick = function(event) {
 }
 
 .simplifyNewsBox_btn-primary {
-    background-color: #FFCC0D;
-    color: #3B3E4D;
+    background-color: var(--newsbox-accent);
+    color: var(--newsbox-bg);
 }
 
 .simplifyNewsBox_btn-primary:hover {
-    background-color: #FFD700;
+    background-color: var(--newsbox-accent-hover);
 }
 
 .simplifyNewsBox_btn-secondary {
     background-color: transparent;
-    color: #FFCC0D;
-    border: 1px solid #FFCC0D;
+    color: var(--newsbox-accent);
+    border: 1px solid var(--newsbox-border);
 }
 
 .simplifyNewsBox_btn-secondary:hover {
-    background-color: #FFCC0D;
-    color: #3B3E4D;
+    background-color: var(--newsbox-accent);
+    color: var(--newsbox-bg);
 }
 
 .simplifyNewsBox_btn-danger {
-    background-color: #FF6B6B;
-    color: white;
+    background-color: var(--newsbox-btn-danger);
+    color: #fff;
 }
 
 .simplifyNewsBox_btn-danger:hover {
-    background-color: #FF5252;
+    background-color: var(--newsbox-btn-danger-hover);
 }
 
 .simplifyNewsBox_delete-confirm-content {
@@ -679,26 +699,26 @@ window.onclick = function(event) {
 
 .simplifyNewsBox_delete-news-title {
     font-weight: 600;
-    color: #FFD700;
+    color: var(--newsbox-accent-hover);
     font-style: italic;
 }
 
 .simplifyNewsBox_empty-state {
     text-align: center;
     padding: 60px 20px;
-    color: #B8BCC8;
+    color: var(--newsbox-date);
 }
 
 .simplifyNewsBox_empty-state i {
     font-size: 48px;
     margin-bottom: 20px;
-    color: #FFCC0D;
+    color: var(--newsbox-accent);
 }
 
 .simplifyNewsBox_empty-state h3 {
     font-size: 20px;
     margin-bottom: 10px;
-    color: #FFCC0D;
+    color: var(--newsbox-accent);
 }
 
 /* Toast Notifications */
@@ -706,8 +726,8 @@ window.onclick = function(event) {
     position: absolute;
     top: 10px;
     right: 10px;
-    background-color: #4A4D5C;
-    color: white;
+    background-color: var(--newsbox-toast-info-bg);
+    color: #fff;
     padding: 12px 20px;
     border-radius: 6px;
     font-size: 14px;
@@ -716,7 +736,7 @@ window.onclick = function(event) {
     opacity: 0;
     transform: translateX(100%);
     transition: all 0.3s ease;
-    border-left: 4px solid #FFCC0D;
+    border-left: 4px solid var(--newsbox-toast-info-border);
     max-width: 300px;
     word-wrap: break-word;
 }
@@ -727,18 +747,18 @@ window.onclick = function(event) {
 }
 
 .simplifyNewsBox_toast-success {
-    border-left-color: #4CAF50;
-    background-color: #2E7D32;
+    border-left-color: var(--newsbox-toast-success-border);
+    background-color: var(--newsbox-toast-success-bg);
 }
 
 .simplifyNewsBox_toast-error {
-    border-left-color: #F44336;
-    background-color: #C62828;
+    border-left-color: var(--newsbox-toast-error-border);
+    background-color: var(--newsbox-toast-error-bg);
 }
 
 .simplifyNewsBox_toast-info {
-    border-left-color: #FFCC0D;
-    background-color: #4A4D5C;
+    border-left-color: var(--newsbox-toast-info-border);
+    background-color: var(--newsbox-toast-info-bg);
 }
 
 </style>

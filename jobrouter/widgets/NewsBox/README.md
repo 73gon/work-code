@@ -36,3 +36,37 @@ Das NewsBox-Widget zeigt Mitteilungen im JobRouter-Dashboard an und ermöglicht 
 - Nachricht bearbeiten: Stift-Symbol anklicken, ändern und speichern.
 - Nachricht löschen: Papierkorb-Symbol anklicken und Löschvorgang bestätigen.
 - Löschdatum setzen: Optionales Datum, ab dem die Nachricht automatisch entfernt wird.
+
+### 5. Farbkonfiguration
+
+Die Farben des Widgets können über CSS-Variablen in der `template.hbs` Datei angepasst werden. Die konfigurierbaren Farben befinden sich im `:root` Bereich und können mit Hexadezimal-Farbcodes geändert werden:
+
+```css
+:root {
+  --newsbox-bg: #3b3e4d; /* Haupthintergrundfarbe */
+  --newsbox-accent: #ffcc0d; /* Akzentfarbe (Buttons, Titel) */
+  --newsbox-accent-hover: #ffd700; /* Akzentfarbe beim Hover */
+  --newsbox-item-bg: #4a4d5c; /* Hintergrund der News-Items */
+  --newsbox-item-bg-hover: #525566; /* News-Item Hover-Farbe */
+  --newsbox-border: #ffcc0d; /* Rahmenfarbe */
+  --newsbox-date: #b8bcc8; /* Datumsfarbe */
+  --newsbox-edit-info: #999; /* "Zuletzt bearbeitet" Text */
+  --newsbox-btn-danger: #ff6b6b; /* Löschen-Button Farbe */
+  --newsbox-btn-danger-hover: #ff5252; /* Löschen-Button Hover */
+  --newsbox-message: #e5e5e5; /* Nachrichtentext */
+  --newsbox-toast-success-bg: #2e7d32; /* Erfolgs-Toast Hintergrund */
+  --newsbox-toast-error-bg: #c62828; /* Fehler-Toast Hintergrund */
+}
+```
+
+Beispiel für eine blaue Farbvariation:
+
+```css
+:root {
+  --newsbox-bg: #1e3a8a;
+  --newsbox-accent: #3b82f6;
+  --newsbox-accent-hover: #60a5fa;
+  --newsbox-item-bg: #1e40af;
+  --newsbox-border: #3b82f6;
+}
+```
