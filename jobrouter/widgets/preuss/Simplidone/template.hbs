@@ -234,16 +234,33 @@ function simplidoneUpdate() {
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log("AJAX Error:", textStatus, errorThrown);
-            console.log("Response:", jqXHR.responseText);
+            console.log("Status Code:", jqXHR.status);
+            console.log("Response Text:", jqXHR.responseText);
+            console.log("Request URL:", this.url);
+            console.log("Request Data:", this.data);
             loader.style.opacity = '0';
             outerBox.style.opacity = '100';
+
+            let errorMessage = "Fehler beim Laden der Daten!";
+            if (jqXHR.status === 500) {
+                errorMessage = "Server-Fehler (500): " + (jqXHR.responseText || "Unbekannter Fehler");
+            } else if (jqXHR.status === 404) {
+                errorMessage = "Datei nicht gefunden (404)";
+            } else if (jqXHR.status === 403) {
+                errorMessage = "Zugriff verweigert (403)";
+            }
+
             let toast = document.createElement("div");
             toast.setAttribute("id", "simplidone_toast");
-            toast.innerText = "Fehler beim Laden der Daten!";
+            toast.innerText = errorMessage;
+            toast.style.maxWidth = "400px";
+            toast.style.wordWrap = "break-word";
             outerBox.appendChild(toast);
             setTimeout(function(){
-                outerBox.removeChild(toast);
-            }, 3000);
+                if (outerBox.contains(toast)) {
+                    outerBox.removeChild(toast);
+                }
+            }, 5000);
         }
     });
 }
@@ -260,14 +277,14 @@ function simplidoneUpdate() {
 
 #simplidone_toast {
     position: absolute;
-    bottom: 20px;
+    top: 20px;
     right: 20px;
     background-color: #d9534f;
     color: #fff;
     padding: 10px 20px;
     border-radius: 5px;
     z-index: 9999;
-    opacity: 0;
+    opacity: 1;
     animation: fadeInOut 3s forwards;
 }
 
@@ -428,6 +445,25 @@ function simplidoneUpdate() {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeInOut {
+    0% {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    15% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    85% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(100%);
+    }
 }
 
 [id^="simplidone_invis"] {

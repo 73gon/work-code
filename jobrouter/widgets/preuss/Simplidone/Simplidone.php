@@ -50,9 +50,9 @@ class Simplidone extends Widget
 
   public function getIncidents()
   {
-    $normalSteps = $this->getNormalSteps();
+    $steps = $this->getSteps();
 
-    $incidents = array_merge($normalSteps);
+    $incidents = array_merge($steps);
 
     $sum = array_fill(0, count($incidents[0]), 0);
     for ($i = 0; $i < count($incidents); $i++) {
@@ -121,7 +121,7 @@ class Simplidone extends Widget
     }
     return $businessSeconds;
   }
-  public function getNormalSteps()
+  public function getSteps()
   {
       $JobDB = $this->getJobDB();
       $query = "
