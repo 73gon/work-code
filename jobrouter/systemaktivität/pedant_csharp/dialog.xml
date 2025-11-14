@@ -1,0 +1,85 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<jobrouterModuleSettings>
+    <module name='PEDANT'>
+        <functions>
+		    <function id='pedant' name='READ' description='READ_DESC'>
+                <inputParameters>
+					<field id='inputFile' name='INPUTFILE' worktable='yes' subtable='no' fixed='no' datatype='file' required='yes'/>
+					<field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='varchar' required='no' texttype='checkbox'/>
+					<field id='internalNumber' name='INTNUMBER' worktable='yes' subtable='no' fixed='yes' datatype='varchar'/>
+                    <field id='maxCounter' name='MAXRETRIES' worktable='no' subtable='no' fixed='yes' datatype='int' required='yes'/>
+					<field id='flag' name='FLAG' desc='FLAG_DESC' worktable='no' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='flagXML' name='FLAGXML' worktable='no' subtable='no' fixed='yes' datatype='varchar'/>
+                    <field id='zugferd' name='ZUGFERD' worktable='no' subtable='no' fixed='yes' datatype='int' required='yes' texttype='checkbox'/>
+                    <field id="interval" name="INTERVAL" description="INTERVAL_DESC" worktable="yes" subtable="no" fixed="yes" datatype="int" required="yes"/>
+                    <field id='note' name='NOTE' worktable='yes' subtable='yes' fixed='yes' datatype='varchar'/>
+					<field id='incident' name='INCIDENT' worktable='no' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='maxFileSize' name='MAXFILESIZE' worktable='yes' subtable='no' fixed='yes' datatype='int' required='no'/>
+                </inputParameters>
+                <outputParameters>
+					<field id='fileID' name='FILEID' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='invoiceID' name='INVOICEID' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
+                    <field id='tempJSON' name='TEMPJSON' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
+                    <field id='counterSummary' name='COUNTERSUMMARY' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no'/>
+					<list id='recipientDetails' name='RECIPIENTDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
+					<list id='vendorDetails' name='VENDORDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
+					<list id='invoiceDetails' name='INVOICEDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
+                    <list id='positionDetails' name='POSITIONDETAILS' worktable='no' subtable='yes' fixed='no' datatype='varchar' required='no' udl='yes'/>
+                    <list id='auditTrailDetails' name='AUDITTRAILDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
+                    <list id='rejectionDetails' name='REJECTIONDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
+                    <list id='attachments' name='ATTACHMENTS' worktable='yes' subtable='yes' fixed='no' datatype='file' required='no' udl='yes'/>
+                    <list id='workflowDetails' name='WORKFLOWDETAILS' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' udl='yes'/>
+                </outputParameters>
+			</function>
+            <function id='importVendorCSV' name='IMPORTVENDORCSV' description='IMPORTVENDORCSV_DESC'>
+                <inputParameters>
+                    <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
+                    <field id="vendorTable" name="VENDORTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
+                    <list id="importVendor" name="IMPORTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
+                </inputParameters>
+                <outputParameters>
+                </outputParameters>
+            </function>
+            <function id='importRecipientCSV' name='IMPORTRECIPIENTCSV' description='IMPORTRECIPIENTCSV_DESC'>
+                <inputParameters>
+                    <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
+                    <field id="recipientTable" name="RECIPIENTTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
+                    <list id="importRecipient" name="IMPORTRECIPIENT" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
+                </inputParameters>
+                <outputParameters>
+                </outputParameters>
+            </function>
+            <function id='importCostCenterCSV' name='IMPORTCOSTCENTERCSV' description='IMPORTCOSTCENTERCSV_DESC'>
+                <inputParameters>
+                    <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
+                    <field id="costCenterTable" name="COSTCENTERTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
+                    <list id="importCostCenter" name="IMPORTCOSTCENTER" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
+                </inputParameters>
+                <outputParameters>
+                </outputParameters>
+            </function>
+            <function id='fetchData' name='FETCH' description='FETCH_DESC'>
+                <inputParameters>
+                    <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
+                    <field id="table_head" name="TABLEHEAD" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
+                    <field id="stepID" name="STEPID" worktable="yes" subtable="no" fixed="yes" datatype="int" required="yes"/>
+                    <field id="interval" name="INTERVAL" description="INTERVAL_DESC" worktable="yes" subtable="no" fixed="yes" datatype="int" required="yes"/>
+                    <field id="worktime" name="WORKTIME" description="WORKTIME_DESC" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
+                    <field id="weekend" name="WEEKEND" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes" texttype="checkbox"/>
+                </inputParameters>
+                <outputParameters>
+                </outputParameters>
+            </function>
+        </functions>
+        <simulation>
+            <behavior id='EXECUTE' name='CONST_ACT_SIM_EXECUTE' desc='CONST_ACT_SIM_EXECUTE_DESC' />
+            <behavior id='SUCCESS' name='CONST_ACT_SIM_SUCCESS' desc='CONST_ACT_SIM_SUCCESS_DESC' />
+            <behavior id='ERROR' name='CONST_ACT_SIM_ERROR' desc='CONST_ACT_SIM_ERROR_DESC' />
+        </simulation>
+    </module>
+</jobrouterModuleSettings>
