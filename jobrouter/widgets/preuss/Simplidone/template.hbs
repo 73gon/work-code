@@ -28,6 +28,15 @@ function simplidoneWidget() {
     usernameInput.placeholder = "Username";
     usernameWrapper.appendChild(usernameInput);
 
+    let clearUsernameButton = document.createElement("button");
+    clearUsernameButton.setAttribute("class", "fa-solid fa-trash");
+    clearUsernameButton.addEventListener("click", function() {
+        usernameInput.value = "";
+        username = "";
+        simplidoneUpdate();
+    });
+    usernameWrapper.appendChild(clearUsernameButton);
+
     let sendButton = document.createElement("button");
     sendButton.id = "simplidone_sendButton";
     sendButton.setAttribute("class", "fa-solid fa-paper-plane");
@@ -93,14 +102,20 @@ function simplidoneWidget() {
 
     $j(function () {
         let dateFormat = "dd.mm.yy",
+            currentDate = new Date(),
             from = $j("#simplidone_dateFrom")
                 .datepicker({
-                    defaultDate: "+1w",
                     changeMonth: true,
                     numberOfMonths: 1,
                     dateFormat: dateFormat,
                     onSelect: function(dateText, inst) {
                         simplidoneUpdate();
+                    },
+                    beforeShow: function(input, inst) {
+                        // Navigate to current month
+                        setTimeout(function() {
+                            $j.datepicker._gotoToday('#simplidone_dateFrom');
+                        }, 1);
                     }
                 })
                 .on("change", function () {
@@ -108,12 +123,17 @@ function simplidoneWidget() {
 
                 }),
             to = $j("#simplidone_dateTo").datepicker({
-                defaultDate: "+1w",
                 changeMonth: true,
                 numberOfMonths: 1,
                 dateFormat: dateFormat,
                 onSelect: function(dateText, inst) {
                     simplidoneUpdate();
+                },
+                beforeShow: function(input, inst) {
+                    // Navigate to current month
+                    setTimeout(function() {
+                        $j.datepicker._gotoToday('#simplidone_dateTo');
+                    }, 1);
                 }
             })
                 .on("change", function () {
@@ -335,6 +355,18 @@ function simplidoneUpdate() {
 }
 
 #simplidone_sendButton:hover {
+    opacity: 0.8;
+}
+
+.simplidone_usernameWrapper button {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #FFCC0D;
+}
+
+.simplidone_usernameWrapper button:hover {
     opacity: 0.8;
 }
 
