@@ -613,11 +613,6 @@ body {
 
 /* Print Styles */
 @media print {
-  body {
-    background: white;
-    color: black;
-  }
-
   .simplifyTable_filter-container,
   .simplifyTable_reset-button,
   .simplifyTable_pagination-container {

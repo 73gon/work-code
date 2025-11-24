@@ -3,8 +3,6 @@
 namespace dashboard\MyWidgets\SimplifyTable;
 
 use JobRouter\Api\Dashboard\v1\Widget;
-use DateTime;
-use DateTimeZone;
 
 class SimplifyTable extends Widget
 {
@@ -47,9 +45,7 @@ class SimplifyTable extends Widget
   public function getColumns()
   {
     return [
-      ['id' => 'id', 'label' => 'ID', 'type' => 'number', 'align' => 'center'],
       ['id' => 'status', 'label' => 'Status', 'type' => 'status', 'align' => 'center'],
-      ['id' => 'incident', 'label' => 'Vorgang', 'type' => 'text', 'align' => 'left'],
       ['id' => 'entryDate', 'label' => 'Eingangsdatum', 'type' => 'date', 'align' => 'left'],
       ['id' => 'stepLabel', 'label' => 'Schritt', 'type' => 'text', 'align' => 'left'],
       ['id' => 'startDate', 'label' => 'Startdatum (Schritt)', 'type' => 'date', 'align' => 'left'],
@@ -80,7 +76,7 @@ class SimplifyTable extends Widget
   public function getDropdownOptions()
   {
     $JobDB = $this->getJobDB();
-    
+
     // Fetch distinct steps from database
     $schrittQuery = "SELECT DISTINCT step, steplabel FROM V_UEBERSICHTEN_WIDGET";
     $schrittResult = $JobDB->query($schrittQuery);
@@ -88,12 +84,39 @@ class SimplifyTable extends Widget
     while ($row = $JobDB->fetchRow($schrittResult)) {
       $schrittOptions[] = ['id' => $row['step'], 'label' => $row['steplabel']];
     }
-    
+
+    // Fetch distinct companies for Gesellschaft dropdown
+    $gesellschaftQuery = "
+      SELECT DISTINCT mandantnr, mandantname
+      FROM V_UEBERSICHTEN_WIDGET
+      WHERE mandantname NOT IN ('', '-')
+        AND mandantnr IS NOT NULL
+        AND fondflag = 0
+    ";
+    $gesellschaftResult = $JobDB->query($gesellschaftQuery);
+    $gesellschaftOptions = [];
+    while ($row = $JobDB->fetchRow($gesellschaftResult)) {
+      $gesellschaftOptions[] = ['id' => $row['mandantnr'], 'label' => $row['mandantname']];
+    }
+
+    // Fetch distinct funds for Fonds dropdown
+    $fondsQuery = "
+      SELECT DISTINCT mandantnr, mandantname
+      FROM V_UEBERSICHTEN_WIDGET
+      WHERE mandantname NOT IN ('', '-')
+        AND fondflag = 1
+    ";
+    $fondsResult = $JobDB->query($fondsQuery);
+    $fondsOptions = [];
+    while ($row = $JobDB->fetchRow($fondsResult)) {
+      $fondsOptions[] = ['id' => $row['mandantnr'], 'label' => $row['mandantname']];
+    }
+
     return [
       'status' => [
-      ['id' => 'Gruen', 'label' => 'Gruen'],
-      ['id' => 'Rot', 'label' => 'Rot'],
-      ['id' => 'Beendet', 'label' => 'Beendet'],
+      ['id' => 'completed', 'label' => 'Beendet'],
+      ['id' => 'faellig', 'label' => 'Fällig'],
+      ['id' => 'not_faellig', 'label' => 'Nicht Fällig'],
       ],
       'schritt' => $schrittOptions,
       'laufzeit' => [
@@ -107,26 +130,8 @@ class SimplifyTable extends Widget
       ['id' => 'Nein', 'label' => 'Nein'],
       ['id' => 'Ausstehend', 'label' => 'Ausstehend']
       ],
-      'gesellschaft' => [
-      ['id' => 'Firma A GmbH', 'label' => 'Firma A GmbH'],
-      ['id' => 'Firma B AG', 'label' => 'Firma B AG'],
-      ['id' => 'Firma C KG', 'label' => 'Firma C KG'],
-      ['id' => 'Firma D SE', 'label' => 'Firma D SE'],
-      ['id' => 'Firma E GmbH & Co. KG', 'label' => 'Firma E GmbH & Co. KG'],
-      ['id' => 'Firma F International', 'label' => 'Firma F International'],
-      ['id' => 'Firma G Holdings', 'label' => 'Firma G Holdings'],
-      ['id' => 'Firma H Industries', 'label' => 'Firma H Industries']
-      ],
-      'fonds' => [
-      ['id' => 'Fonds A', 'label' => 'Fonds A'],
-      ['id' => 'Fonds B', 'label' => 'Fonds B'],
-      ['id' => 'Fonds C', 'label' => 'Fonds C'],
-      ['id' => 'Fonds D', 'label' => 'Fonds D'],
-      ['id' => 'Fonds E', 'label' => 'Fonds E'],
-      ['id' => 'Fonds Internationaldwadwdadawd', 'label' => 'Fonds Internationaldwadwdadawd'],
-      ['id' => 'Fonds Portfolio', 'label' => 'Fonds Portfolio'],
-      ['id' => 'Fonds Strategic', 'label' => 'Fonds Strategic']
-      ],
+      'gesellschaft' => $gesellschaftOptions,
+      'fonds' => $fondsOptions,
     ];
   }
 
@@ -142,15 +147,32 @@ class SimplifyTable extends Widget
     $query = "
             SELECT *
             FROM V_UEBERSICHTEN_WIDGET
-            WHERE CONCAT(',', berechtigung, ',') LIKE CONCAT('%,', '$currentUsername', ',%')
+            WHERE CONCAT(',', REPLACE(LOWER(berechtigung), ' ', ''), ',') LIKE CONCAT('%,', LOWER('$currentUsername'), ',%')
         ";
 
     $result = $JobDB->query($query);
 
     while ($row = $JobDB->fetchRow($result)) {
+      // Determine status label based on logic
+      $statusId = $row['status'];
+      $statusLabel = '';
+
+      if ($statusId === 'completed') {
+        $statusLabel = 'Beendet';
+      } else if ($statusId === 'rest') {
+        $faelligkeitDays = (int) filter_var($row['faelligkeit'], FILTER_SANITIZE_NUMBER_INT);
+        if ($faelligkeitDays > 2) {
+          $statusId = 'due';
+          $statusLabel = 'Fällig';
+        } else {
+          $statusId = 'not_due';
+          $statusLabel = 'Nicht Fällig';
+        }
+      }
+
       $data[] = [
         'id' => ['id' => $row['processid'], 'label' => $row['processid']],
-        'status' => ['id' => $row['dauerschritt'], 'label' => $row['dauerschritt']],
+        'status' => ['id' => $statusId, 'label' => $statusLabel],
         'incident' => ['id' => $row['incident'], 'label' => $row['incident']],
         'entryDate' => ['id' => $row['eingangsdatum'], 'label' => $row['eingangsdatum']],
         'stepLabel' => ['id' => $row['step'], 'label' => $row['steplabel']],
@@ -175,7 +197,6 @@ class SimplifyTable extends Widget
         'chargeable' => ['id' => $row['berechenbar'], 'label' => $row['berechenbar']],
       ];
     }
-
     return $data;
   }
 }

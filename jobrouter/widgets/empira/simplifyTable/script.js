@@ -2,16 +2,45 @@
 // CONFIGURATION - Data from PHP
 // ============================================
 
-// ❌ REMOVED - Now comes from PHP via template.hbs
-// These variables are now loaded from hidden divs in the template
-// const COLUMNS = [...];
-// const DROPDOWN_OPTIONS = {...};
-// const SAMPLE_DATA = [...];
-
 // Read data from PHP (injected via template.hbs)
-let COLUMNS = [];
-let DROPDOWN_OPTIONS = {};
-let INITIAL_DATA = [];
+var COLUMNS = [];
+var DROPDOWN_OPTIONS = {};
+var INITIAL_DATA = [];
+
+function normalizeDataRows(rows) {
+  return (rows || []).map((row) => {
+    const normalized = {};
+    Object.keys(row || {}).forEach((key) => {
+      const value = row[key];
+      if (value && typeof value === 'object') {
+        // Prefer label when provided, otherwise use id
+        normalized[key] = value.label !== undefined ? value.label : value.id;
+      } else {
+        normalized[key] = value;
+      }
+    });
+    return normalized;
+  });
+}
+
+function normalizeDropdownOptions(options) {
+  const mapOptionArray = (arr) =>
+    (arr || []).map((opt) => {
+      if (typeof opt === 'object' && opt !== null) {
+        return opt.label !== undefined ? opt.label : opt.id;
+      }
+      return opt;
+    });
+
+  return {
+    status: mapOptionArray(options.status),
+    schritt: mapOptionArray(options.schritt),
+    laufzeit: mapOptionArray(options.laufzeit),
+    coor: mapOptionArray(options.coor),
+    gesellschaft: mapOptionArray(options.gesellschaft),
+    fonds: mapOptionArray(options.fonds),
+  };
+}
 
 // Load configuration from hidden divs
 function loadConfigFromPHP() {
@@ -25,22 +54,20 @@ function loadConfigFromPHP() {
     }
 
     if (dropdownDiv && dropdownDiv.textContent) {
-      DROPDOWN_OPTIONS = JSON.parse(dropdownDiv.textContent);
+      DROPDOWN_OPTIONS = normalizeDropdownOptions(JSON.parse(dropdownDiv.textContent) || {});
     }
 
     if (dataDiv && dataDiv.textContent) {
       INITIAL_DATA = JSON.parse(dataDiv.textContent);
     }
 
-    // If no data from PHP, generate sample data for testing
-    if (INITIAL_DATA.length === 0) {
-      console.warn('No data from PHP, generating sample data for testing');
-      INITIAL_DATA = generateSampleData();
+    if (!Array.isArray(INITIAL_DATA)) {
+      console.warn('Table data from PHP was not an array; defaulting to empty list');
+      INITIAL_DATA = [];
     }
   } catch (error) {
     console.error('Error loading configuration from PHP:', error);
-    // Fallback: use sample data
-    INITIAL_DATA = generateSampleData();
+    INITIAL_DATA = [];
   }
 }
 
@@ -48,11 +75,10 @@ function loadConfigFromPHP() {
 // APPLICATION STATE
 // ============================================
 
-let appState = {
+var appState = {
   data: [],
   filteredData: [],
   filters: {
-    vorgang: '',
     schritt: 'all',
     kreditor: '',
     rechnungsdatumFrom: '',
@@ -85,127 +111,6 @@ function formatDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-// ❌ REMOVED - Sample data generation (only used as fallback now)
-// This function is kept only for testing when PHP doesn't provide data
-function generateSampleData() {
-  // Sample base data
-  const SAMPLE_DATA = [
-    {
-      id: 1,
-      status: 'Aktiv',
-      vorgang: 'RE-2024-001',
-      eingangsdatum: '2024-01-15',
-      schritt: 'Schritt 1',
-      startdatum: '2024-01-16',
-      rolle: 'Prüfer',
-      bearbeiter: 'Max Mustermann',
-      dokumentId: 'DOK-001',
-      gesellschaft: 'Firma A GmbH',
-      kreditor: 'Lieferant XYZ',
-      rechnungstyp: 'Standard',
-      rechnungsnummer: 'R-2024-1001',
-      rechnungsdatum: '2024-01-10',
-      bruttobetrag: -15000.5,
-      faelligkeit: '2024-02-10',
-      auftragsnummer: 'AUF-2024-100',
-      zahlbetrag: 15000.5,
-      zahldatum: '2024-02-08',
-      dauer: '5 Tage',
-      rechnung: 'Rechnung-001.pdf',
-      protokoll: 'Protokoll-001.pdf',
-      weiterbelasten: 'Ja',
-      fonds: 'Fonds A',
-      laufzeit: '0-5 Tage',
-      coor: 'Ja',
-    },
-    {
-      id: 2,
-      status: 'Ausstehend',
-      vorgang: 'RE-2024-002',
-      eingangsdatum: '2024-01-20',
-      schritt: 'Schritt 2',
-      startdatum: '2024-01-21',
-      rolle: 'Genehmiger',
-      bearbeiter: 'Anna Schmidt',
-      dokumentId: 'DOK-002',
-      gesellschaft: 'Firma B AG',
-      kreditor: 'Lieferant ABC',
-      rechnungstyp: 'Eilig',
-      rechnungsnummer: 'R-2024-1002',
-      rechnungsdatum: '2024-01-18',
-      bruttobetrag: 8750.0,
-      faelligkeit: '2024-02-18',
-      auftragsnummer: 'AUF-2024-101',
-      zahlbetrag: 8750.0,
-      zahldatum: '',
-      dauer: '12 Tage',
-      rechnung: 'Rechnung-002.pdf',
-      protokoll: 'Protokoll-002.pdf',
-      weiterbelasten: 'Nein',
-      fonds: 'Fonds B',
-      laufzeit: '11-20 Tage',
-      coor: 'Ausstehend',
-    },
-  ];
-
-  const additionalData = [];
-  const statuses = DROPDOWN_OPTIONS.status || ['Aktiv', 'Inaktiv', 'Ausstehend', 'Abgeschlossen'];
-  const schritte = DROPDOWN_OPTIONS.schritt || ['Schritt 1', 'Schritt 2', 'Schritt 4', 'Schritt 5'];
-  const laufzeiten = DROPDOWN_OPTIONS.laufzeit || ['0-5 Tage', '6-10 Tage', '11-20 Tage', '21+ Tage'];
-  const coors = DROPDOWN_OPTIONS.coor || ['Ja', 'Nein', 'Ausstehend'];
-  const rollen = ['Prüfer', 'Genehmiger', 'Sachbearbeiter', 'Controller'];
-  const bearbeiter = ['Max Mustermann', 'Anna Schmidt', 'Peter Weber', 'Sarah Fischer', 'Thomas Müller', 'Laura Wagner'];
-  const gesellschaften = DROPDOWN_OPTIONS.gesellschaft || ['Firma A GmbH', 'Firma B AG', 'Firma C KG', 'Firma D SE'];
-  const kreditoren = ['Lieferant XYZ', 'Lieferant ABC', 'Lieferant DEF', 'Lieferant GHI'];
-  const rechnungstypen = ['Standard', 'Eilig', 'Kredit', 'Anzahlung'];
-  const fonds = DROPDOWN_OPTIONS.fonds || ['Fonds A', 'Fonds B', 'Fonds C', 'Fonds D'];
-  const weiterbelastenOptions = ['Ja', 'Nein'];
-
-  for (let i = 0; i < 48; i++) {
-    const id = i + 3;
-    const eingangsdatumDate = new Date(new Date(2024, 0, 1).getTime() + Math.random() * (new Date().getTime() - new Date(2024, 0, 1).getTime()));
-    const startdatumDate = new Date(eingangsdatumDate);
-    startdatumDate.setDate(startdatumDate.getDate() + 1);
-    const rechnungsdatumDate = new Date(eingangsdatumDate);
-    rechnungsdatumDate.setDate(rechnungsdatumDate.getDate() - Math.floor(Math.random() * 10));
-    const faelligkeitDate = new Date(eingangsdatumDate);
-    faelligkeitDate.setDate(faelligkeitDate.getDate() + 30);
-    const zahldatumDate = new Date(eingangsdatumDate);
-    zahldatumDate.setDate(zahldatumDate.getDate() + 35);
-
-    additionalData.push({
-      id: id,
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      vorgang: `RE-2024-${String(id).padStart(3, '0')}`,
-      eingangsdatum: formatDate(eingangsdatumDate),
-      schritt: schritte[Math.floor(Math.random() * schritte.length)],
-      startdatum: formatDate(startdatumDate),
-      rolle: rollen[Math.floor(Math.random() * rollen.length)],
-      bearbeiter: bearbeiter[Math.floor(Math.random() * bearbeiter.length)],
-      dokumentId: `DOK-${String(id).padStart(3, '0')}`,
-      gesellschaft: gesellschaften[Math.floor(Math.random() * gesellschaften.length)],
-      kreditor: kreditoren[Math.floor(Math.random() * kreditoren.length)],
-      rechnungstyp: rechnungstypen[Math.floor(Math.random() * rechnungstypen.length)],
-      rechnungsnummer: `R-2024-${1000 + id}`,
-      rechnungsdatum: formatDate(rechnungsdatumDate),
-      bruttobetrag: (Math.random() > 0.8 ? -1 : 1) * (Math.random() * 50000).toFixed(2),
-      faelligkeit: formatDate(faelligkeitDate),
-      auftragsnummer: `AUF-2024-${100 + id}`,
-      zahlbetrag: (Math.random() > 0.8 ? -1 : 1) * (Math.random() * 50000).toFixed(2),
-      zahldatum: Math.random() > 0.3 ? formatDate(zahldatumDate) : '',
-      dauer: `${Math.floor(Math.random() * 30)} Tage`,
-      rechnung: `Rechnung-${String(id).padStart(3, '0')}.pdf`,
-      protokoll: `Protokoll-${String(id).padStart(3, '0')}.pdf`,
-      weiterbelasten: weiterbelastenOptions[Math.floor(Math.random() * weiterbelastenOptions.length)],
-      fonds: fonds[Math.floor(Math.random() * fonds.length)],
-      laufzeit: laufzeiten[Math.floor(Math.random() * laufzeiten.length)],
-      coor: coors[Math.floor(Math.random() * coors.length)],
-    });
-  }
-
-  return [...SAMPLE_DATA, ...additionalData];
 }
 
 // ============================================
@@ -320,7 +225,6 @@ function createFilters() {
 
   const filters = [
     // Process & Status
-    { label: 'Vorgang', type: 'text', id: 'simplifyTable_vorgang-filter', key: 'vorgang' },
     { label: 'Status', type: 'dropdown', id: 'simplifyTable_status-filter', key: 'status', options: DROPDOWN_OPTIONS.status },
     { label: 'Schritt', type: 'dropdown', id: 'simplifyTable_schritt-filter', key: 'schritt', options: DROPDOWN_OPTIONS.schritt },
     { label: 'DokumentId', type: 'text', id: 'simplifyTable_dokumentId-filter', key: 'dokumentId' },
@@ -485,7 +389,7 @@ function createTable() {
   if (appState.filteredData.length === 0) {
     const noResults = document.createElement('div');
     noResults.className = 'simplifyTable_no-results';
-    noResults.innerHTML = '<i class="fas fa-search"></i><p>Keine Ergebnisse gefunden</p>';
+    noResults.innerHTML = '<i class="fas fa-clipboard-list"></i><p>Es wurden keine Einträge gefunden</p>';
     tableWrapper.appendChild(noResults);
   }
 
@@ -608,7 +512,6 @@ function changeItemsPerPage(value) {
 
 function applyFilters() {
   appState.filteredData = appState.data.filter((item) => {
-    if (appState.filters.vorgang && !item.vorgang.toLowerCase().includes(appState.filters.vorgang)) return false;
     if (appState.filters.kreditor && !item.kreditor.toLowerCase().includes(appState.filters.kreditor)) return false;
     if (appState.filters.weiterbelasten && !item.weiterbelasten.toLowerCase().includes(appState.filters.weiterbelasten)) return false;
     if (appState.filters.rolle && !item.rolle.toLowerCase().includes(appState.filters.rolle)) return false;
@@ -646,7 +549,6 @@ function applyFilters() {
 
 function resetFilters() {
   appState.filters = {
-    vorgang: '',
     schritt: 'all',
     kreditor: '',
     rechnungsdatumFrom: '',
@@ -789,7 +691,7 @@ function updateTable() {
     if (!noResults) {
       noResults = document.createElement('div');
       noResults.className = 'simplifyTable_no-results';
-      noResults.innerHTML = '<i class="fas fa-search"></i><p>Keine Ergebnisse gefunden</p>';
+      noResults.innerHTML = '<i class="fas fa-clipboard-list"></i><p>Es wurden keine Einträge gefunden</p>';
       tableWrapper.appendChild(noResults);
     }
   } else if (noResults) {
@@ -846,7 +748,7 @@ function updateSortArrows() {
 // ============================================
 
 function attachEventListeners() {
-  ['vorgang', 'kreditor', 'weiterbelasten', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
+  ['kreditor', 'weiterbelasten', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
     const input = document.getElementById(`simplifyTable_${key}-filter`);
     if (input) {
       input.addEventListener('input', (e) => {
@@ -965,8 +867,8 @@ function init() {
   // Load configuration and data from PHP
   loadConfigFromPHP();
 
-  // Initialize application state with data from PHP (or fallback sample data)
-  appState.data = INITIAL_DATA;
+  // Initialize application state with data from PHP
+  appState.data = normalizeDataRows(INITIAL_DATA);
   appState.filteredData = [...appState.data];
 
   // Render the UI
@@ -974,4 +876,5 @@ function init() {
   attachEventListeners();
 }
 
-document.addEventListener('DOMContentLoaded', init);
+init();
+$j('#simplifyTable_app').parent().toggleClass('simplifyTable_background', true);
