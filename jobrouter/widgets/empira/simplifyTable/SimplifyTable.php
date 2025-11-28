@@ -18,7 +18,7 @@ class SimplifyTable extends Widget
     return [
       'minHeight' => 8,
       'minWidth' => 6,
-      'maxHeight' => 8,
+      'maxHeight' => 15,
       'maxWidth' => 6,
     ];
   }
@@ -35,7 +35,8 @@ class SimplifyTable extends Widget
     return [
       'columns' => json_encode($this->getColumns()),
       'dropdownOptions' => json_encode($this->getDropdownOptions()),
-      'tableData' => json_encode($this->getTableData()),
+      'tableData' => json_encode([]),
+      'currentUser' => $this->getUser()->getUsername(),
     ];
   }
 
@@ -142,6 +143,7 @@ class SimplifyTable extends Widget
   public function getTableData()
   {
     $JobDB = $this->getJobDB();
+    $maxRows = 1000; // cap initial payload to speed up widget load
 
     $currentUsername = $this->getUser()->getUsername();
     $query = "
@@ -151,6 +153,8 @@ class SimplifyTable extends Widget
         ";
 
     $result = $JobDB->query($query);
+    $data = [];
+    $count = 0;
 
     while ($row = $JobDB->fetchRow($result)) {
       // Determine status label based on logic
@@ -196,6 +200,11 @@ class SimplifyTable extends Widget
         'protocol' => ['id' => $row['dokumentid'], 'label' => $row['dokumentid']],
         'chargeable' => ['id' => $row['berechenbar'], 'label' => $row['berechenbar']],
       ];
+
+      $count++;
+      if ($count >= $maxRows) {
+        break;
+      }
     }
     return $data;
   }

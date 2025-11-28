@@ -6,6 +6,8 @@
 var COLUMNS = [];
 var DROPDOWN_OPTIONS = {};
 var INITIAL_DATA = [];
+var CURRENT_USER = '';
+var DATA_ENDPOINT = 'dashboard/MyWidgets/SimplifyTable/query.php';
 
 function normalizeDataRows(rows) {
   return (rows || []).map((row) => {
@@ -48,6 +50,7 @@ function loadConfigFromPHP() {
     const columnsDiv = document.getElementById('simplifyTable_columns');
     const dropdownDiv = document.getElementById('simplifyTable_dropdownOptions');
     const dataDiv = document.getElementById('simplifyTable_tableData');
+    const userDiv = document.getElementById('simplifyTable_currentUser');
 
     if (columnsDiv && columnsDiv.textContent) {
       COLUMNS = JSON.parse(columnsDiv.textContent);
@@ -59,6 +62,10 @@ function loadConfigFromPHP() {
 
     if (dataDiv && dataDiv.textContent) {
       INITIAL_DATA = JSON.parse(dataDiv.textContent);
+    }
+
+    if (userDiv && userDiv.textContent) {
+      CURRENT_USER = userDiv.textContent.trim();
     }
 
     if (!Array.isArray(INITIAL_DATA)) {
@@ -97,9 +104,11 @@ var appState = {
     coor: 'all',
   },
   currentPage: 1,
-  itemsPerPage: 50,
+  itemsPerPage: 25,
+  totalItems: 0,
   sortColumn: null,
   sortDirection: 'asc',
+  loading: false,
 };
 
 // ============================================
@@ -111,6 +120,19 @@ function formatDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+// Safely lowercase values to avoid runtime errors on undefined/null
+function safeLower(value) {
+  return value === null || value === undefined ? '' : value.toString().toLowerCase();
+}
+
+function setLoading(isLoading) {
+  appState.loading = isLoading;
+  const spinner = document.getElementById('simplifyTable_spinner');
+  if (spinner) {
+    spinner.style.display = isLoading ? 'flex' : 'none';
+  }
 }
 
 // ============================================
@@ -133,7 +155,7 @@ function createFilterItem(label, type, id, filterKey, options = null) {
 
     const allOption = document.createElement('option');
     allOption.value = 'all';
-    allOption.textContent = `Alle ${label}`;
+    allOption.textContent = `Alle`;
     select.appendChild(allOption);
 
     options.forEach((opt) => {
@@ -234,7 +256,13 @@ function createFilters() {
     { label: 'Rolle', type: 'text', id: 'simplifyTable_rolle-filter', key: 'rolle' },
 
     // Company & Financial Structure
-    { label: 'Gesellschaft', type: 'autocomplete', id: 'simplifyTable_gesellschaft-filter', key: 'gesellschaft', options: DROPDOWN_OPTIONS.gesellschaft },
+    {
+      label: 'Gesellschaft',
+      type: 'autocomplete',
+      id: 'simplifyTable_gesellschaft-filter',
+      key: 'gesellschaft',
+      options: DROPDOWN_OPTIONS.gesellschaft,
+    },
     { label: 'Fonds', type: 'autocomplete', id: 'simplifyTable_fonds-filter', key: 'fonds', options: DROPDOWN_OPTIONS.fonds },
     { label: 'Kreditor', type: 'text', id: 'simplifyTable_kreditor-filter', key: 'kreditor' },
 
@@ -374,9 +402,7 @@ function createTable() {
   const tbody = document.createElement('tbody');
   tbody.id = 'simplifyTable_table-body';
 
-  const start = (appState.currentPage - 1) * appState.itemsPerPage;
-  const end = start + appState.itemsPerPage;
-  const paginatedData = appState.filteredData.slice(start, end);
+  const paginatedData = appState.filteredData;
 
   paginatedData.forEach((item) => {
     const row = createTableRow(item);
@@ -421,13 +447,13 @@ function createPagination() {
   itemsPerPageWrapper.appendChild(itemsLabel);
   itemsPerPageWrapper.appendChild(itemsSelect);
 
-  const totalPages = Math.ceil(appState.filteredData.length / appState.itemsPerPage);
-  const start = (appState.currentPage - 1) * appState.itemsPerPage + 1;
-  const end = Math.min(start + appState.itemsPerPage - 1, appState.filteredData.length);
+  const totalPages = Math.max(1, Math.ceil(appState.totalItems / appState.itemsPerPage));
+  const start = appState.totalItems === 0 ? 0 : (appState.currentPage - 1) * appState.itemsPerPage + 1;
+  const end = appState.totalItems === 0 ? 0 : Math.min(start + appState.filteredData.length - 1, appState.totalItems);
 
   const paginationInfo = document.createElement('div');
   paginationInfo.className = 'simplifyTable_pagination-info';
-  paginationInfo.textContent = `${start}-${end} von ${appState.filteredData.length} Einträgen`;
+  paginationInfo.textContent = `${start}-${end} von ${appState.totalItems} Einträgen`;
 
   const paginationButtons = document.createElement('div');
   paginationButtons.className = 'simplifyTable_pagination-buttons';
@@ -471,80 +497,77 @@ function sortTable(columnId) {
     appState.sortDirection = 'asc';
   }
 
-  appState.filteredData.sort((a, b) => {
-    let aVal = a[columnId];
-    let bVal = b[columnId];
-
-    if (aVal === null || aVal === undefined) aVal = '';
-    if (bVal === null || bVal === undefined) bVal = '';
-
-    const column = COLUMNS.find((col) => col.id === columnId);
-    if (column && (column.type === 'number' || column.type === 'currency')) {
-      aVal = parseFloat(aVal) || 0;
-      bVal = parseFloat(bVal) || 0;
-    } else if (column && column.type === 'date') {
-      aVal = new Date(aVal).getTime() || 0;
-      bVal = new Date(bVal).getTime() || 0;
-    } else {
-      aVal = aVal.toString().toLowerCase();
-      bVal = bVal.toString().toLowerCase();
-    }
-
-    if (aVal < bVal) return appState.sortDirection === 'asc' ? -1 : 1;
-    if (aVal > bVal) return appState.sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
-
   appState.currentPage = 1;
-  updateTable();
+  fetchData(1);
 }
 
 function changePage(page) {
   appState.currentPage = page;
-  updateTable();
+  fetchData(page);
 }
 
 function changeItemsPerPage(value) {
   appState.itemsPerPage = parseInt(value);
   appState.currentPage = 1;
-  updateTable();
+  fetchData(1);
+}
+
+function buildRequestParams(pageOverride) {
+  const filters = appState.filters;
+  const params = {
+    page: pageOverride || appState.currentPage,
+    perPage: appState.itemsPerPage,
+    sortColumn: appState.sortColumn || '',
+    sortDirection: appState.sortDirection,
+    username: CURRENT_USER,
+  };
+
+  ['kreditor', 'weiterbelasten', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
+    if (filters[key]) params[key] = filters[key];
+  });
+
+  if (filters.gesellschaft && filters.gesellschaft.length > 0) {
+    params.gesellschaft = JSON.stringify(filters.gesellschaft);
+  }
+  if (filters.fonds && filters.fonds.length > 0) {
+    params.fonds = JSON.stringify(filters.fonds);
+  }
+  if (filters.schritt && filters.schritt !== 'all') params.schritt = filters.schritt;
+  if (filters.status && filters.status !== 'all') params.status = filters.status;
+  if (filters.laufzeit && filters.laufzeit !== 'all') params.laufzeit = filters.laufzeit;
+  if (filters.coor && filters.coor !== 'all') params.coor = filters.coor;
+  if (filters.rechnungsdatumFrom) params.rechnungsdatumFrom = filters.rechnungsdatumFrom;
+  if (filters.rechnungsdatumTo) params.rechnungsdatumTo = filters.rechnungsdatumTo;
+
+  return params;
+}
+
+function fetchData(page = 1) {
+  const params = buildRequestParams(page);
+  setLoading(true);
+  return $j
+    .ajax({
+      url: DATA_ENDPOINT,
+      type: 'GET',
+      data: params,
+      dataType: 'json',
+    })
+    .done((response) => {
+      appState.currentPage = response.page || page;
+      appState.itemsPerPage = response.perPage || appState.itemsPerPage;
+      appState.totalItems = response.total || 0;
+      appState.filteredData = normalizeDataRows(response.data || []);
+      updateTable();
+    })
+    .fail((jqXHR, textStatus, errorThrown) => {
+      console.error('Error fetching data', textStatus, errorThrown);
+    })
+    .always(() => setLoading(false));
 }
 
 function applyFilters() {
-  appState.filteredData = appState.data.filter((item) => {
-    if (appState.filters.kreditor && !item.kreditor.toLowerCase().includes(appState.filters.kreditor)) return false;
-    if (appState.filters.weiterbelasten && !item.weiterbelasten.toLowerCase().includes(appState.filters.weiterbelasten)) return false;
-    if (appState.filters.rolle && !item.rolle.toLowerCase().includes(appState.filters.rolle)) return false;
-    if (appState.filters.rechnungstyp && !item.rechnungstyp.toLowerCase().includes(appState.filters.rechnungstyp)) return false;
-    if (appState.filters.bruttobetrag && !item.bruttobetrag.toString().includes(appState.filters.bruttobetrag)) return false;
-    if (appState.filters.dokumentId && !item.dokumentId.toLowerCase().includes(appState.filters.dokumentId)) return false;
-    if (appState.filters.bearbeiter && !item.bearbeiter.toLowerCase().includes(appState.filters.bearbeiter)) return false;
-    if (appState.filters.rechnungsnummer && !item.rechnungsnummer.toLowerCase().includes(appState.filters.rechnungsnummer)) return false;
-
-    if (appState.filters.gesellschaft.length > 0) {
-      const itemGesellschaft = item.gesellschaft.toLowerCase();
-      const hasMatch = appState.filters.gesellschaft.some((g) => itemGesellschaft.includes(g.toLowerCase()));
-      if (!hasMatch) return false;
-    }
-    if (appState.filters.fonds.length > 0) {
-      const itemFonds = item.fonds.toLowerCase();
-      const hasMatch = appState.filters.fonds.some((f) => itemFonds.includes(f.toLowerCase()));
-      if (!hasMatch) return false;
-    }
-
-    if (appState.filters.schritt !== 'all' && item.schritt !== appState.filters.schritt) return false;
-    if (appState.filters.status !== 'all' && item.status !== appState.filters.status) return false;
-    if (appState.filters.laufzeit !== 'all' && item.laufzeit !== appState.filters.laufzeit) return false;
-    if (appState.filters.coor !== 'all' && item.coor !== appState.filters.coor) return false;
-
-    if (appState.filters.rechnungsdatumFrom && item.rechnungsdatum < appState.filters.rechnungsdatumFrom) return false;
-    if (appState.filters.rechnungsdatumTo && item.rechnungsdatum > appState.filters.rechnungsdatumTo) return false;
-
-    return true;
-  });
-
   appState.currentPage = 1;
-  updateTable();
+  fetchData(1);
 }
 
 function resetFilters() {
@@ -672,9 +695,7 @@ function updateTable() {
   const tbody = document.getElementById('simplifyTable_table-body');
   tbody.innerHTML = '';
 
-  const start = (appState.currentPage - 1) * appState.itemsPerPage;
-  const end = start + appState.itemsPerPage;
-  const paginatedData = appState.filteredData.slice(start, end);
+  const paginatedData = appState.filteredData;
 
   paginatedData.forEach((item) => {
     const row = createTableRow(item);
@@ -700,13 +721,13 @@ function updateTable() {
 }
 
 function updatePagination() {
-  const totalPages = Math.ceil(appState.filteredData.length / appState.itemsPerPage);
-  const start = (appState.currentPage - 1) * appState.itemsPerPage + 1;
-  const end = Math.min(start + appState.itemsPerPage - 1, appState.filteredData.length);
+  const totalPages = Math.max(1, Math.ceil(appState.totalItems / appState.itemsPerPage));
+  const start = appState.totalItems === 0 ? 0 : (appState.currentPage - 1) * appState.itemsPerPage + 1;
+  const end = appState.totalItems === 0 ? 0 : Math.min(start + appState.filteredData.length - 1, appState.totalItems);
 
   const paginationInfo = document.querySelector('.simplifyTable_pagination-info');
   if (paginationInfo) {
-    paginationInfo.textContent = `${start}-${end} von ${appState.filteredData.length} Einträgen`;
+    paginationInfo.textContent = `${start}-${end} von ${appState.totalItems} Einträgen`;
   }
 
   const pageInfo = document.querySelector('.simplifyTable_page-info');
@@ -854,6 +875,12 @@ function render() {
   container.appendChild(createTable());
   container.appendChild(createPagination());
 
+  const spinnerOverlay = document.createElement('div');
+  spinnerOverlay.id = 'simplifyTable_spinner';
+  spinnerOverlay.className = 'simplifyTable_spinner-overlay';
+  spinnerOverlay.innerHTML = '<div class="simplifyTable_spinner"></div>';
+  container.appendChild(spinnerOverlay);
+
   app.appendChild(container);
 }
 
@@ -868,13 +895,30 @@ function init() {
   loadConfigFromPHP();
 
   // Initialize application state with data from PHP
-  appState.data = normalizeDataRows(INITIAL_DATA);
-  appState.filteredData = [...appState.data];
+  appState.data = [];
+  appState.filteredData = [];
+  appState.totalItems = 0;
 
   // Render the UI
   render();
   attachEventListeners();
+  fetchData(1);
 }
 
 init();
 $j('#simplifyTable_app').parent().toggleClass('simplifyTable_background', true);
+
+(function addWidgetBackground() {
+  const appEl = document.getElementById('simplifyTable_app');
+  if (!appEl) return;
+
+  // Try to add the background directly to the dashboard label element
+  const container = appEl.closest('.grid-stack-item-content');
+  const labelEl = container ? container.querySelector('.jr-dashboard-label') : null;
+
+  if (labelEl) {
+    labelEl.classList.add('simplifyTable_background-label');
+  } else if (container) {
+    container.classList.add('simplifyTable_background-label');
+  }
+})();
