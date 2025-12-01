@@ -84,7 +84,7 @@ class Query extends Widget
             'orderId' => 'coor_orderid',
             'paymentAmount' => 'zahlbetrag',
             'paymentDate' => 'zahldatum',
-            'duration' => 'dauer',
+            'runtime' => 'runtime',
             'status' => 'status',
         ];
 
@@ -149,9 +149,10 @@ class Query extends Widget
             $where[] = "LOWER(kredname) LIKE '%{$value}%'";
         }
 
-        if (!empty($filters['weiterbelasten'])) {
-            $value = addslashes(strtolower($filters['weiterbelasten']));
-            $where[] = "LOWER(berechenbar) LIKE '%{$value}%'";
+        if (!empty($filters['weiterbelasten']) && $filters['weiterbelasten'] !== 'all') {
+            error_log('Filter weiterbelasten: ' . $filters['weiterbelasten']);
+            $value = addslashes($filters['weiterbelasten']);
+            $where[] = "berechenbar = '{$value}'";
         }
 
         if (!empty($filters['rolle'])) {
@@ -186,26 +187,37 @@ class Query extends Widget
 
         if (!empty($filters['schritt']) && $filters['schritt'] !== 'all') {
             $value = addslashes($filters['schritt']);
-            $where[] = "steplabel = '{$value}'";
+            $where[] = "step = '{$value}'";
         }
 
         if (!empty($filters['status']) && $filters['status'] !== 'all') {
             $statusValue = strtolower($filters['status']);
-            // Extract numeric part of faelligkeit ("123 Tage ") for comparisons
-            $faelligkeitDaysSql = "TRY_CONVERT(int, NULLIF(LEFT(faelligkeit, CHARINDEX(' ', faelligkeit + ' ') - 1), ''))";
+            // SQL Server: DATEADD to add 5 days to eskalation, compare with today
+            $eskalationPlusFiveSql = "DATEADD(day, 5, TRY_CONVERT(date, eskalation))";
             switch ($statusValue) {
                 case 'beendet':
+                case 'completed':
                     $where[] = "status = 'completed'";
+                    break;
+                case 'aktiv_alle':
+                case 'aktiv alle':
+                    // All active (rest) items - both fällig and nicht fällig
+                    $where[] = "status = 'rest'";
                     break;
                 case 'fällig':
                 case 'faellig':
-                    // Matches derived "due" status or rest items with faelligkeit > 2
-                    $where[] = "(status = 'due' OR (status = 'rest' AND {$faelligkeitDaysSql} > 2))";
+                case 'aktiv fällig':
+                case 'aktiv faellig':
+                    // Fällig: status = 'rest' AND eskalation + 5 days <= today
+                    $where[] = "(status = 'rest' AND {$eskalationPlusFiveSql} <= CAST(GETDATE() AS date))";
                     break;
                 case 'nicht fällig':
                 case 'nicht faellig':
-                    // Matches derived "not_due" status or rest items with faelligkeit <= 2
-                    $where[] = "(status = 'not_due' OR (status = 'rest' AND {$faelligkeitDaysSql} <= 2))";
+                case 'not_faellig':
+                case 'aktiv nicht fällig':
+                case 'aktiv nicht faellig':
+                    // Nicht Fällig: status = 'rest' AND eskalation + 5 days > today
+                    $where[] = "(status = 'rest' AND ({$eskalationPlusFiveSql} > CAST(GETDATE() AS date) OR eskalation IS NULL))";
                     break;
                 default:
                     $value = addslashes($filters['status']);
@@ -214,14 +226,43 @@ class Query extends Widget
         }
 
         if (!empty($filters['laufzeit']) && $filters['laufzeit'] !== 'all') {
-            $value = addslashes($filters['laufzeit']);
-            // stored as text ranges like '0-5 Tage'
-            $where[] = "dauer = '{$value}'";
+            $value = $filters['laufzeit'];
+            // Calculate days from indate: DATEDIFF(day, indate, GETDATE())
+            $daysSql = "DATEDIFF(day, indate, GETDATE())";
+
+            switch ($value) {
+                case '0-5 Tage':
+                    $where[] = "({$daysSql} >= 0 AND {$daysSql} <= 5)";
+                    break;
+                case '6-10 Tage':
+                    $where[] = "({$daysSql} >= 6 AND {$daysSql} <= 10)";
+                    break;
+                case '11-20 Tage':
+                    $where[] = "({$daysSql} >= 11 AND {$daysSql} <= 20)";
+                    break;
+                case '21+ Tage':
+                    $where[] = "({$daysSql} >= 21)";
+                    break;
+                default:
+                    // Fallback: try to parse custom range like "X-Y Tage"
+                    if (preg_match('/^(\d+)-(\d+)\s*Tage$/i', $value, $matches)) {
+                        $min = (int)$matches[1];
+                        $max = (int)$matches[2];
+                        $where[] = "({$daysSql} >= {$min} AND {$daysSql} <= {$max})";
+                    } elseif (preg_match('/^(\d+)\+\s*Tage$/i', $value, $matches)) {
+                        $min = (int)$matches[1];
+                        $where[] = "({$daysSql} >= {$min})";
+                    }
+            }
         }
 
         if (!empty($filters['coor']) && $filters['coor'] !== 'all') {
-            $value = addslashes($filters['coor']);
-            $where[] = "coor = '{$value}'";
+            $value = strtolower($filters['coor']);
+            if ($value === 'ja') {
+                $where[] = "coorflag = 1";
+            } elseif ($value === 'nein') {
+                $where[] = "coorflag = 0";
+            }
         }
 
         if (!empty($filters['rechnungsdatumFrom'])) {
@@ -253,17 +294,29 @@ class Query extends Widget
 
     private function mapRow(array $row): array
     {
-        $statusId = $row['status'];
+        // Normalize keys to lowercase for consistent access
+        $row = array_change_key_case($row, CASE_LOWER);
+
+        $statusId = isset($row['status']) ? $row['status'] : '';
         $statusLabel = '';
 
         if ($statusId === 'completed') {
             $statusLabel = 'Beendet';
         } else if ($statusId === 'rest') {
-            $faelligkeitDays = (int) filter_var($row['faelligkeit'], FILTER_SANITIZE_NUMBER_INT);
-            if ($faelligkeitDays > 2) {
-                $statusId = 'due';
-                $statusLabel = 'Faellig';
+            // Check if eskalation + 5 days <= today
+            $eskalationDate = isset($row['eskalation']) ? $row['eskalation'] : '';
+            if (!empty($eskalationDate)) {
+                $eskalationPlusFive = strtotime($eskalationDate . ' +5 days');
+                $today = strtotime('today');
+                if ($eskalationPlusFive <= $today) {
+                    $statusId = 'due';
+                    $statusLabel = 'Faellig';
+                } else {
+                    $statusId = 'not_due';
+                    $statusLabel = 'Nicht Faellig';
+                }
             } else {
+                // No eskalation date, default to not due
                 $statusId = 'not_due';
                 $statusLabel = 'Nicht Faellig';
             }
@@ -273,40 +326,40 @@ class Query extends Widget
 
         return [
             'status' => $statusLabel,
-            'entryDate' => $row['eingangsdatum'],
-            'stepLabel' => $row['steplabel'],
-            'startDate' => $row['indate'],
-            'jobFunction' => $row['jobfunction'],
-            'fullName' => $row['fullname'],
-            'documentId' => $row['dokumentid'],
-            'companyName' => $row['mandantname'],
-            'fund' => $row['fond_abkuerzung'],
-            'creditorName' => $row['kredname'],
-            'invoiceType' => $row['rechnungstyp'],
-            'invoiceNumber' => $row['rechnungsnummer'],
-            'invoiceDate' => $row['rechnungsdatum'],
-            'grossAmount' => $row['bruttobetrag'],
-            'dueDate' => $row['eskalation'],
-            'orderId' => $row['coor_orderid'],
-            'paymentAmount' => $row['zahlbetrag'],
-            'paymentDate' => $row['zahldatum'],
-            'duration' => $row['dauer'],
-            'invoice' => $row['dokumentid'],
-            'protocol' => $row['dokumentid'],
-            'chargeable' => $row['berechenbar'],
-            'kreditor' => $row['kredname'],
-            'weiterbelasten' => $row['berechenbar'],
-            'rolle' => $row['jobfunction'],
-            'bruttobetrag' => $row['bruttobetrag'],
-            'dokumentId' => $row['dokumentid'],
-            'bearbeiter' => $row['fullname'],
-            'rechnungsnummer' => $row['rechnungsnummer'],
-            'gesellschaft' => $row['mandantname'],
-            'fonds' => $row['fond_abkuerzung'],
-            'schritt' => $row['steplabel'],
-            'laufzeit' => $row['dauer'],
-            'coor' => isset($row['coor']) ? $row['coor'] : $row['coor_orderid'],
-            'rechnungsdatum' => $row['rechnungsdatum'],
+            'entryDate' => isset($row['eingangsdatum']) ? $row['eingangsdatum'] : '',
+            'stepLabel' => isset($row['steplabel']) ? $row['steplabel'] : '',
+            'startDate' => isset($row['indate']) ? $row['indate'] : '',
+            'jobFunction' => isset($row['jobfunction']) ? $row['jobfunction'] : '',
+            'fullName' => isset($row['fullname']) ? $row['fullname'] : '',
+            'documentId' => isset($row['dokumentid']) ? $row['dokumentid'] : '',
+            'companyName' => isset($row['mandantname']) ? $row['mandantname'] : '',
+            'fund' => isset($row['fond_abkuerzung']) ? $row['fond_abkuerzung'] : '',
+            'creditorName' => isset($row['kredname']) ? $row['kredname'] : '',
+            'invoiceType' => isset($row['rechnungstyp']) ? $row['rechnungstyp'] : '',
+            'invoiceNumber' => isset($row['rechnungsnummer']) ? $row['rechnungsnummer'] : '',
+            'invoiceDate' => isset($row['rechnungsdatum']) ? $row['rechnungsdatum'] : '',
+            'grossAmount' => isset($row['bruttobetrag']) ? $row['bruttobetrag'] : '',
+            'dueDate' => !empty($row['eskalation']) ? date('Y-m-d', strtotime($row['eskalation'] . ' +5 days')) : '',
+            'orderId' => isset($row['coor_orderid']) ? $row['coor_orderid'] : '',
+            'paymentAmount' => isset($row['zahlbetrag']) ? $row['zahlbetrag'] : '',
+            'paymentDate' => isset($row['zahldatum']) ? $row['zahldatum'] : '',
+            'runtime' => isset($row['runtime']) ? $row['runtime'] : '',
+            'invoice' => isset($row['dokumentid']) ? $row['dokumentid'] : '',
+            'protocol' => isset($row['dokumentid']) ? $row['dokumentid'] : '',
+            'chargeable' => isset($row['berechenbar']) ? $row['berechenbar'] : '',
+            'kreditor' => isset($row['kredname']) ? $row['kredname'] : '',
+            'weiterbelasten' => isset($row['berechenbar']) ? $row['berechenbar'] : '',
+            'rolle' => isset($row['jobfunction']) ? $row['jobfunction'] : '',
+            'bruttobetrag' => isset($row['bruttobetrag']) ? $row['bruttobetrag'] : '',
+            'dokumentId' => isset($row['dokumentid']) ? $row['dokumentid'] : '',
+            'bearbeiter' => isset($row['fullname']) ? $row['fullname'] : '',
+            'rechnungsnummer' => isset($row['rechnungsnummer']) ? $row['rechnungsnummer'] : '',
+            'gesellschaft' => isset($row['mandantname']) ? $row['mandantname'] : '',
+            'fonds' => isset($row['fond_abkuerzung']) ? $row['fond_abkuerzung'] : '',
+            'schritt' => isset($row['steplabel']) ? $row['steplabel'] : '',
+            'laufzeit' => isset($row['runtime']) ? $row['runtime'] : '',
+            'coor' => isset($row['coorflag']) ? $row['coorflag'] : (isset($row['coor_orderid']) ? $row['coor_orderid'] : ''),
+            'rechnungsdatum' => isset($row['rechnungsdatum']) ? $row['rechnungsdatum'] : '',
         ];
     }
 }

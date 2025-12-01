@@ -282,8 +282,57 @@
   grid-column: 1 / -1;
   display: flex;
   gap: 10px;
-  justify-content: flex-end;
+  justify-content: space-between !important;
+  align-items: center;
   margin-top: 5px;
+}
+
+/* Preset Buttons Container (left side) */
+.simplifyTable_preset-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Action Buttons Container (right side) */
+.simplifyTable_action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/* Preset Filter Button */
+.simplifyTable_preset-button {
+  padding: 8px 16px !important;
+  background: linear-gradient(135deg, #0ea5e9, #06b6d4) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  justify-content: center !important;
+  font-family: var(--font-family) !important;
+  white-space: nowrap !important;
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.3) !important;
+}
+
+.simplifyTable_preset-button:hover {
+  background: linear-gradient(135deg, #0284c7, #0891b2) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 5px 20px rgba(14, 165, 233, 0.5) !important;
+}
+
+.simplifyTable_preset-button:active {
+  transform: translateY(0) !important;
+}
+
+.simplifyTable_preset-button i {
+  color: white !important;
+  font-size: 12px !important;
 }
 
 /* Apply Filter Button */
@@ -447,6 +496,46 @@
 
 .simplifyTable_negative-amount {
   color: var(--danger-color) !important;
+}
+
+/* Status Icons */
+.simplifyTable_status-icon {
+  font-size: 18px;
+  cursor: default;
+  transition: transform 0.2s ease;
+}
+
+.simplifyTable_status-completed {
+  color: var(--success-color);
+}
+
+.simplifyTable_status-due {
+  color: var(--danger-color);
+}
+
+.simplifyTable_status-not-due {
+  color: var(--warning-color);
+}
+
+.simplifyTable_status-unknown {
+  color: var(--text-secondary);
+}
+
+/* Row backgrounds based on status */
+.simplifyTable_row-due {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+.simplifyTable_row-due:hover {
+  background-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+.simplifyTable_row-not-due {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+}
+
+.simplifyTable_row-not-due:hover {
+  background-color: rgba(245, 158, 11, 0.22) !important;
 }
 
 /* No Results */
@@ -624,32 +713,36 @@
   text-align: center;
 }
 
-/* Spinner */
-.simplifyTable_spinner-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.65);
-  z-index: 999;
+/* Skeleton Loading */
+.simplifyTable_skeleton-row {
+  animation: simplifyTable_skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-.simplifyTable_spinner {
-  width: 56px;
-  height: 56px;
-  border: 5px solid rgba(255, 255, 255, 0.2);
-  border-top-color: var(--primary-color);
-  border-radius: 50%;
-  animation: simplifyTable_spin 1s linear infinite;
+.simplifyTable_skeleton {
+  height: 16px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
+  background-size: 200% 100%;
+  animation: simplifyTable_skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+  min-width: 40px;
 }
 
-@keyframes simplifyTable_spin {
-  to {
-    transform: rotate(360deg);
+@keyframes simplifyTable_skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes simplifyTable_skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
   }
 }
 

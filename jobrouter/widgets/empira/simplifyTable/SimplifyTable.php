@@ -64,7 +64,6 @@ class SimplifyTable extends Widget
       ['id' => 'orderId', 'label' => 'Auftragsnummer', 'type' => 'text', 'align' => 'left'],
       ['id' => 'paymentAmount', 'label' => 'Zahlbetrag', 'type' => 'currency', 'align' => 'left'],
       ['id' => 'paymentDate', 'label' => 'Zahldatum', 'type' => 'date', 'align' => 'left'],
-      ['id' => 'duration', 'label' => 'Dauer', 'type' => 'text', 'align' => 'left'],
       ['id' => 'invoice', 'label' => 'Rechnung', 'type' => 'text', 'align' => 'left'],
       ['id' => 'protocol', 'label' => 'Protokoll', 'type' => 'text', 'align' => 'left'],
       ['id' => 'chargeable', 'label' => 'Weiterbelasten', 'type' => 'text', 'align' => 'center'],
@@ -102,22 +101,23 @@ class SimplifyTable extends Widget
 
     // Fetch distinct funds for Fonds dropdown
     $fondsQuery = "
-      SELECT DISTINCT mandantnr, mandantname
+      SELECT DISTINCT fond_abkuerzung
       FROM V_UEBERSICHTEN_WIDGET
-      WHERE mandantname NOT IN ('', '-')
-        AND fondflag = 1
+      WHERE fond_abkuerzung IS NOT NULL
+        AND fond_abkuerzung != ''
     ";
     $fondsResult = $JobDB->query($fondsQuery);
     $fondsOptions = [];
     while ($row = $JobDB->fetchRow($fondsResult)) {
-      $fondsOptions[] = ['id' => $row['mandantnr'], 'label' => $row['mandantname']];
+      $fondsOptions[] = ['id' => $row['fond_abkuerzung'], 'label' => $row['fond_abkuerzung']];
     }
 
     return [
       'status' => [
       ['id' => 'completed', 'label' => 'Beendet'],
-      ['id' => 'faellig', 'label' => 'Fällig'],
-      ['id' => 'not_faellig', 'label' => 'Nicht Fällig'],
+      ['id' => 'aktiv_alle', 'label' => 'Aktiv Alle'],
+      ['id' => 'faellig', 'label' => 'Aktiv Fällig'],
+      ['id' => 'not_faellig', 'label' => 'Aktiv Nicht Fällig'],
       ],
       'schritt' => $schrittOptions,
       'laufzeit' => [
@@ -128,8 +128,11 @@ class SimplifyTable extends Widget
       ],
       'coor' => [
       ['id' => 'Ja', 'label' => 'Ja'],
-      ['id' => 'Nein', 'label' => 'Nein'],
-      ['id' => 'Ausstehend', 'label' => 'Ausstehend']
+      ['id' => 'Nein', 'label' => 'Nein']
+      ],
+      'weiterbelasten' => [
+      ['id' => 'Ja', 'label' => 'Ja'],
+      ['id' => 'Nein', 'label' => 'Nein']
       ],
       'gesellschaft' => $gesellschaftOptions,
       'fonds' => $fondsOptions,
@@ -164,11 +167,20 @@ class SimplifyTable extends Widget
       if ($statusId === 'completed') {
         $statusLabel = 'Beendet';
       } else if ($statusId === 'rest') {
-        $faelligkeitDays = (int) filter_var($row['faelligkeit'], FILTER_SANITIZE_NUMBER_INT);
-        if ($faelligkeitDays > 2) {
-          $statusId = 'due';
-          $statusLabel = 'Fällig';
+        // Check if eskalation + 5 days <= today
+        $eskalationDate = $row['eskalation'];
+        if (!empty($eskalationDate)) {
+          $eskalationPlusFive = strtotime($eskalationDate . ' +5 days');
+          $today = strtotime('today');
+          if ($eskalationPlusFive <= $today) {
+            $statusId = 'due';
+            $statusLabel = 'Fällig';
+          } else {
+            $statusId = 'not_due';
+            $statusLabel = 'Nicht Fällig';
+          }
         } else {
+          // No eskalation date, default to not due
           $statusId = 'not_due';
           $statusLabel = 'Nicht Fällig';
         }
@@ -191,11 +203,11 @@ class SimplifyTable extends Widget
         'invoiceNumber' => ['id' => $row['rechnungsnummer'], 'label' => $row['rechnungsnummer']],
         'invoiceDate' => ['id' => $row['rechnungsdatum'], 'label' => $row['rechnungsdatum']],
         'grossAmount' => ['id' => $row['bruttobetrag'], 'label' => $row['bruttobetrag']],
-        'dueDate' => ['id' => $row['eskalation'], 'label' => $row['eskalation']],
+        'dueDate' => ['id' => $row['eskalation'], 'label' => !empty($row['eskalation']) ? date('Y-m-d', strtotime($row['eskalation'] . ' +5 days')) : ''],
         'orderId' => ['id' => $row['coor_orderid'], 'label' => $row['coor_orderid']],
         'paymentAmount' => ['id' => $row['zahlbetrag'], 'label' => $row['zahlbetrag']],
         'paymentDate' => ['id' => $row['zahldatum'], 'label' => $row['zahldatum']],
-        'duration' => ['id' => $row['dauer'], 'label' => $row['dauer']],
+        'runtime' => ['id' => isset($row['runtime']) ? $row['runtime'] : '', 'label' => isset($row['runtime']) ? $row['runtime'] : ''],
         'invoice' => ['id' => $row['dokumentid'], 'label' => $row['dokumentid']],
         'protocol' => ['id' => $row['dokumentid'], 'label' => $row['dokumentid']],
         'chargeable' => ['id' => $row['berechenbar'], 'label' => $row['berechenbar']],

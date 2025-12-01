@@ -29,9 +29,9 @@ function normalizeDropdownOptions(options) {
   const mapOptionArray = (arr) =>
     (arr || []).map((opt) => {
       if (typeof opt === 'object' && opt !== null) {
-        return opt.label !== undefined ? opt.label : opt.id;
+        return { id: opt.id, label: opt.label !== undefined ? opt.label : opt.id };
       }
-      return opt;
+      return { id: opt, label: opt };
     });
 
   return {
@@ -39,6 +39,7 @@ function normalizeDropdownOptions(options) {
     schritt: mapOptionArray(options.schritt),
     laufzeit: mapOptionArray(options.laufzeit),
     coor: mapOptionArray(options.coor),
+    weiterbelasten: mapOptionArray(options.weiterbelasten),
     gesellschaft: mapOptionArray(options.gesellschaft),
     fonds: mapOptionArray(options.fonds),
   };
@@ -91,7 +92,7 @@ var appState = {
     rechnungsdatumFrom: '',
     rechnungsdatumTo: '',
     status: 'all',
-    weiterbelasten: '',
+    weiterbelasten: 'all',
     gesellschaft: [],
     rolle: '',
     rechnungstyp: '',
@@ -129,9 +130,44 @@ function safeLower(value) {
 
 function setLoading(isLoading) {
   appState.loading = isLoading;
-  const spinner = document.getElementById('simplifyTable_spinner');
-  if (spinner) {
-    spinner.style.display = isLoading ? 'flex' : 'none';
+  const tbody = document.getElementById('simplifyTable_table-body');
+  const tableWrapper = tbody ? tbody.closest('.simplifyTable_table-wrapper') : null;
+
+  if (isLoading && tbody) {
+    // Show skeleton rows
+    tbody.innerHTML = '';
+    const skeletonRowCount = 25; // Number of skeleton rows to show
+
+    for (let i = 0; i < skeletonRowCount; i++) {
+      const row = document.createElement('tr');
+      row.className = 'simplifyTable_skeleton-row';
+
+      COLUMNS.forEach((column) => {
+        const td = document.createElement('td');
+        td.className = 'simplifyTable_table-cell';
+        if (column.align) {
+          td.style.textAlign = column.align;
+        }
+
+        const skeleton = document.createElement('div');
+        skeleton.className = 'simplifyTable_skeleton';
+
+        // Vary skeleton widths for visual interest
+        const widths = ['60%', '80%', '70%', '90%', '50%', '75%'];
+        skeleton.style.width = widths[Math.floor(Math.random() * widths.length)];
+
+        td.appendChild(skeleton);
+        row.appendChild(td);
+      });
+
+      tbody.appendChild(row);
+    }
+
+    // Hide no-results message during loading
+    if (tableWrapper) {
+      const noResults = tableWrapper.querySelector('.simplifyTable_no-results');
+      if (noResults) noResults.style.display = 'none';
+    }
   }
 }
 
@@ -160,8 +196,14 @@ function createFilterItem(label, type, id, filterKey, options = null) {
 
     options.forEach((opt) => {
       const option = document.createElement('option');
-      option.value = opt;
-      option.textContent = opt;
+      // Support both {id, label} objects and plain strings
+      if (typeof opt === 'object' && opt !== null) {
+        option.value = opt.id;
+        option.textContent = opt.label;
+      } else {
+        option.value = opt;
+        option.textContent = opt;
+      }
       select.appendChild(option);
     });
 
@@ -279,7 +321,13 @@ function createFilters() {
     { label: 'Bruttobetrag', type: 'text', id: 'simplifyTable_bruttobetrag-filter', key: 'bruttobetrag' },
 
     // Additional Options
-    { label: 'Weiterbelasten', type: 'text', id: 'simplifyTable_weiterbelasten-filter', key: 'weiterbelasten' },
+    {
+      label: 'Weiterbelasten',
+      type: 'dropdown',
+      id: 'simplifyTable_weiterbelasten-filter',
+      key: 'weiterbelasten',
+      options: DROPDOWN_OPTIONS.weiterbelasten,
+    },
     { label: 'Laufzeit', type: 'dropdown', id: 'simplifyTable_laufzeit-filter', key: 'laufzeit', options: DROPDOWN_OPTIONS.laufzeit },
     { label: 'Coor', type: 'dropdown', id: 'simplifyTable_coor-filter', key: 'coor', options: DROPDOWN_OPTIONS.coor },
   ];
@@ -292,6 +340,38 @@ function createFilters() {
   const actionsRow = document.createElement('div');
   actionsRow.className = 'simplifyTable_filter-actions';
 
+  // Preset buttons container (left side)
+  const presetButtonsContainer = document.createElement('div');
+  presetButtonsContainer.className = 'simplifyTable_preset-buttons';
+
+  // Define filter presets - easily add more here
+  // Use the 'id' values from dropdown options (check SimplifyTable.php for available IDs)
+  const filterPresets = [
+    {
+      label: 'Überfällige Rechnungen',
+      icon: 'fa-exclamation-triangle',
+      filters: { status: 'faellig' },
+      sort: { column: 'dueDate', direction: 'asc' },
+    },
+    {
+      label: 'Coor Schnittstelle',
+      icon: 'fa-exchange-alt',
+      filters: { status: 'aktiv_alle', schritt: '4001' },
+    },
+  ];
+
+  filterPresets.forEach((preset) => {
+    const presetButton = document.createElement('button');
+    presetButton.className = 'simplifyTable_preset-button';
+    presetButton.innerHTML = `<i class="fas ${preset.icon}"></i> ${preset.label}`;
+    presetButton.addEventListener('click', () => applyFilterPreset(preset));
+    presetButtonsContainer.appendChild(presetButton);
+  });
+
+  // Action buttons container (right side)
+  const actionButtonsContainer = document.createElement('div');
+  actionButtonsContainer.className = 'simplifyTable_action-buttons';
+
   const applyButton = document.createElement('button');
   applyButton.id = 'simplifyTable_apply-filter-button';
   applyButton.className = 'simplifyTable_apply-filter-button';
@@ -302,8 +382,11 @@ function createFilters() {
   resetButton.className = 'simplifyTable_reset-button';
   resetButton.innerHTML = '<i class="fas fa-redo"></i> Filter zurücksetzen';
 
-  actionsRow.appendChild(applyButton);
-  actionsRow.appendChild(resetButton);
+  actionButtonsContainer.appendChild(applyButton);
+  actionButtonsContainer.appendChild(resetButton);
+
+  actionsRow.appendChild(presetButtonsContainer);
+  actionsRow.appendChild(actionButtonsContainer);
   filterContainer.appendChild(actionsRow);
 
   return filterContainer;
@@ -312,6 +395,14 @@ function createFilters() {
 function createTableRow(item) {
   const row = document.createElement('tr');
   row.className = 'simplifyTable_table-row';
+
+  // Add row background class based on status
+  const statusValue = (item.status || '').toLowerCase();
+  if (statusValue === 'fällig' || statusValue === 'faellig' || statusValue === 'due') {
+    row.classList.add('simplifyTable_row-due');
+  } else if (statusValue === 'nicht fällig' || statusValue === 'nicht faellig' || statusValue === 'not_due' || statusValue === 'not_faellig') {
+    row.classList.add('simplifyTable_row-not-due');
+  }
 
   COLUMNS.forEach((column) => {
     const cell = document.createElement('td');
@@ -325,7 +416,47 @@ function createTableRow(item) {
     const value = item[column.id];
 
     if (column.type === 'status') {
-      cell.textContent = value || '-';
+      const statusValue = (value || '').toLowerCase();
+      const runtime = item.runtime || '';
+      const dueDate = item.dueDate || '';
+      const statusIcon = document.createElement('i');
+      statusIcon.className = 'simplifyTable_status-icon';
+
+      if (statusValue === 'beendet' || statusValue === 'completed') {
+        statusIcon.className += ' fas fa-check-circle simplifyTable_status-completed';
+        const tooltip = runtime ? `Beendet - Laufzeit: ${runtime}` : 'Beendet';
+        statusIcon.title = tooltip;
+        statusIcon.setAttribute('aria-label', tooltip);
+      } else if (statusValue === 'fällig' || statusValue === 'faellig' || statusValue === 'due') {
+        statusIcon.className += ' fas fa-exclamation-circle simplifyTable_status-due';
+        let tooltip = 'Fällig';
+        if (dueDate) {
+          // dueDate is already eskalation + 5 days from backend
+          const dueDateObj = new Date(dueDate);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          dueDateObj.setHours(0, 0, 0, 0);
+          // Calculate days overdue (today - dueDate)
+          const diffTime = today - dueDateObj;
+          const daysOverdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          if (daysOverdue >= 0) {
+            tooltip = `Fällig seit ${daysOverdue} Tagen`;
+          }
+        }
+        statusIcon.title = tooltip;
+        statusIcon.setAttribute('aria-label', tooltip);
+      } else if (statusValue === 'nicht fällig' || statusValue === 'nicht faellig' || statusValue === 'not_due' || statusValue === 'not_faellig') {
+        statusIcon.className += ' fas fa-clock simplifyTable_status-not-due';
+        const tooltip = runtime ? `Nicht Fällig - Laufzeit: ${runtime}` : 'Nicht Fällig';
+        statusIcon.title = tooltip;
+        statusIcon.setAttribute('aria-label', tooltip);
+      } else {
+        statusIcon.className += ' fas fa-question-circle simplifyTable_status-unknown';
+        statusIcon.title = value || 'Unbekannt';
+        statusIcon.setAttribute('aria-label', value || 'Unbekannt');
+      }
+
+      cell.appendChild(statusIcon);
     } else if (column.type === 'currency') {
       const numValue = parseFloat(value);
       cell.textContent = value ? `€ ${numValue.toLocaleString('de-DE', { minimumFractionDigits: 2 })}` : '-';
@@ -522,7 +653,7 @@ function buildRequestParams(pageOverride) {
     username: CURRENT_USER,
   };
 
-  ['kreditor', 'weiterbelasten', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
+  ['kreditor', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
     if (filters[key]) params[key] = filters[key];
   });
 
@@ -536,6 +667,7 @@ function buildRequestParams(pageOverride) {
   if (filters.status && filters.status !== 'all') params.status = filters.status;
   if (filters.laufzeit && filters.laufzeit !== 'all') params.laufzeit = filters.laufzeit;
   if (filters.coor && filters.coor !== 'all') params.coor = filters.coor;
+  if (filters.weiterbelasten && filters.weiterbelasten !== 'all') params.weiterbelasten = filters.weiterbelasten;
   if (filters.rechnungsdatumFrom) params.rechnungsdatumFrom = filters.rechnungsdatumFrom;
   if (filters.rechnungsdatumTo) params.rechnungsdatumTo = filters.rechnungsdatumTo;
 
@@ -570,6 +702,82 @@ function applyFilters() {
   fetchData(1);
 }
 
+function applyFilterPreset(preset) {
+  // Reset all filters first
+  appState.filters = {
+    schritt: 'all',
+    kreditor: '',
+    rechnungsdatumFrom: '',
+    rechnungsdatumTo: '',
+    status: 'all',
+    weiterbelasten: 'all',
+    gesellschaft: [],
+    rolle: '',
+    rechnungstyp: '',
+    bruttobetrag: '',
+    fonds: [],
+    dokumentId: '',
+    bearbeiter: '',
+    rechnungsnummer: '',
+    laufzeit: 'all',
+    coor: 'all',
+  };
+
+  // Apply preset filters
+  Object.keys(preset.filters).forEach((key) => {
+    appState.filters[key] = preset.filters[key];
+  });
+
+  // Apply preset sort if defined
+  if (preset.sort) {
+    appState.sortColumn = preset.sort.column;
+    appState.sortDirection = preset.sort.direction;
+  }
+
+  // Update UI to reflect filter values
+  updateFilterUI();
+
+  // Fetch data with new filters
+  appState.currentPage = 1;
+  fetchData(1);
+}
+
+function updateFilterUI() {
+  // Update dropdown selects
+  const statusSelect = document.getElementById('simplifyTable_status-filter');
+  if (statusSelect) statusSelect.value = appState.filters.status || 'all';
+
+  const schrittSelect = document.getElementById('simplifyTable_schritt-filter');
+  if (schrittSelect) schrittSelect.value = appState.filters.schritt || 'all';
+
+  const weiterbelastenSelect = document.getElementById('simplifyTable_weiterbelasten-filter');
+  if (weiterbelastenSelect) weiterbelastenSelect.value = appState.filters.weiterbelasten || 'all';
+
+  const laufzeitSelect = document.getElementById('simplifyTable_laufzeit-filter');
+  if (laufzeitSelect) laufzeitSelect.value = appState.filters.laufzeit || 'all';
+
+  const coorSelect = document.getElementById('simplifyTable_coor-filter');
+  if (coorSelect) coorSelect.value = appState.filters.coor || 'all';
+
+  // Update text inputs
+  const textFields = ['kreditor', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'];
+  textFields.forEach((field) => {
+    const input = document.getElementById(`simplifyTable_${field}-filter`);
+    if (input) input.value = appState.filters[field] || '';
+  });
+
+  // Update date range inputs
+  const dateFrom = document.getElementById('simplifyTable_rechnungsdatum-from-filter');
+  if (dateFrom) dateFrom.value = appState.filters.rechnungsdatumFrom || '';
+
+  const dateTo = document.getElementById('simplifyTable_rechnungsdatum-to-filter');
+  if (dateTo) dateTo.value = appState.filters.rechnungsdatumTo || '';
+
+  // Update autocomplete tags
+  renderTags('gesellschaft');
+  renderTags('fonds');
+}
+
 function resetFilters() {
   appState.filters = {
     schritt: 'all',
@@ -577,7 +785,7 @@ function resetFilters() {
     rechnungsdatumFrom: '',
     rechnungsdatumTo: '',
     status: 'all',
-    weiterbelasten: '',
+    weiterbelasten: 'all',
     gesellschaft: [],
     rolle: '',
     rechnungstyp: '',
@@ -611,7 +819,14 @@ function showAutocomplete(field, inputElement) {
 
   let allOptions = [];
   if (inputElement.dataset.options) {
-    allOptions = JSON.parse(inputElement.dataset.options);
+    const parsedOptions = JSON.parse(inputElement.dataset.options);
+    // Handle both {id, label} objects and plain strings
+    allOptions = parsedOptions.map((opt) => {
+      if (typeof opt === 'object' && opt !== null) {
+        return opt.label || opt.id;
+      }
+      return opt;
+    });
   } else {
     allOptions = [...new Set(appState.data.map((item) => item[field]))].filter((v) => v);
   }
@@ -769,7 +984,7 @@ function updateSortArrows() {
 // ============================================
 
 function attachEventListeners() {
-  ['kreditor', 'weiterbelasten', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
+  ['kreditor', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
     const input = document.getElementById(`simplifyTable_${key}-filter`);
     if (input) {
       input.addEventListener('input', (e) => {
@@ -805,7 +1020,7 @@ function attachEventListeners() {
     }
   });
 
-  ['schritt', 'status', 'laufzeit', 'coor'].forEach((key) => {
+  ['schritt', 'status', 'laufzeit', 'coor', 'weiterbelasten'].forEach((key) => {
     const select = document.getElementById(`simplifyTable_${key}-filter`);
     if (select) {
       select.addEventListener('change', (e) => {
@@ -874,12 +1089,6 @@ function render() {
   container.appendChild(createFilters());
   container.appendChild(createTable());
   container.appendChild(createPagination());
-
-  const spinnerOverlay = document.createElement('div');
-  spinnerOverlay.id = 'simplifyTable_spinner';
-  spinnerOverlay.className = 'simplifyTable_spinner-overlay';
-  spinnerOverlay.innerHTML = '<div class="simplifyTable_spinner"></div>';
-  container.appendChild(spinnerOverlay);
 
   app.appendChild(container);
 }
