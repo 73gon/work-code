@@ -128,3 +128,5 @@ define('IMPORTCOSTCENTERCSV_DESC', 'Diese Systemaktivität kann dazu verwendet w
 define('IMPORTCOSTCENTER', 'Kostenstellen-Konfiguration');
 define('COSTCENTERTABLE', 'Kostenstellentabelle');
 define('COUNTERSUMMARY', 'Counter Zusammenfassung');
+define('AUDITTRAIL', 'Audit Trail');
+define('AUDITTRAILCSV', 'Audit Trail CSV');

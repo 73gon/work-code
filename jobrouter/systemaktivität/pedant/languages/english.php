@@ -128,4 +128,5 @@ define('IMPORTCOSTCENTERCSV_DESC', 'This systemactivity can be used to add a dat
 define('IMPORTCOSTCENTER', 'Cost Center Configuration');
 define('COSTCENTERTABLE', 'Cost Center Table');
 define('COUNTERSUMMARY', 'Counter Summary');
-
+define('AUDITTRAIL', 'Audit Trail');
+define('AUDITTRAILCSV', 'Audit Trail CSV');

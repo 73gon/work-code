@@ -281,6 +281,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     $index++;
                 }
             }
+
+            // Clean up audit trail CSV
+            $auditTrailPath = $this->getSystemActivityVar('AUDITTRAILPATH');
+            if ($auditTrailPath && file_exists($auditTrailPath)) {
+                unlink($auditTrailPath);
+            }
+
             $this->setResubmission(1, "s");
             $this->markActivityAsCompleted();
         }
@@ -721,6 +728,74 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     }
 
     /**
+     * Converts an audit trail array to CSV format and saves it to a file.
+     *
+     * @param array $auditTrail The audit trail data array.
+     * @param string $savePath The path to save the CSV file.
+     * @param string $fileName The base name for the CSV file.
+     * @return string The full path to the saved CSV file.
+     */
+    protected function convertAuditTrailToCSV($auditTrail, $savePath, $fileName)
+    {
+        $csvFilePath = $savePath . "/" . $fileName . "_AUDITTRAIL_.csv";
+        $csvFile = fopen($csvFilePath, 'w');
+
+        // CSV headers
+        $headers = [
+            'id',
+            'documentId',
+            'actionBy',
+            'userName',
+            'userId',
+            'userRole',
+            'type',
+            'subType',
+            'field',
+            'comment',
+            'oldValue',
+            'newValue',
+            'createdAt',
+            'updatedAt'
+        ];
+        fputcsv($csvFile, $headers);
+
+        // Write each audit trail entry
+        foreach ($auditTrail as $entry) {
+            $oldValue = isset($entry['updates']['oldValue']) ? $entry['updates']['oldValue'] : '';
+            $newValue = isset($entry['updates']['newValue']) ? $entry['updates']['newValue'] : '';
+
+            // Handle complex objects in values by JSON encoding them
+            if (is_array($oldValue) || is_object($oldValue)) {
+                $oldValue = json_encode($oldValue);
+            }
+            if (is_array($newValue) || is_object($newValue)) {
+                $newValue = json_encode($newValue);
+            }
+
+            $row = [
+                $entry['id'] ?? '',
+                $entry['documentId'] ?? '',
+                $entry['actionBy'] ?? '',
+                $entry['userName'] ?? '',
+                $entry['userId'] ?? '',
+                $entry['userRole'] ?? '',
+                $entry['type'] ?? '',
+                $entry['subType'] ?? '',
+                $entry['field'] ?? '',
+                $entry['comment'] ?? '',
+                $oldValue,
+                $newValue,
+                $entry['createdAt'] ?? '',
+                $entry['updatedAt'] ?? ''
+            ];
+            fputcsv($csvFile, $row);
+        }
+
+        fclose($csvFile);
+        return $csvFilePath;
+    }
+
+    /**
      * Stores the list of invoice details in the system activity.
      *
      * @param array $data The data containing invoice details.
@@ -982,11 +1057,38 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             foreach ($attachmentFiles as $i => $attachmentPath) {
                 $values6['e_invoiceAttachments'][] = $attachmentPath;
             }
+
+            // Generate audit trail CSV
+            $auditTrailData = $dataItem['auditTrail'] ?? [];
+            if (!empty($auditTrailData)) {
+                $auditTrailCSVPath = $this->convertAuditTrailToCSV($auditTrailData, $savePath, $tempFileName);
+                $values6['auditTrailCSV'] = $auditTrailCSVPath;
+                $this->setSystemActivityVar('AUDITTRAILPATH', $auditTrailCSVPath);
+            } else {
+                $values6['auditTrailCSV'] = '';
+            }
         } else {
+            $tempPath = $this->getTempPath();
+            $tempFileName = $dataItem['file']['name'] ?? 'invoice';
+            $savePath = $tempPath . "/pedant";
+
+            if (!is_dir($savePath)) {
+                mkdir($savePath, 0777, true);
+            }
+
+            // Generate audit trail CSV for regular invoices
+            $auditTrailData = $dataItem['auditTrail'] ?? [];
+            $auditTrailCSVPath = '';
+            if (!empty($auditTrailData)) {
+                $auditTrailCSVPath = $this->convertAuditTrailToCSV($auditTrailData, $savePath, $tempFileName);
+                $this->setSystemActivityVar('AUDITTRAILPATH', $auditTrailCSVPath);
+            }
+
             $values6 = [
                 'e_invoicePDF' => '',
                 'e_invoiceReport' => '',
-                'e_invoiceAttachments' => []
+                'e_invoiceAttachments' => [],
+                'auditTrailCSV' => $auditTrailCSVPath
             ];
         }
 
@@ -1214,7 +1316,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => '-', 'value' => ''],
                 ['name' => E_INVOICEPDF, 'value' => 'e_invoicePDF'],
                 ['name' => E_INVOICEREPORT, 'value' => 'e_invoiceReport'],
-                ['name' => E_INVOICEATTACHMENT1, 'value' => 'e_invoiceAttachments']
+                ['name' => E_INVOICEATTACHMENT1, 'value' => 'e_invoiceAttachments'],
+                ['name' => AUDITTRAILCSV, 'value' => 'auditTrailCSV']
             ];
         }
 
@@ -1227,4 +1330,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.7.2.1
+//Version 1.8
