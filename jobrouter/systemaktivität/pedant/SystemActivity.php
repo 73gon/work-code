@@ -737,17 +737,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
      */
     protected function convertAuditTrailToCSV($auditTrail, $savePath, $fileName)
     {
-        $csvFilePath = $savePath . "/" . $fileName . "_AUDITTRAIL_.csv";
+        // Remove file extension from fileName
+        $fileNameWithoutExtension = pathinfo($fileName, PATHINFO_FILENAME);
+
+        $csvFilePath = $savePath . "/" . $fileNameWithoutExtension . "_AUDITTRAIL.csv";
         $csvFile = fopen($csvFilePath, 'w');
 
         // CSV headers
         $headers = [
-            'id',
-            'documentId',
             'actionBy',
             'userName',
             'userId',
-            'userRole',
             'type',
             'subType',
             'field',
@@ -773,12 +773,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             }
 
             $row = [
-                $entry['id'] ?? '',
-                $entry['documentId'] ?? '',
                 $entry['actionBy'] ?? '',
                 $entry['userName'] ?? '',
                 $entry['userId'] ?? '',
-                $entry['userRole'] ?? '',
                 $entry['type'] ?? '',
                 $entry['subType'] ?? '',
                 $entry['field'] ?? '',
@@ -1330,4 +1327,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.8
+//Version 1.8.1
