@@ -167,12 +167,12 @@ class SimplifyTable extends Widget
       if ($statusId === 'completed') {
         $statusLabel = 'Beendet';
       } else if ($statusId === 'rest') {
-        // Check if eskalation + 5 days <= today
+        // Check if eskalation (due date) <= today
         $eskalationDate = $row['eskalation'];
         if (!empty($eskalationDate)) {
-          $eskalationPlusFive = strtotime($eskalationDate . ' +5 days');
+          $eskalation = strtotime($eskalationDate);
           $today = strtotime('today');
-          if ($eskalationPlusFive <= $today) {
+          if ($eskalation <= $today) {
             $statusId = 'due';
             $statusLabel = 'Fällig';
           } else {
@@ -203,7 +203,7 @@ class SimplifyTable extends Widget
         'invoiceNumber' => ['id' => $row['rechnungsnummer'], 'label' => $row['rechnungsnummer']],
         'invoiceDate' => ['id' => $row['rechnungsdatum'], 'label' => $row['rechnungsdatum']],
         'grossAmount' => ['id' => $row['bruttobetrag'], 'label' => $row['bruttobetrag']],
-        'dueDate' => ['id' => $row['eskalation'], 'label' => !empty($row['eskalation']) ? date('Y-m-d', strtotime($row['eskalation'] . ' +5 days')) : ''],
+        'dueDate' => ['id' => $row['eskalation'], 'label' => $row['eskalation']],
         'orderId' => ['id' => $row['coor_orderid'], 'label' => $row['coor_orderid']],
         'paymentAmount' => ['id' => $row['zahlbetrag'], 'label' => $row['zahlbetrag']],
         'paymentDate' => ['id' => $row['zahldatum'], 'label' => $row['zahldatum']],

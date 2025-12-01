@@ -192,8 +192,8 @@ class Query extends Widget
 
         if (!empty($filters['status']) && $filters['status'] !== 'all') {
             $statusValue = strtolower($filters['status']);
-            // SQL Server: DATEADD to add 5 days to eskalation, compare with today
-            $eskalationPlusFiveSql = "DATEADD(day, 5, TRY_CONVERT(date, eskalation))";
+            // SQL Server: compare eskalation (due date) with today
+            $eskalationSql = "TRY_CONVERT(date, eskalation)";
             switch ($statusValue) {
                 case 'beendet':
                 case 'completed':
@@ -208,16 +208,16 @@ class Query extends Widget
                 case 'faellig':
                 case 'aktiv fällig':
                 case 'aktiv faellig':
-                    // Fällig: status = 'rest' AND eskalation + 5 days <= today
-                    $where[] = "(status = 'rest' AND {$eskalationPlusFiveSql} <= CAST(GETDATE() AS date))";
+                    // Fällig: status = 'rest' AND eskalation <= today
+                    $where[] = "(status = 'rest' AND {$eskalationSql} <= CAST(GETDATE() AS date))";
                     break;
                 case 'nicht fällig':
                 case 'nicht faellig':
                 case 'not_faellig':
                 case 'aktiv nicht fällig':
                 case 'aktiv nicht faellig':
-                    // Nicht Fällig: status = 'rest' AND eskalation + 5 days > today
-                    $where[] = "(status = 'rest' AND ({$eskalationPlusFiveSql} > CAST(GETDATE() AS date) OR eskalation IS NULL))";
+                    // Nicht Fällig: status = 'rest' AND eskalation > today
+                    $where[] = "(status = 'rest' AND ({$eskalationSql} > CAST(GETDATE() AS date) OR eskalation IS NULL))";
                     break;
                 default:
                     $value = addslashes($filters['status']);
@@ -303,12 +303,12 @@ class Query extends Widget
         if ($statusId === 'completed') {
             $statusLabel = 'Beendet';
         } else if ($statusId === 'rest') {
-            // Check if eskalation + 5 days <= today
+            // Check if eskalation (due date) <= today
             $eskalationDate = isset($row['eskalation']) ? $row['eskalation'] : '';
             if (!empty($eskalationDate)) {
-                $eskalationPlusFive = strtotime($eskalationDate . ' +5 days');
+                $eskalation = strtotime($eskalationDate);
                 $today = strtotime('today');
-                if ($eskalationPlusFive <= $today) {
+                if ($eskalation <= $today) {
                     $statusId = 'due';
                     $statusLabel = 'Faellig';
                 } else {
@@ -339,7 +339,7 @@ class Query extends Widget
             'invoiceNumber' => isset($row['rechnungsnummer']) ? $row['rechnungsnummer'] : '',
             'invoiceDate' => isset($row['rechnungsdatum']) ? $row['rechnungsdatum'] : '',
             'grossAmount' => isset($row['bruttobetrag']) ? $row['bruttobetrag'] : '',
-            'dueDate' => !empty($row['eskalation']) ? date('Y-m-d', strtotime($row['eskalation'] . ' +5 days')) : '',
+            'dueDate' => isset($row['eskalation']) ? $row['eskalation'] : '',
             'orderId' => isset($row['coor_orderid']) ? $row['coor_orderid'] : '',
             'paymentAmount' => isset($row['zahlbetrag']) ? $row['zahlbetrag'] : '',
             'paymentDate' => isset($row['zahldatum']) ? $row['zahldatum'] : '',
