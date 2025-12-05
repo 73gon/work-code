@@ -64,7 +64,7 @@ class SimplifyTable extends Widget
       ['id' => 'orderId', 'label' => 'Auftragsnummer', 'type' => 'text', 'align' => 'left'],
       ['id' => 'paymentAmount', 'label' => 'Zahlbetrag', 'type' => 'currency', 'align' => 'left'],
       ['id' => 'paymentDate', 'label' => 'Zahldatum', 'type' => 'date', 'align' => 'left'],
-      ['id' => 'invoice', 'label' => 'Rechnung', 'type' => 'text', 'align' => 'left'],
+      ['id' => 'invoice', 'label' => 'Rechnung', 'type' => 'invoiceLink', 'align' => 'center'],
       ['id' => 'protocol', 'label' => 'Protokoll', 'type' => 'text', 'align' => 'left'],
       ['id' => 'chargeable', 'label' => 'Weiterbelasten', 'type' => 'text', 'align' => 'center'],
     ];

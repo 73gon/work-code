@@ -414,7 +414,6 @@ function createTableRow(item) {
     }
 
     const value = item[column.id];
-
     if (column.type === 'status') {
       const statusValue = (value || '').toLowerCase();
       const runtime = item.runtime || '';
@@ -466,6 +465,23 @@ function createTableRow(item) {
       }
     } else if (column.type === 'date') {
       cell.textContent = value ? new Date(value).toLocaleDateString('de-DE') : '-';
+    } else if (column.type === 'invoiceLink') {
+      if (value) {
+        const link = document.createElement('a');
+        link.href = `https://jobrouter.empira-invest.com/jobrouter/FIBU_URL.php?dokument=${value}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'simplifyTable_invoice-link';
+        link.title = `Rechnung öffnen: ${value}`;
+
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-file-invoice simplifyTable_invoice-icon';
+        link.appendChild(icon);
+
+        cell.appendChild(link);
+      } else {
+        cell.textContent = '-';
+      }
     } else if (column.type === 'number') {
       cell.textContent = value;
     } else {

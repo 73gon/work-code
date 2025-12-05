@@ -534,6 +534,29 @@
   color: var(--text-secondary);
 }
 
+/* Invoice Link */
+.simplifyTable_invoice-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.simplifyTable_invoice-icon {
+  font-size: 18px;
+  color: var(--primary-color);
+}
+
+.simplifyTable_invoice-link:hover .simplifyTable_invoice-icon {
+  color: var(--primary-hover);
+}
+
+.simplifyTable_invoice-empty {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
 /* Row backgrounds based on status */
 .simplifyTable_row-due {
   background-color: rgba(239, 68, 68, 0.15) !important;
