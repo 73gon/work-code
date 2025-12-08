@@ -107,7 +107,6 @@ class Query extends Widget
         $total = $totalRow ? (int) $totalRow['total'] : 0;
 
         $dataQuery = "SELECT * FROM V_UEBERSICHTEN_WIDGET {$whereSql} {$orderSql} OFFSET {$offset} ROWS FETCH NEXT {$perPage} ROWS ONLY";
-        error_log($dataQuery);
         $result = $JobDB->query($dataQuery);
 
         $data = [];

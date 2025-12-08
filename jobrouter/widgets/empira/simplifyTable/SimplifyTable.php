@@ -32,11 +32,14 @@ class SimplifyTable extends Widget
 
   public function getData()
   {
+    $userPreferences = $this->loadUserPreferences();
+
     return [
       'columns' => json_encode($this->getColumns()),
       'dropdownOptions' => json_encode($this->getDropdownOptions()),
       'tableData' => json_encode([]),
       'currentUser' => $this->getUser()->getUsername(),
+      'userPreferences' => json_encode($userPreferences),
     ];
   }
 
@@ -137,6 +140,127 @@ class SimplifyTable extends Widget
       'gesellschaft' => $gesellschaftOptions,
       'fonds' => $fondsOptions,
     ];
+  }
+
+  /**
+     * Determines the database type based on the version query.
+     *
+     * @return string The database type, either "MySQL" or "MSSQL".
+     * @throws \Exception If the database type cannot be detected.
+     */
+    public function getDatabaseType()
+    {
+        $jobDB = $this->getJobDB();
+        try {
+            $result = $jobDB->query("SELECT VERSION()");
+            $row = $jobDB->fetchAll($result);
+            if (is_string($row[0]["VERSION()"])) {
+                return "MySQL";
+            }
+        } catch (\Exception $e) {
+        }
+
+        try {
+            $result = $jobDB->query("SELECT @@VERSION");
+            $row = $jobDB->fetchAll($result);
+            if (is_string(reset($row[0]))) {
+                return "MSSQL";
+            }
+        } catch (\Exception $e) {
+        }
+        throw new \Exception("Database could not be detected");
+    }
+
+  /**
+   * Initialize the user preferences table if it doesn't exist
+   */
+  public function initializeUserPreferencesTable()
+  {
+    $JobDB = $this->getJobDB();
+    $dbType = $this->getDatabaseType();
+
+    // Check if table exists
+    $tableExists = false;
+    try {
+      if ($dbType === 'MySQL') {
+        $checkQuery = "SHOW TABLES LIKE 'WIDGET_SIMPLIFYTABLE'";
+        $result = $JobDB->query($checkQuery);
+        $row = $JobDB->fetchRow($result);
+        $tableExists = !empty($row);
+      } else { // MSSQL
+        $checkQuery = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'WIDGET_SIMPLIFYTABLE'";
+        $result = $JobDB->query($checkQuery);
+        $row = $JobDB->fetchRow($result);
+        $tableExists = !empty($row);
+      }
+    } catch (\Exception $e) {
+      $tableExists = false;
+    }
+
+    // Create table if it doesn't exist
+    if (!$tableExists) {
+      if ($dbType === 'MySQL') {
+        $createQuery = "
+          CREATE TABLE WIDGET_SIMPLIFYTABLE (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) NOT NULL,
+            filter TEXT,
+            column_order TEXT,
+            sort_column VARCHAR(100),
+            sort_direction VARCHAR(4),
+            current_page INT DEFAULT 1,
+            entries_per_page INT DEFAULT 25,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_user (username)
+          )
+        ";
+      } else { // MSSQL
+        $createQuery = "
+          CREATE TABLE WIDGET_SIMPLIFYTABLE (
+            id INT IDENTITY(1,1) PRIMARY KEY,
+            username NVARCHAR(255) NOT NULL,
+            filter NVARCHAR(MAX),
+            column_order NVARCHAR(MAX),
+            sort_column NVARCHAR(100),
+            sort_direction NVARCHAR(4),
+            current_page INT DEFAULT 1,
+            entries_per_page INT DEFAULT 25,
+            updated_at DATETIME DEFAULT GETDATE(),
+            CONSTRAINT unique_user UNIQUE (username)
+          )
+        ";
+      }
+      $JobDB->exec($createQuery);
+    }
+  }
+
+  /**
+   * Load user preferences from database
+   */
+  public function loadUserPreferences()
+  {
+    $this->initializeUserPreferencesTable();
+
+    $JobDB = $this->getJobDB();
+    $username = $this->getUser()->getUsername();
+    $safeUsername = addslashes($username);
+
+    $query = "SELECT * FROM WIDGET_SIMPLIFYTABLE WHERE username = '{$safeUsername}'";
+    $result = $JobDB->query($query);
+    $row = $JobDB->fetchRow($result);
+
+    if ($row) {
+      $preferences = [
+        'filter' => $row['filter'] ? json_decode(stripslashes($row['filter']), true) : null,
+        'column_order' => $row['column_order'] ? json_decode(stripslashes($row['column_order']), true) : null,
+        'sort_column' => $row['sort_column'],
+        'sort_direction' => $row['sort_direction'],
+        'current_page' => (int)$row['current_page'],
+        'entries_per_page' => (int)$row['entries_per_page'],
+      ];
+      return $preferences;
+    }
+    return null;
   }
 
   /**

@@ -8,6 +8,8 @@ var DROPDOWN_OPTIONS = {};
 var INITIAL_DATA = [];
 var CURRENT_USER = '';
 var DATA_ENDPOINT = 'dashboard/MyWidgets/SimplifyTable/query.php';
+var SAVE_PREFERENCES_ENDPOINT = 'dashboard/MyWidgets/SimplifyTable/savePreferences.php';
+var USER_PREFERENCES = null;
 
 function normalizeDataRows(rows) {
   return (rows || []).map((row) => {
@@ -69,6 +71,15 @@ function loadConfigFromPHP() {
       CURRENT_USER = userDiv.textContent.trim();
     }
 
+    const preferencesDiv = document.getElementById('simplifyTable_userPreferences');
+    if (preferencesDiv && preferencesDiv.textContent) {
+      try {
+        USER_PREFERENCES = JSON.parse(preferencesDiv.textContent);
+      } catch (e) {
+        console.warn('Could not parse user preferences:', e);
+      }
+    }
+
     if (!Array.isArray(INITIAL_DATA)) {
       console.warn('Table data from PHP was not an array; defaulting to empty list');
       INITIAL_DATA = [];
@@ -110,6 +121,13 @@ var appState = {
   sortColumn: null,
   sortDirection: 'asc',
   loading: false,
+  columnOrder: [],
+  dragState: {
+    dragging: false,
+    draggedColumn: null,
+    dragOverColumn: null,
+  },
+  isInitialLoad: true,
 };
 
 // ============================================
@@ -128,6 +146,119 @@ function safeLower(value) {
   return value === null || value === undefined ? '' : value.toString().toLowerCase();
 }
 
+function getOrderedColumns() {
+  if (appState.columnOrder.length === 0) {
+    return COLUMNS;
+  }
+  return appState.columnOrder.map((id) => COLUMNS.find((col) => col.id === id)).filter((col) => col !== undefined);
+}
+
+function saveColumnOrder() {
+  try {
+    localStorage.setItem('simplifyTable_columnOrder', JSON.stringify(appState.columnOrder));
+  } catch (e) {
+    console.warn('Could not save column order:', e);
+  }
+  // Also save to database
+  savePreferencesToDatabase();
+}
+
+function savePreferencesToDatabase() {
+  const preferences = {
+    username: CURRENT_USER,
+    filter: JSON.stringify(appState.filters),
+    column_order: JSON.stringify(appState.columnOrder),
+    sort_column: appState.sortColumn,
+    sort_direction: appState.sortDirection,
+    current_page: appState.currentPage,
+    entries_per_page: appState.itemsPerPage,
+  };
+
+  $j.ajax({
+    url: SAVE_PREFERENCES_ENDPOINT,
+    type: 'POST',
+    data: preferences,
+    dataType: 'json',
+  })
+    .done((response) => {
+      if (!response.success) {
+        console.warn('Failed to save preferences:', response.message);
+      }
+    })
+    .fail((jqXHR, textStatus, errorThrown) => {
+      console.warn('Error saving preferences:', textStatus, errorThrown);
+    });
+}
+
+function loadColumnOrder() {
+  // First try to load from database (user preferences)
+  if (USER_PREFERENCES && USER_PREFERENCES.column_order) {
+    try {
+      const order = USER_PREFERENCES.column_order;
+      if (Array.isArray(order) && order.length === COLUMNS.length) {
+        appState.columnOrder = order;
+        return;
+      }
+    } catch (e) {
+      console.warn('Could not load column order from preferences:', e);
+    }
+  }
+
+  // Fallback to localStorage
+  try {
+    const saved = localStorage.getItem('simplifyTable_columnOrder');
+    if (saved) {
+      const order = JSON.parse(saved);
+      if (Array.isArray(order) && order.length === COLUMNS.length) {
+        appState.columnOrder = order;
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not load column order from localStorage:', e);
+  }
+
+  // Default: use original column order
+  if (appState.columnOrder.length === 0) {
+    appState.columnOrder = COLUMNS.map((col) => col.id);
+  }
+}
+
+function loadUserPreferences() {
+  if (!USER_PREFERENCES) return;
+
+  // Load filters
+  if (USER_PREFERENCES.filter) {
+    // Parse filter if it's a string (from database)
+    const filterData = typeof USER_PREFERENCES.filter === 'string' ? JSON.parse(USER_PREFERENCES.filter) : USER_PREFERENCES.filter;
+    appState.filters = { ...appState.filters, ...filterData };
+  }
+
+  // Load sort column and direction
+  if (USER_PREFERENCES.sort_column) {
+    appState.sortColumn = USER_PREFERENCES.sort_column;
+  }
+  if (USER_PREFERENCES.sort_direction) {
+    appState.sortDirection = USER_PREFERENCES.sort_direction;
+  }
+
+  // Load pagination
+  if (USER_PREFERENCES.current_page) {
+    appState.currentPage = USER_PREFERENCES.current_page;
+  }
+  if (USER_PREFERENCES.entries_per_page) {
+    appState.itemsPerPage = USER_PREFERENCES.entries_per_page;
+  }
+}
+
+function reorderColumn(fromIndex, toIndex) {
+  const newOrder = [...appState.columnOrder];
+  const [movedItem] = newOrder.splice(fromIndex, 1);
+  newOrder.splice(toIndex, 0, movedItem);
+  appState.columnOrder = newOrder;
+  saveColumnOrder();
+}
+
 function setLoading(isLoading) {
   appState.loading = isLoading;
   const tbody = document.getElementById('simplifyTable_table-body');
@@ -142,7 +273,8 @@ function setLoading(isLoading) {
       const row = document.createElement('tr');
       row.className = 'simplifyTable_skeleton-row';
 
-      COLUMNS.forEach((column) => {
+      const orderedColumns = getOrderedColumns();
+      orderedColumns.forEach((column) => {
         const td = document.createElement('td');
         td.className = 'simplifyTable_table-cell';
         if (column.align) {
@@ -404,7 +536,8 @@ function createTableRow(item) {
     row.classList.add('simplifyTable_row-not-due');
   }
 
-  COLUMNS.forEach((column) => {
+  const orderedColumns = getOrderedColumns();
+  orderedColumns.forEach((column) => {
     const cell = document.createElement('td');
     cell.className = 'simplifyTable_table-cell';
 
@@ -464,7 +597,15 @@ function createTableRow(item) {
         cell.className += ' simplifyTable_negative-amount';
       }
     } else if (column.type === 'date') {
-      cell.textContent = value ? new Date(value).toLocaleDateString('de-DE') : '-';
+      if (value) {
+        const date = new Date(value);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        cell.textContent = `${day}.${month}.${year}`;
+      } else {
+        cell.textContent = '-';
+      }
     } else if (column.type === 'invoiceLink') {
       if (value) {
         const link = document.createElement('a');
@@ -504,11 +645,13 @@ function createTable() {
   const thead = document.createElement('thead');
   const headerRow = document.createElement('tr');
 
-  COLUMNS.forEach((column) => {
+  const orderedColumns = getOrderedColumns();
+  orderedColumns.forEach((column, index) => {
     const th = document.createElement('th');
     th.className = 'simplifyTable_table-header simplifyTable_sortable';
     th.dataset.column = column.id;
-    th.style.cursor = 'pointer';
+    th.dataset.columnIndex = index;
+    th.draggable = true;
 
     // Apply alignment
     if (column.align) {
@@ -538,7 +681,82 @@ function createTable() {
     sortIconContainer.appendChild(sortDownIcon);
     th.appendChild(sortIconContainer);
 
-    th.addEventListener('click', () => sortTable(column.id));
+    // Drag and drop handlers
+    th.addEventListener('dragstart', (e) => {
+      appState.dragState.dragging = true;
+      appState.dragState.draggedColumn = index;
+      th.classList.add('simplifyTable_dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', th.innerHTML);
+    });
+
+    th.addEventListener('dragend', (e) => {
+      appState.dragState.dragging = false;
+      appState.dragState.draggedColumn = null;
+      appState.dragState.dragOverColumn = null;
+      th.classList.remove('simplifyTable_dragging');
+      document.querySelectorAll('.simplifyTable_table-header').forEach((header) => {
+        header.classList.remove('simplifyTable_drag-over-left', 'simplifyTable_drag-over-right');
+      });
+    });
+
+    th.addEventListener('dragover', (e) => {
+      if (!appState.dragState.dragging) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+
+      const draggedIndex = appState.dragState.draggedColumn;
+      if (draggedIndex === null || draggedIndex === index) return;
+
+      // Determine drop position based on mouse position
+      const rect = th.getBoundingClientRect();
+      const midpoint = rect.left + rect.width / 2;
+      const isLeftSide = e.clientX < midpoint;
+
+      // Clear previous indicators
+      document.querySelectorAll('.simplifyTable_table-header').forEach((header) => {
+        header.classList.remove('simplifyTable_drag-over-left', 'simplifyTable_drag-over-right');
+      });
+
+      // Add indicator to current target
+      if (isLeftSide) {
+        th.classList.add('simplifyTable_drag-over-left');
+      } else {
+        th.classList.add('simplifyTable_drag-over-right');
+      }
+
+      appState.dragState.dragOverColumn = index;
+    });
+
+    th.addEventListener('dragleave', (e) => {
+      th.classList.remove('simplifyTable_drag-over-left', 'simplifyTable_drag-over-right');
+    });
+
+    th.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const draggedIndex = appState.dragState.draggedColumn;
+      const targetIndex = index;
+
+      if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+      // Perform the reorder
+      reorderColumn(draggedIndex, targetIndex);
+
+      // Rebuild the entire table to reflect new column order
+      const container = document.querySelector('.simplifyTable_container');
+      const oldTableWrapper = container.querySelector('.simplifyTable_table-wrapper');
+      const newTableWrapper = createTable();
+      container.replaceChild(newTableWrapper, oldTableWrapper);
+    });
+
+    // Click handler for sorting (only trigger if not dragging)
+    th.addEventListener('click', (e) => {
+      if (!appState.dragState.dragging) {
+        sortTable(column.id);
+      }
+    });
 
     headerRow.appendChild(th);
   });
@@ -706,6 +924,11 @@ function fetchData(page = 1) {
       appState.totalItems = response.total || 0;
       appState.filteredData = normalizeDataRows(response.data || []);
       updateTable();
+      // Save preferences after successful data fetch (but not on initial load)
+      if (!appState.isInitialLoad) {
+        savePreferencesToDatabase();
+      }
+      appState.isInitialLoad = false;
     })
     .fail((jqXHR, textStatus, errorThrown) => {
       console.error('Error fetching data', textStatus, errorThrown);
@@ -1004,7 +1227,7 @@ function attachEventListeners() {
     const input = document.getElementById(`simplifyTable_${key}-filter`);
     if (input) {
       input.addEventListener('input', (e) => {
-        appState.filters[key] = e.target.value.toLowerCase();
+        appState.filters[key] = e.target.value;
       });
     }
   });
@@ -1119,6 +1342,12 @@ function init() {
   // Load configuration and data from PHP
   loadConfigFromPHP();
 
+  // Load saved column order
+  loadColumnOrder();
+
+  // Load other user preferences (filters, sort, pagination)
+  loadUserPreferences();
+
   // Initialize application state with data from PHP
   appState.data = [];
   appState.filteredData = [];
@@ -1127,7 +1356,12 @@ function init() {
   // Render the UI
   render();
   attachEventListeners();
-  fetchData(1);
+
+  // Update filter UI to reflect loaded preferences
+  updateFilterUI();
+
+  // Fetch data with loaded preferences
+  fetchData(appState.currentPage || 1);
 }
 
 init();

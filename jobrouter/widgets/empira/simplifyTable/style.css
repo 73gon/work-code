@@ -477,6 +477,28 @@
   opacity: 1;
 }
 
+/* Drag and Drop Styles */
+.simplifyTable_table-header.simplifyTable_dragging {
+  opacity: 0.5;
+  cursor: grabbing !important;
+}
+
+.simplifyTable_table-header.simplifyTable_drag-over-left {
+  box-shadow: -4px 0 0 0 var(--primary-color);
+}
+
+.simplifyTable_table-header.simplifyTable_drag-over-right {
+  box-shadow: 4px 0 0 0 var(--primary-color);
+}
+
+.simplifyTable_table-header[draggable='true'] {
+  cursor: grab;
+}
+
+.simplifyTable_table-header[draggable='true']:active {
+  cursor: grabbing;
+}
+
 .simplifyTable_table-row {
   transition: all 0.2s ease;
   border-bottom: 1px solid var(--border-color);
