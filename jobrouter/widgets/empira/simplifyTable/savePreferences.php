@@ -75,6 +75,7 @@ class SavePreferences extends Widget
         $sortDirection = $this->getParam('sort_direction', null);
         $currentPage = max(1, (int)$this->getParam('current_page', 1));
         $entriesPerPage = max(1, (int)$this->getParam('entries_per_page', 25));
+        $zoomLevel = (float)$this->getParam('zoom_level', 1.0);
 
         // Prepare data for SQL
         $safeUsername = addslashes($username);
@@ -100,6 +101,7 @@ class SavePreferences extends Widget
                         sort_direction = " . ($safeSortDirection ? "'{$safeSortDirection}'" : "NULL") . ",
                         current_page = {$currentPage},
                         entries_per_page = {$entriesPerPage},
+                        zoom_level = {$zoomLevel},
                         updated_at = CURRENT_TIMESTAMP
                     WHERE username = '{$safeUsername}'
                 ";
@@ -112,6 +114,7 @@ class SavePreferences extends Widget
                         sort_direction = " . ($safeSortDirection ? "'{$safeSortDirection}'" : "NULL") . ",
                         current_page = {$currentPage},
                         entries_per_page = {$entriesPerPage},
+                        zoom_level = {$zoomLevel},
                         updated_at = GETDATE()
                     WHERE username = '{$safeUsername}'
                 ";
@@ -121,7 +124,7 @@ class SavePreferences extends Widget
             // Insert new record
             $insertQuery = "
                 INSERT INTO WIDGET_SIMPLIFYTABLE
-                (username, filter, column_order, sort_column, sort_direction, current_page, entries_per_page)
+                (username, filter, column_order, sort_column, sort_direction, current_page, entries_per_page, zoom_level)
                 VALUES (
                     '{$safeUsername}',
                     " . ($safeFilter ? "'{$safeFilter}'" : "NULL") . ",
@@ -129,7 +132,8 @@ class SavePreferences extends Widget
                     " . ($safeSortColumn ? "'{$safeSortColumn}'" : "NULL") . ",
                     " . ($safeSortDirection ? "'{$safeSortDirection}'" : "NULL") . ",
                     {$currentPage},
-                    {$entriesPerPage}
+                    {$entriesPerPage},
+                    {$zoomLevel}
                 )
             ";
             $JobDB->exec($insertQuery);

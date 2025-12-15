@@ -128,6 +128,7 @@ var appState = {
     dragOverColumn: null,
   },
   isInitialLoad: true,
+  zoomLevel: 1.0,
 };
 
 // ============================================
@@ -172,6 +173,7 @@ function savePreferencesToDatabase() {
     sort_direction: appState.sortDirection,
     current_page: appState.currentPage,
     entries_per_page: appState.itemsPerPage,
+    zoom_level: appState.zoomLevel,
   };
 
   $j.ajax({
@@ -249,6 +251,11 @@ function loadUserPreferences() {
   if (USER_PREFERENCES.entries_per_page) {
     appState.itemsPerPage = USER_PREFERENCES.entries_per_page;
   }
+
+  // Load zoom level
+  if (USER_PREFERENCES.zoom_level) {
+    appState.zoomLevel = parseFloat(USER_PREFERENCES.zoom_level);
+  }
 }
 
 function reorderColumn(fromIndex, toIndex) {
@@ -303,9 +310,55 @@ function setLoading(isLoading) {
   }
 }
 
+function setZoom(level) {
+  // Clamp zoom level between 0.5 and 2.0
+  const newLevel = Math.max(0.5, Math.min(2.0, level));
+  appState.zoomLevel = newLevel;
+
+  const app = document.getElementById('simplifyTable_app');
+  if (app) {
+    app.style.transform = `scale(${newLevel})`;
+    app.style.transformOrigin = 'top left';
+    app.style.width = `${100 / newLevel}%`;
+    app.style.height = `${100 / newLevel}%`;
+  }
+  if (!appState.isInitialLoad) {
+    savePreferencesToDatabase();
+  }
+}
+
 // ============================================
 // UI CREATION FUNCTIONS
 // ============================================
+
+function createZoomControls() {
+  const controls = document.createElement('div');
+  controls.className = 'simplifyTable_zoom-controls';
+
+  const zoomOutBtn = document.createElement('button');
+  zoomOutBtn.className = 'simplifyTable_zoom-btn';
+  zoomOutBtn.innerHTML = '<i class="fas fa-minus"></i>';
+  zoomOutBtn.title = 'Zoom Out';
+  zoomOutBtn.onclick = () => setZoom(appState.zoomLevel - 0.1);
+
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'simplifyTable_zoom-btn';
+  resetBtn.innerHTML = '<i class="fas fa-undo"></i>';
+  resetBtn.title = 'Reset Zoom';
+  resetBtn.onclick = () => setZoom(1.0);
+
+  const zoomInBtn = document.createElement('button');
+  zoomInBtn.className = 'simplifyTable_zoom-btn';
+  zoomInBtn.innerHTML = '<i class="fas fa-plus"></i>';
+  zoomInBtn.title = 'Zoom In';
+  zoomInBtn.onclick = () => setZoom(appState.zoomLevel + 0.1);
+
+  controls.appendChild(zoomOutBtn);
+  controls.appendChild(resetBtn);
+  controls.appendChild(zoomInBtn);
+
+  return controls;
+}
 
 function createFilterItem(label, type, id, filterKey, options = null) {
   const wrapper = document.createElement('div');
@@ -928,7 +981,6 @@ function fetchData(page = 1) {
       if (!appState.isInitialLoad) {
         savePreferencesToDatabase();
       }
-      appState.isInitialLoad = false;
     })
     .fail((jqXHR, textStatus, errorThrown) => {
       console.error('Error fetching data', textStatus, errorThrown);
@@ -1360,8 +1412,13 @@ function init() {
   // Update filter UI to reflect loaded preferences
   updateFilterUI();
 
+  // Set initial zoom
+  setZoom(appState.zoomLevel);
+
   // Fetch data with loaded preferences
   fetchData(appState.currentPage || 1);
+
+  appState.isInitialLoad = false;
 }
 
 init();
@@ -1370,6 +1427,11 @@ $j('#simplifyTable_app').parent().toggleClass('simplifyTable_background', true);
 (function addWidgetBackground() {
   const appEl = document.getElementById('simplifyTable_app');
   if (!appEl) return;
+
+  const parent = $j(appEl).parent();
+  if (parent.length && !parent.find('.simplifyTable_zoom-controls').length) {
+    parent.append(createZoomControls());
+  }
 
   // Try to add the background directly to the dashboard label element
   const container = appEl.closest('.grid-stack-item-content');

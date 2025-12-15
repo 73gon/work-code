@@ -210,6 +210,7 @@ class SimplifyTable extends Widget
             sort_direction VARCHAR(4),
             current_page INT DEFAULT 1,
             entries_per_page INT DEFAULT 25,
+            zoom_level FLOAT DEFAULT 1.0,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY unique_user (username)
           )
@@ -225,6 +226,7 @@ class SimplifyTable extends Widget
             sort_direction NVARCHAR(4),
             current_page INT DEFAULT 1,
             entries_per_page INT DEFAULT 25,
+            zoom_level FLOAT DEFAULT 1.0,
             updated_at DATETIME DEFAULT GETDATE(),
             CONSTRAINT unique_user UNIQUE (username)
           )
@@ -257,6 +259,7 @@ class SimplifyTable extends Widget
         'sort_direction' => $row['sort_direction'],
         'current_page' => (int)$row['current_page'],
         'entries_per_page' => (int)$row['entries_per_page'],
+        'zoom_level' => isset($row['zoom_level']) ? (float)$row['zoom_level'] : 1.0,
       ];
       return $preferences;
     }
