@@ -30,6 +30,10 @@ class SimplifyTable extends Widget
   }
   */
 
+  public function isMandatory(){
+    return true;
+  }
+
   public function getData()
   {
     $userPreferences = $this->loadUserPreferences();
