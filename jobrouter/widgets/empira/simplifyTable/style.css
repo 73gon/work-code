@@ -583,6 +583,55 @@
   font-size: 14px;
 }
 
+.simplifyTable_history-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.simplifyTable_history-icon {
+  font-size: 16px;
+  color: var(--primary-color);
+}
+
+.simplifyTable_history-link:hover .simplifyTable_history-icon {
+  color: var(--primary-color);
+}
+
+td[data-column='actions'] {
+  width: 90px;
+}
+
+.simplifyTable_actions-cell {
+  padding: 4px 8px !important;
+}
+
+.simplifyTable_actions-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.simplifyTable_protocol-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.simplifyTable_protocol-icon {
+  font-size: 18px;
+  color: var(--info-color);
+}
+
+.simplifyTable_protocol-link:hover .simplifyTable_protocol-icon {
+  color: #60a5fa;
+}
+
 /* Row backgrounds based on status */
 .simplifyTable_row-due {
   background-color: rgba(239, 68, 68, 0.15) !important;

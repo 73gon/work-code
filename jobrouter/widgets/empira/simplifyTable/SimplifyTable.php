@@ -29,11 +29,10 @@ class SimplifyTable extends Widget
     return $this->getUser()->isInJobFunction('Widgets');
   }
   */
-
-  public function isMandatory(){
+ public function isMandatory()
+{
     return true;
-  }
-
+}
   public function getData()
   {
     $userPreferences = $this->loadUserPreferences();
@@ -53,6 +52,7 @@ class SimplifyTable extends Widget
   public function getColumns()
   {
     return [
+      ['id' => 'actions', 'label' => '', 'type' => 'actions', 'align' => 'center'],
       ['id' => 'status', 'label' => 'Status', 'type' => 'status', 'align' => 'center'],
       ['id' => 'entryDate', 'label' => 'Eingangsdatum', 'type' => 'date', 'align' => 'left'],
       ['id' => 'stepLabel', 'label' => 'Schritt', 'type' => 'text', 'align' => 'left'],
@@ -71,8 +71,6 @@ class SimplifyTable extends Widget
       ['id' => 'orderId', 'label' => 'Auftragsnummer', 'type' => 'text', 'align' => 'left'],
       ['id' => 'paymentAmount', 'label' => 'Zahlbetrag', 'type' => 'currency', 'align' => 'left'],
       ['id' => 'paymentDate', 'label' => 'Zahldatum', 'type' => 'date', 'align' => 'left'],
-      ['id' => 'invoice', 'label' => 'Rechnung', 'type' => 'invoiceLink', 'align' => 'center'],
-      ['id' => 'protocol', 'label' => 'Protokoll', 'type' => 'text', 'align' => 'left'],
       ['id' => 'chargeable', 'label' => 'Weiterbelasten', 'type' => 'text', 'align' => 'center'],
     ];
   }
@@ -153,27 +151,31 @@ class SimplifyTable extends Widget
      * @throws \Exception If the database type cannot be detected.
      */
     public function getDatabaseType()
-    {
-        $jobDB = $this->getJobDB();
-        try {
-            $result = $jobDB->query("SELECT VERSION()");
-            $row = $jobDB->fetchAll($result);
-            if (is_string($row[0]["VERSION()"])) {
-                return "MySQL";
-            }
-        } catch (\Exception $e) {
-        }
+	{
+		$jobDB = $this->getJobDB();
 
-        try {
-            $result = $jobDB->query("SELECT @@VERSION");
-            $row = $jobDB->fetchAll($result);
-            if (is_string(reset($row[0]))) {
-                return "MSSQL";
-            }
-        } catch (\Exception $e) {
-        }
-        throw new \Exception("Database could not be detected");
-    }
+		// MSSQL (sqlsrv driver)
+		try {
+			$result = $jobDB->query("SELECT @@VERSION");
+			if ($result) {
+				return "MSSQL";
+			}
+		} catch (\Exception $e) {
+			// ignore
+		}
+
+		// MySQL
+		try {
+			$result = $jobDB->query("SELECT VERSION()");
+			if ($result) {
+				return "MySQL";
+			}
+		} catch (\Exception $e) {
+			// ignore
+		}
+
+		throw new \Exception("Database type could not be detected");
+	}
 
   /**
    * Initialize the user preferences table if it doesn't exist
@@ -279,7 +281,8 @@ class SimplifyTable extends Widget
     $JobDB = $this->getJobDB();
     $maxRows = 1000; // cap initial payload to speed up widget load
 
-    $currentUsername = $this->getUser()->getUsername();
+	$currentUsername = $this->getUser()->getUsername();
+
     $query = "
             SELECT *
             FROM V_UEBERSICHTEN_WIDGET

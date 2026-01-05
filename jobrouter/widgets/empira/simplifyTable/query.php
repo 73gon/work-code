@@ -42,7 +42,15 @@ class Query extends Widget
         $offset = ($page - 1) * $perPage;
 
         $sortColumn = $this->getParam('sortColumn', '');
+		if ($sortColumn === 'historyLink') {
+			$sortColumn = '';
+		}
         $sortDirection = strtolower($this->getParam('sortDirection', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+		if (empty($sortColumn)) {
+			$sortColumn = 'invoiceDate';
+			$sortDirection = 'desc';
+		}
 
         $username = $this->getParam('username', '');
 
@@ -108,10 +116,12 @@ class Query extends Widget
 
         $dataQuery = "SELECT * FROM V_UEBERSICHTEN_WIDGET {$whereSql} {$orderSql} OFFSET {$offset} ROWS FETCH NEXT {$perPage} ROWS ONLY";
         $result = $JobDB->query($dataQuery);
+		$username = $this->getParam('username', '');
 
         $data = [];
         while ($row = $JobDB->fetchRow($result)) {
-            $data[] = $this->mapRow($row);
+            //$data[] = $this->mapRow($row);
+			$data[] = $this->mapRow($row, $username);
         }
 
         return [
@@ -291,11 +301,12 @@ class Query extends Widget
         return $where;
     }
 
-    private function mapRow(array $row): array
+	private function mapRow(array $row, string $username): array
     {
         // Normalize keys to lowercase for consistent access
         $row = array_change_key_case($row, CASE_LOWER);
 
+		$processId = $row['processid'] ?? '';
         $statusId = isset($row['status']) ? $row['status'] : '';
         $statusLabel = '';
 
@@ -324,6 +335,7 @@ class Query extends Widget
         }
 
         return [
+			'historyLink' => $this->buildTrackingLink($processId, $username),
             'status' => $statusLabel,
             'entryDate' => isset($row['eingangsdatum']) ? $row['eingangsdatum'] : '',
             'stepLabel' => isset($row['steplabel']) ? $row['steplabel'] : '',
@@ -361,6 +373,25 @@ class Query extends Widget
             'rechnungsdatum' => isset($row['rechnungsdatum']) ? $row['rechnungsdatum'] : '',
         ];
     }
+
+	//private function buildTrackingLink(string $processId): string
+	private function buildTrackingLink(string $processId, string $username): string
+	{
+		if ($processId === '' || $username === '') {
+			return '';
+		}
+
+		$passphrase = '6unYY_z[&%z-S,t2';
+		$jrKey = md5($processId . $passphrase . strtolower($username));
+
+		return
+			'https://jobrouter.empira-invest.com/jobrouter/index.php'
+			. '?cmd=Tracking_ShowTracking'
+			. '&jrprocessid=' . urlencode($processId)
+			. '&display=popup'
+			. '&jrkey=' . $jrKey;
+	}
+
 }
 
 Query::execute();

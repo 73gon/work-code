@@ -193,12 +193,38 @@ function savePreferencesToDatabase() {
 }
 
 function loadColumnOrder() {
+  // Helper to validate and migrate column order
+  const validateAndMigrateOrder = (order) => {
+    if (!Array.isArray(order)) return null;
+
+    // Get current valid column IDs
+    const validIds = COLUMNS.map((col) => col.id);
+
+    // Filter out old/invalid column IDs and migrate old ones
+    let migratedOrder = order.filter((id) => id !== 'historyLink' && id !== 'invoice' && id !== 'protocol').filter((id) => validIds.includes(id));
+
+    // Ensure 'actions' column is first if it exists in COLUMNS
+    if (validIds.includes('actions') && !migratedOrder.includes('actions')) {
+      migratedOrder.unshift('actions');
+    }
+
+    // Add any missing columns at the end
+    validIds.forEach((id) => {
+      if (!migratedOrder.includes(id)) {
+        migratedOrder.push(id);
+      }
+    });
+
+    return migratedOrder.length === validIds.length ? migratedOrder : null;
+  };
+
   // First try to load from database (user preferences)
   if (USER_PREFERENCES && USER_PREFERENCES.column_order) {
     try {
       const order = USER_PREFERENCES.column_order;
-      if (Array.isArray(order) && order.length === COLUMNS.length) {
-        appState.columnOrder = order;
+      const migratedOrder = validateAndMigrateOrder(order);
+      if (migratedOrder) {
+        appState.columnOrder = migratedOrder;
         return;
       }
     } catch (e) {
@@ -211,8 +237,9 @@ function loadColumnOrder() {
     const saved = localStorage.getItem('simplifyTable_columnOrder');
     if (saved) {
       const order = JSON.parse(saved);
-      if (Array.isArray(order) && order.length === COLUMNS.length) {
-        appState.columnOrder = order;
+      const migratedOrder = validateAndMigrateOrder(order);
+      if (migratedOrder) {
+        appState.columnOrder = migratedOrder;
         return;
       }
     }
@@ -259,6 +286,10 @@ function loadUserPreferences() {
 }
 
 function reorderColumn(fromIndex, toIndex) {
+  // Prevent moving the actions column (always first)
+  if (fromIndex === 0 || toIndex === 0) {
+    return;
+  }
   const newOrder = [...appState.columnOrder];
   const [movedItem] = newOrder.splice(fromIndex, 1);
   newOrder.splice(toIndex, 0, movedItem);
@@ -593,6 +624,7 @@ function createTableRow(item) {
   orderedColumns.forEach((column) => {
     const cell = document.createElement('td');
     cell.className = 'simplifyTable_table-cell';
+    cell.dataset.column = column.id;
 
     // Apply alignment
     if (column.align) {
@@ -600,7 +632,70 @@ function createTableRow(item) {
     }
 
     const value = item[column.id];
-    if (column.type === 'status') {
+
+    if (column.type === 'actions') {
+      cell.className += ' simplifyTable_actions-cell';
+      const actionsContainer = document.createElement('div');
+      actionsContainer.className = 'simplifyTable_actions-container';
+
+      // History link
+      const historyValue = item.historyLink;
+      if (historyValue) {
+        const historyLink = document.createElement('a');
+        historyLink.href = '#';
+        historyLink.dataset.url = historyValue;
+        historyLink.className = 'simplifyTable_history-link';
+        historyLink.title = 'Vorgangshistorie anzeigen';
+
+        const historyIcon = document.createElement('i');
+        historyIcon.className = 'fa-solid fa-clock-rotate-left simplifyTable_history-icon';
+
+        historyLink.appendChild(historyIcon);
+        actionsContainer.appendChild(historyLink);
+
+        historyLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.open(historyLink.dataset.url, '_blank', 'width=1000,height=700,resizable=yes,scrollbars=yes');
+        });
+      }
+
+      // Invoice link (Rechnung)
+      const invoiceValue = item.invoice;
+      if (invoiceValue) {
+        const invoiceLink = document.createElement('a');
+        invoiceLink.href = `https://jobrouter.empira-invest.com/jobrouter/FIBU_URL.php?dokument=${invoiceValue}`;
+        invoiceLink.target = '_blank';
+        invoiceLink.rel = 'noopener noreferrer';
+        invoiceLink.className = 'simplifyTable_invoice-link';
+        invoiceLink.title = `Rechnung öffnen: ${invoiceValue}`;
+
+        const invoiceIcon = document.createElement('i');
+        invoiceIcon.className = 'fas fa-file-invoice simplifyTable_invoice-icon';
+        invoiceLink.appendChild(invoiceIcon);
+
+        actionsContainer.appendChild(invoiceLink);
+      }
+
+      // Protocol link (Protokoll)
+      const protocolValue = item.protocol;
+      if (protocolValue) {
+        const protocolLink = document.createElement('a');
+        protocolLink.href = `https://jobrouter.empira-invest.com/jobrouter/PROTOCOL_URL.php?dokument=${protocolValue}`;
+        protocolLink.target = '_blank';
+        protocolLink.rel = 'noopener noreferrer';
+        protocolLink.className = 'simplifyTable_protocol-link';
+        protocolLink.title = `Protokoll öffnen: ${protocolValue}`;
+
+        const protocolIcon = document.createElement('i');
+        protocolIcon.className = 'fas fa-file-alt simplifyTable_protocol-icon';
+        protocolLink.appendChild(protocolIcon);
+
+        actionsContainer.appendChild(protocolLink);
+      }
+
+      cell.appendChild(actionsContainer);
+    } else if (column.type === 'status') {
       const statusValue = (value || '').toLowerCase();
       const runtime = item.runtime || '';
       const dueDate = item.dueDate || '';
@@ -659,23 +754,6 @@ function createTableRow(item) {
       } else {
         cell.textContent = '-';
       }
-    } else if (column.type === 'invoiceLink') {
-      if (value) {
-        const link = document.createElement('a');
-        link.href = `https://jobrouter.empira-invest.com/jobrouter/FIBU_URL.php?dokument=${value}`;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.className = 'simplifyTable_invoice-link';
-        link.title = `Rechnung öffnen: ${value}`;
-
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-file-invoice simplifyTable_invoice-icon';
-        link.appendChild(icon);
-
-        cell.appendChild(link);
-      } else {
-        cell.textContent = '-';
-      }
     } else if (column.type === 'number') {
       cell.textContent = value;
     } else {
@@ -700,11 +778,22 @@ function createTable() {
 
   const orderedColumns = getOrderedColumns();
   orderedColumns.forEach((column, index) => {
+    const isActionsColumn = column.id === 'actions';
     const th = document.createElement('th');
-    th.className = 'simplifyTable_table-header simplifyTable_sortable';
+    th.className = 'simplifyTable_table-header';
+    if (!isActionsColumn) {
+      th.classList.add('simplifyTable_sortable');
+    }
     th.dataset.column = column.id;
     th.dataset.columnIndex = index;
     th.draggable = true;
+
+    if (isActionsColumn) {
+      th.draggable = false;
+      th.style.cursor = 'default';
+      th.addEventListener('click', (e) => e.stopPropagation());
+      th.addEventListener('dragstart', (e) => e.preventDefault());
+    }
 
     // Apply alignment
     if (column.align) {
@@ -714,25 +803,26 @@ function createTable() {
     const headerContent = document.createElement('span');
     headerContent.textContent = column.label;
     th.appendChild(headerContent);
+    if (!isActionsColumn) {
+      const sortIconContainer = document.createElement('span');
+      sortIconContainer.className = 'simplifyTable_sort-icon-container';
 
-    const sortIconContainer = document.createElement('span');
-    sortIconContainer.className = 'simplifyTable_sort-icon-container';
+      const sortUpIcon = document.createElement('i');
+      sortUpIcon.className = 'fas fa-caret-up simplifyTable_sort-arrow simplifyTable_sort-arrow-up';
+      if (appState.sortColumn === column.id && appState.sortDirection === 'asc') {
+        sortUpIcon.classList.add('simplifyTable_active');
+      }
 
-    const sortUpIcon = document.createElement('i');
-    sortUpIcon.className = 'fas fa-caret-up simplifyTable_sort-arrow simplifyTable_sort-arrow-up';
-    if (appState.sortColumn === column.id && appState.sortDirection === 'asc') {
-      sortUpIcon.classList.add('simplifyTable_active');
+      const sortDownIcon = document.createElement('i');
+      sortDownIcon.className = 'fas fa-caret-down simplifyTable_sort-arrow simplifyTable_sort-arrow-down';
+      if (appState.sortColumn === column.id && appState.sortDirection === 'desc') {
+        sortDownIcon.classList.add('simplifyTable_active');
+      }
+
+      sortIconContainer.appendChild(sortUpIcon);
+      sortIconContainer.appendChild(sortDownIcon);
+      th.appendChild(sortIconContainer);
     }
-
-    const sortDownIcon = document.createElement('i');
-    sortDownIcon.className = 'fas fa-caret-down simplifyTable_sort-arrow simplifyTable_sort-arrow-down';
-    if (appState.sortColumn === column.id && appState.sortDirection === 'desc') {
-      sortDownIcon.classList.add('simplifyTable_active');
-    }
-
-    sortIconContainer.appendChild(sortUpIcon);
-    sortIconContainer.appendChild(sortDownIcon);
-    th.appendChild(sortIconContainer);
 
     // Drag and drop handlers
     th.addEventListener('dragstart', (e) => {
@@ -755,6 +845,8 @@ function createTable() {
 
     th.addEventListener('dragover', (e) => {
       if (!appState.dragState.dragging) return;
+      // Prevent dropping on the actions column (index 0)
+      if (index === 0) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
 
@@ -792,7 +884,8 @@ function createTable() {
       const draggedIndex = appState.dragState.draggedColumn;
       const targetIndex = index;
 
-      if (draggedIndex === null || draggedIndex === targetIndex) return;
+      // Prevent dropping on or moving the actions column
+      if (draggedIndex === null || draggedIndex === targetIndex || draggedIndex === 0 || targetIndex === 0) return;
 
       // Perform the reorder
       reorderColumn(draggedIndex, targetIndex);
@@ -805,8 +898,13 @@ function createTable() {
     });
 
     // Click handler for sorting (only trigger if not dragging)
-    th.addEventListener('click', (e) => {
+    /*th.addEventListener('click', (e) => {
       if (!appState.dragState.dragging) {
+        sortTable(column.id);
+      }
+    });*/
+    th.addEventListener('click', (e) => {
+      if (!isActionsColumn && !appState.dragState.dragging) {
         sortTable(column.id);
       }
     });
