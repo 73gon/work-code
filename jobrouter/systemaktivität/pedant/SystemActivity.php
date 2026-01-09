@@ -248,9 +248,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $falseStates = ['processing', 'failed', 'uploaded', ''];
 
-        if ($dataItem["status"] == "uploaded") {
-            $this->storeOutputParameter('tempJSON', json_encode($data));
-        }
+        $this->storeOutputParameter('tempJSON', json_encode($data));
 
         if (in_array($dataItem["status"], $falseStates) === false) {
             $check = true;
@@ -258,7 +256,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         if ($check === true) {
-            if ($type = "e_invoice") {
+            if ($type == "e_invoice") {
                 $pdfPath = $this->getSystemActivityVar('PDFPATH');
                 if (file_exists($pdfPath)) {
                     unlink($pdfPath);
@@ -330,7 +328,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $temp .= " FROM " . $table;
         $result = $JobDB->query($temp);
-        $payload = [];
+        $payloads = [];
 
         while ($row = $JobDB->fetchRow($result)) {
             $data = [];
@@ -457,7 +455,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $temp .= " FROM " . $table;
         $result = $JobDB->query($temp);
-        $payload = [];
+        $payloads = [];
 
         while ($row = $JobDB->fetchRow($result)) {
             $data = [];
@@ -564,7 +562,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         $temp .= " FROM " . $table;
         $result = $JobDB->query($temp);
-        $payload = [];
+        $payloads = [];
 
         while ($row = $JobDB->fetchRow($result)) {
             $data = [];
@@ -1102,17 +1100,18 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         $attributes7 = $this->resolveOutputParameterListAttributes('positionDetails'); //positionDetails
+        $lineItems = $dataItem['lineItems'];
 
         $values7 = [
-            'positionNumber' => [],
-            'singleNetPrice' => [],
-            'singleNetAmount' => [],
-            'quantity' => [],
-            'unitOfMeasureCode' => [],
+            'positionNumber' => $lineItems['lineSubPositionNumber'],
+            'singleNetPrice' => $lineItems['lineSubUnitPrice'],
+            'singleNetAmount' => $lineItems['lineSubNetAmount'],
+            'quantity' => $lineItems['lineSubQuantity'],
+            'unitOfMeasureCode' => $lineItems['lineSubUnit'],
             'articleNumber' => [],
             'articleName' => [],
-            'itemDescription' => [],
-            'vatRatePerLine' => []
+            'itemDescription' => $lineItems['lineSubDescription'],
+            'vatRatePerLine' =>  $lineItems['lineSubVatPercent']
         ];
 
         if ($type == "e_invoice") {
@@ -1327,4 +1326,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
     }
 }
-//Version 1.8.1
+//Version 1.9
