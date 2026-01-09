@@ -59,11 +59,11 @@ class Query extends Widget
             'weiterbelasten' => $this->getParam('weiterbelasten', ''),
             'rolle' => $this->getParam('rolle', ''),
             'rechnungstyp' => $this->getParam('rechnungstyp', ''),
-            'bruttobetrag' => $this->getParam('bruttobetrag', ''),
+            'bruttobetragFrom' => $this->getParam('bruttobetragFrom', ''),
+            'bruttobetragTo' => $this->getParam('bruttobetragTo', ''),
             'dokumentId' => $this->getParam('dokumentId', ''),
             'bearbeiter' => $this->getParam('bearbeiter', ''),
             'rechnungsnummer' => $this->getParam('rechnungsnummer', ''),
-            'schritt' => $this->getParam('schritt', ''),
             'status' => $this->getParam('status', ''),
             'laufzeit' => $this->getParam('laufzeit', ''),
             'coor' => $this->getParam('coor', ''),
@@ -73,6 +73,7 @@ class Query extends Widget
 
         $gesellschaftList = $this->decodeListParam($this->getParam('gesellschaft', ''));
         $fondsList = $this->decodeListParam($this->getParam('fonds', ''));
+        $schrittList = $this->decodeListParam($this->getParam('schritt', ''));
 
         $sortMap = [
             'entryDate' => 'eingangsdatum',
@@ -104,7 +105,7 @@ class Query extends Widget
             $orderSql = 'ORDER BY (SELECT NULL)';
         }
 
-        $where = $this->buildWhereClauses($filters, $username, $gesellschaftList, $fondsList);
+        $where = $this->buildWhereClauses($filters, $username, $gesellschaftList, $fondsList, $schrittList);
         $whereSql = empty($where) ? '' : 'WHERE ' . implode(' AND ', $where);
 
         $JobDB = $this->getJobDB();
@@ -115,6 +116,7 @@ class Query extends Widget
         $total = $totalRow ? (int) $totalRow['total'] : 0;
 
         $dataQuery = "SELECT * FROM V_UEBERSICHTEN_WIDGET {$whereSql} {$orderSql} OFFSET {$offset} ROWS FETCH NEXT {$perPage} ROWS ONLY";
+        error_log('Data Query: ' . $dataQuery);
         $result = $JobDB->query($dataQuery);
 		$username = $this->getParam('username', '');
 
@@ -144,7 +146,7 @@ class Query extends Widget
         return [$value];
     }
 
-    private function buildWhereClauses(array $filters, string $username, array $gesellschaftList, array $fondsList): array
+    private function buildWhereClauses(array $filters, string $username, array $gesellschaftList, array $fondsList, array $schrittList = []): array
     {
         $where = [];
 
@@ -174,9 +176,14 @@ class Query extends Widget
             $where[] = "LOWER(rechnungstyp) LIKE '%{$value}%'";
         }
 
-        if (!empty($filters['bruttobetrag'])) {
-            $value = addslashes($filters['bruttobetrag']);
-            $where[] = "CAST(bruttobetrag AS VARCHAR(50)) LIKE '%{$value}%'";
+        if (!empty($filters['bruttobetragFrom'])) {
+            $value = floatval($filters['bruttobetragFrom']);
+            $where[] = "bruttobetrag >= {$value}";
+        }
+
+        if (!empty($filters['bruttobetragTo'])) {
+            $value = floatval($filters['bruttobetragTo']);
+            $where[] = "bruttobetrag <= {$value}";
         }
 
         if (!empty($filters['dokumentId'])) {
@@ -194,9 +201,19 @@ class Query extends Widget
             $where[] = "LOWER(rechnungsnummer) LIKE '%{$value}%'";
         }
 
-        if (!empty($filters['schritt']) && $filters['schritt'] !== 'all') {
-            $value = addslashes($filters['schritt']);
-            $where[] = "step = '{$value}'";
+        if (!empty($schrittList)) {
+            // Filter out 'all' values and empty strings
+            $schrittList = array_filter($schrittList, function($item) {
+                return !empty($item) && strtolower($item) !== 'all';
+            });
+
+            if (!empty($schrittList)) {
+                // step is an integer column, so we use numeric values
+                $values = array_map(function ($item) {
+                    return intval($item);
+                }, $schrittList);
+                $where[] = 'step IN (' . implode(',', $values) . ')';
+            }
         }
 
         if (!empty($filters['status']) && $filters['status'] !== 'all') {

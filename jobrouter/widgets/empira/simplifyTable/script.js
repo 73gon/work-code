@@ -98,7 +98,7 @@ var appState = {
   data: [],
   filteredData: [],
   filters: {
-    schritt: 'all',
+    schritt: [],
     kreditor: '',
     rechnungsdatumFrom: '',
     rechnungsdatumTo: '',
@@ -107,7 +107,8 @@ var appState = {
     gesellschaft: [],
     rolle: '',
     rechnungstyp: '',
-    bruttobetrag: '',
+    bruttobetragFrom: '',
+    bruttobetragTo: '',
     fonds: [],
     dokumentId: '',
     bearbeiter: '',
@@ -260,6 +261,18 @@ function loadUserPreferences() {
   if (USER_PREFERENCES.filter) {
     // Parse filter if it's a string (from database)
     const filterData = typeof USER_PREFERENCES.filter === 'string' ? JSON.parse(USER_PREFERENCES.filter) : USER_PREFERENCES.filter;
+
+    // Ensure array fields are always arrays
+    const arrayFields = ['schritt', 'gesellschaft', 'fonds'];
+    arrayFields.forEach((field) => {
+      if (filterData[field] !== undefined) {
+        if (!Array.isArray(filterData[field])) {
+          // Convert string or other value to array
+          filterData[field] = filterData[field] ? [filterData[field]] : [];
+        }
+      }
+    });
+
     appState.filters = { ...appState.filters, ...filterData };
   }
 
@@ -486,6 +499,34 @@ function createFilterItem(label, type, id, filterKey, options = null) {
 
     wrapper.appendChild(labelEl);
     wrapper.appendChild(dateRangeContainer);
+  } else if (type === 'numberrange') {
+    const numberRangeContainer = document.createElement('div');
+    numberRangeContainer.className = 'simplifyTable_date-range-container';
+
+    const fromInput = document.createElement('input');
+    fromInput.type = 'number';
+    fromInput.id = options.fromId;
+    fromInput.className = 'simplifyTable_filter-input simplifyTable_date-range-input';
+    fromInput.placeholder = 'Von';
+    fromInput.step = '0.01';
+
+    const separator = document.createElement('span');
+    separator.className = 'simplifyTable_date-range-separator';
+    separator.textContent = '-';
+
+    const toInput = document.createElement('input');
+    toInput.type = 'number';
+    toInput.id = options.toId;
+    toInput.className = 'simplifyTable_filter-input simplifyTable_date-range-input';
+    toInput.placeholder = 'Bis';
+    toInput.step = '0.01';
+
+    numberRangeContainer.appendChild(fromInput);
+    numberRangeContainer.appendChild(separator);
+    numberRangeContainer.appendChild(toInput);
+
+    wrapper.appendChild(labelEl);
+    wrapper.appendChild(numberRangeContainer);
   } else {
     const input = document.createElement('input');
     input.type = 'text';
@@ -506,7 +547,7 @@ function createFilters() {
   const filters = [
     // Process & Status
     { label: 'Status', type: 'dropdown', id: 'simplifyTable_status-filter', key: 'status', options: DROPDOWN_OPTIONS.status },
-    { label: 'Schritt', type: 'dropdown', id: 'simplifyTable_schritt-filter', key: 'schritt', options: DROPDOWN_OPTIONS.schritt },
+    { label: 'Schritt', type: 'autocomplete', id: 'simplifyTable_schritt-filter', key: 'schritt', options: DROPDOWN_OPTIONS.schritt },
     { label: 'DokumentId', type: 'text', id: 'simplifyTable_dokumentId-filter', key: 'dokumentId' },
 
     // People & Roles
@@ -534,7 +575,13 @@ function createFilters() {
       key: 'rechnungsdatum',
       options: { fromId: 'simplifyTable_rechnungsdatum-from-filter', toId: 'simplifyTable_rechnungsdatum-to-filter' },
     },
-    { label: 'Bruttobetrag', type: 'text', id: 'simplifyTable_bruttobetrag-filter', key: 'bruttobetrag' },
+    {
+      label: 'Bruttobetrag',
+      type: 'numberrange',
+      id: 'simplifyTable_bruttobetrag-filter',
+      key: 'bruttobetrag',
+      options: { fromId: 'simplifyTable_bruttobetrag-from-filter', toId: 'simplifyTable_bruttobetrag-to-filter' },
+    },
 
     // Additional Options
     {
@@ -572,7 +619,7 @@ function createFilters() {
     {
       label: 'Coor Schnittstelle',
       icon: 'fa-exchange-alt',
-      filters: { status: 'aktiv_alle', schritt: '4001' },
+      filters: { status: 'aktiv_alle', schritt: ['4001'] },
     },
   ];
 
@@ -1038,7 +1085,7 @@ function buildRequestParams(pageOverride) {
     username: CURRENT_USER,
   };
 
-  ['kreditor', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
+  ['kreditor', 'rolle', 'rechnungstyp', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
     if (filters[key]) params[key] = filters[key];
   });
 
@@ -1048,7 +1095,11 @@ function buildRequestParams(pageOverride) {
   if (filters.fonds && filters.fonds.length > 0) {
     params.fonds = JSON.stringify(filters.fonds);
   }
-  if (filters.schritt && filters.schritt !== 'all') params.schritt = filters.schritt;
+  if (filters.schritt && filters.schritt.length > 0) {
+    params.schritt = JSON.stringify(filters.schritt);
+  }
+  if (filters.bruttobetragFrom) params.bruttobetragFrom = filters.bruttobetragFrom;
+  if (filters.bruttobetragTo) params.bruttobetragTo = filters.bruttobetragTo;
   if (filters.status && filters.status !== 'all') params.status = filters.status;
   if (filters.laufzeit && filters.laufzeit !== 'all') params.laufzeit = filters.laufzeit;
   if (filters.coor && filters.coor !== 'all') params.coor = filters.coor;
@@ -1094,7 +1145,7 @@ function applyFilters() {
 function applyFilterPreset(preset) {
   // Reset all filters first
   appState.filters = {
-    schritt: 'all',
+    schritt: [],
     kreditor: '',
     rechnungsdatumFrom: '',
     rechnungsdatumTo: '',
@@ -1103,7 +1154,8 @@ function applyFilterPreset(preset) {
     gesellschaft: [],
     rolle: '',
     rechnungstyp: '',
-    bruttobetrag: '',
+    bruttobetragFrom: '',
+    bruttobetragTo: '',
     fonds: [],
     dokumentId: '',
     bearbeiter: '',
@@ -1136,8 +1188,8 @@ function updateFilterUI() {
   const statusSelect = document.getElementById('simplifyTable_status-filter');
   if (statusSelect) statusSelect.value = appState.filters.status || 'all';
 
-  const schrittSelect = document.getElementById('simplifyTable_schritt-filter');
-  if (schrittSelect) schrittSelect.value = appState.filters.schritt || 'all';
+  // Schritt is now multiselect, render tags
+  renderTags('schritt');
 
   const weiterbelastenSelect = document.getElementById('simplifyTable_weiterbelasten-filter');
   if (weiterbelastenSelect) weiterbelastenSelect.value = appState.filters.weiterbelasten || 'all';
@@ -1149,7 +1201,7 @@ function updateFilterUI() {
   if (coorSelect) coorSelect.value = appState.filters.coor || 'all';
 
   // Update text inputs
-  const textFields = ['kreditor', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'];
+  const textFields = ['kreditor', 'rolle', 'rechnungstyp', 'dokumentId', 'bearbeiter', 'rechnungsnummer'];
   textFields.forEach((field) => {
     const input = document.getElementById(`simplifyTable_${field}-filter`);
     if (input) input.value = appState.filters[field] || '';
@@ -1162,6 +1214,13 @@ function updateFilterUI() {
   const dateTo = document.getElementById('simplifyTable_rechnungsdatum-to-filter');
   if (dateTo) dateTo.value = appState.filters.rechnungsdatumTo || '';
 
+  // Update bruttobetrag range inputs
+  const bruttobetragFrom = document.getElementById('simplifyTable_bruttobetrag-from-filter');
+  if (bruttobetragFrom) bruttobetragFrom.value = appState.filters.bruttobetragFrom || '';
+
+  const bruttobetragTo = document.getElementById('simplifyTable_bruttobetrag-to-filter');
+  if (bruttobetragTo) bruttobetragTo.value = appState.filters.bruttobetragTo || '';
+
   // Update autocomplete tags
   renderTags('gesellschaft');
   renderTags('fonds');
@@ -1169,7 +1228,7 @@ function updateFilterUI() {
 
 function resetFilters() {
   appState.filters = {
-    schritt: 'all',
+    schritt: [],
     kreditor: '',
     rechnungsdatumFrom: '',
     rechnungsdatumTo: '',
@@ -1178,7 +1237,8 @@ function resetFilters() {
     gesellschaft: [],
     rolle: '',
     rechnungstyp: '',
-    bruttobetrag: '',
+    bruttobetragFrom: '',
+    bruttobetragTo: '',
     fonds: [],
     dokumentId: '',
     bearbeiter: '',
@@ -1192,6 +1252,7 @@ function resetFilters() {
 
   renderTags('gesellschaft');
   renderTags('fonds');
+  renderTags('schritt');
 
   applyFilters();
 }
@@ -1209,30 +1270,37 @@ function showAutocomplete(field, inputElement) {
   let allOptions = [];
   if (inputElement.dataset.options) {
     const parsedOptions = JSON.parse(inputElement.dataset.options);
-    // Handle both {id, label} objects and plain strings
+    // Keep both id and label for proper mapping
     allOptions = parsedOptions.map((opt) => {
       if (typeof opt === 'object' && opt !== null) {
-        return opt.label || opt.id;
+        return { id: String(opt.id), label: opt.label || String(opt.id) };
       }
-      return opt;
+      return { id: String(opt), label: String(opt) };
     });
   } else {
-    allOptions = [...new Set(appState.data.map((item) => item[field]))].filter((v) => v);
+    const uniqueValues = [...new Set(appState.data.map((item) => item[field]))].filter((v) => v);
+    allOptions = uniqueValues.map((v) => ({ id: String(v), label: String(v) }));
   }
 
-  const filtered = inputValue ? allOptions.filter((value) => value.toLowerCase().includes(inputValue)) : allOptions;
+  // Filter by label (what user types/sees)
+  const filtered = inputValue ? allOptions.filter((opt) => opt.label.toLowerCase().includes(inputValue)) : allOptions;
 
-  const selectedValues = appState.filters[field] || [];
-  const availableOptions = filtered.filter((value) => !selectedValues.some((selected) => selected.toLowerCase() === value.toLowerCase()));
+  // Ensure selectedValues is always an array (contains IDs)
+  let selectedIds = appState.filters[field] || [];
+  if (!Array.isArray(selectedIds)) {
+    selectedIds = selectedIds ? [selectedIds] : [];
+  }
+  // Filter out already selected options by ID
+  const availableOptions = filtered.filter((opt) => !selectedIds.includes(String(opt.id)));
 
   if (availableOptions.length > 0) {
     autocompleteList.innerHTML = '';
-    availableOptions.forEach((value) => {
+    availableOptions.forEach((opt) => {
       const item = document.createElement('div');
       item.className = 'simplifyTable_autocomplete-item';
-      item.textContent = value;
+      item.textContent = opt.label; // Display label
       item.onclick = () => {
-        addTag(field, value);
+        addTag(field, String(opt.id)); // Store ID
         inputElement.value = '';
         showAutocomplete(field, inputElement);
       };
@@ -1245,6 +1313,10 @@ function showAutocomplete(field, inputElement) {
 }
 
 function addTag(field, value) {
+  // Ensure the filter field is an array
+  if (!Array.isArray(appState.filters[field])) {
+    appState.filters[field] = appState.filters[field] ? [appState.filters[field]] : [];
+  }
   if (!appState.filters[field].includes(value)) {
     appState.filters[field].push(value);
     renderTags(field);
@@ -1252,6 +1324,10 @@ function addTag(field, value) {
 }
 
 function removeTag(field, index) {
+  // Ensure the filter field is an array
+  if (!Array.isArray(appState.filters[field])) {
+    appState.filters[field] = appState.filters[field] ? [appState.filters[field]] : [];
+  }
   appState.filters[field].splice(index, 1);
   renderTags(field);
 }
@@ -1263,13 +1339,40 @@ function renderTags(field) {
 
   container.querySelectorAll('.simplifyTable_tag').forEach((tag) => tag.remove());
 
-  appState.filters[field].forEach((value, index) => {
+  // Ensure the filter field is an array
+  let values = appState.filters[field] || [];
+  if (!Array.isArray(values)) {
+    values = values ? [values] : [];
+    appState.filters[field] = values;
+  }
+
+  // Get options to look up labels from IDs
+  let optionsMap = {};
+  if (input.dataset.options) {
+    try {
+      const parsedOptions = JSON.parse(input.dataset.options);
+      parsedOptions.forEach((opt) => {
+        if (typeof opt === 'object' && opt !== null) {
+          optionsMap[String(opt.id)] = opt.label || String(opt.id);
+        } else {
+          optionsMap[String(opt)] = String(opt);
+        }
+      });
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }
+
+  values.forEach((value, index) => {
     const tag = document.createElement('span');
     tag.className = 'simplifyTable_tag';
-    tag.title = value;
+
+    // Look up the label from the ID, fallback to value itself
+    const displayLabel = optionsMap[String(value)] || value;
+    tag.title = displayLabel;
 
     const textSpan = document.createElement('span');
-    textSpan.textContent = value;
+    textSpan.textContent = displayLabel;
 
     const removeBtn = document.createElement('span');
     removeBtn.className = 'simplifyTable_tag-remove';
@@ -1373,7 +1476,7 @@ function updateSortArrows() {
 // ============================================
 
 function attachEventListeners() {
-  ['kreditor', 'rolle', 'rechnungstyp', 'bruttobetrag', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
+  ['kreditor', 'rolle', 'rechnungstyp', 'dokumentId', 'bearbeiter', 'rechnungsnummer'].forEach((key) => {
     const input = document.getElementById(`simplifyTable_${key}-filter`);
     if (input) {
       input.addEventListener('input', (e) => {
@@ -1382,7 +1485,7 @@ function attachEventListeners() {
     }
   });
 
-  ['gesellschaft', 'fonds'].forEach((key) => {
+  ['gesellschaft', 'fonds', 'schritt'].forEach((key) => {
     const input = document.getElementById(`simplifyTable_${key}-filter`);
     const container = document.getElementById(`simplifyTable_${key}-filter-container`);
 
@@ -1409,7 +1512,7 @@ function attachEventListeners() {
     }
   });
 
-  ['schritt', 'status', 'laufzeit', 'coor', 'weiterbelasten'].forEach((key) => {
+  ['status', 'laufzeit', 'coor', 'weiterbelasten'].forEach((key) => {
     const select = document.getElementById(`simplifyTable_${key}-filter`);
     if (select) {
       select.addEventListener('change', (e) => {
@@ -1429,6 +1532,20 @@ function attachEventListeners() {
   if (rechnungsdatumTo) {
     rechnungsdatumTo.addEventListener('change', (e) => {
       appState.filters.rechnungsdatumTo = e.target.value;
+    });
+  }
+
+  const bruttobetragFrom = document.getElementById('simplifyTable_bruttobetrag-from-filter');
+  if (bruttobetragFrom) {
+    bruttobetragFrom.addEventListener('input', (e) => {
+      appState.filters.bruttobetragFrom = e.target.value;
+    });
+  }
+
+  const bruttobetragTo = document.getElementById('simplifyTable_bruttobetrag-to-filter');
+  if (bruttobetragTo) {
+    bruttobetragTo.addEventListener('input', (e) => {
+      appState.filters.bruttobetragTo = e.target.value;
     });
   }
 

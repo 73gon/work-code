@@ -671,22 +671,40 @@ td[data-column='actions'] {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+.simplifyTable_table-wrapper::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--dark-bg);
+.simplifyTable_table-wrapper::-webkit-scrollbar-track {
+  background: transparent !important;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 5px;
+.simplifyTable_table-wrapper::-webkit-scrollbar-thumb {
+  background: #ffcc0d !important;
+  border-radius: 4px !important;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--hover-bg);
+.simplifyTable_table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #e6b800 !important;
+}
+
+.simplifyTable_filter-container::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.simplifyTable_filter-container::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.simplifyTable_filter-container::-webkit-scrollbar-thumb {
+  background: #ffcc0d !important;
+  border-radius: 4px !important;
+}
+
+.simplifyTable_filter-container::-webkit-scrollbar-thumb:hover {
+  background: #e6b800 !important;
 }
 
 /* Responsive */
@@ -787,7 +805,7 @@ td[data-column='actions'] {
 .simplifyTable_pagination-buttons {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 5px;
 }
 
 .simplifyTable_pagination-btn {
