@@ -256,9 +256,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         }
 
         if ($check === true) {
+            error_log($type);
             if ($type == "e_invoice") {
                 $pdfPath = $this->getSystemActivityVar('PDFPATH');
                 if (file_exists($pdfPath)) {
+                    error_log("file does exist");
                     unlink($pdfPath);
                 }
 
@@ -979,7 +981,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             //pdf
             $urlPDF = $dataItem['eInvoicePdfPath'];
             $tempPath = $this->getTempPath();
-            $tempFileName = $dataItem['fileName'];
+            $tempFileName = pathinfo($dataItem['fileName'], PATHINFO_FILENAME);
             $savePath = $tempPath . "/pedant";
 
             if (!is_dir($savePath)) {
@@ -996,6 +998,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             curl_close($ch);
 
             $eInvoicePDF = $savePath . "/" . $tempFileName . "_PDF_.pdf";
+            error_log($eInvoicePDF);
+            error_log($dataPDF === false ? 'Failed to download PDF' : 'PDF downloaded successfully');
+            error_log(print_r($dataPDF, true));
             file_put_contents($eInvoicePDF, $dataPDF);
             $this->setSystemActivityVar('PDFPATH', $eInvoicePDF);
 
