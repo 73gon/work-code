@@ -9,61 +9,61 @@ use Throwable;
 require_once('../../../includes/central.php');
 
 class SavePreferences extends Widget
-{
-    public function getTitle(): string
     {
+    public function getTitle(): string
+        {
         return 'SimplifyTable Save Preferences';
-    }
+        }
 
     public static function execute(): void
-    {
+        {
         try {
             $widget = new static();
             $response = $widget->handleRequest();
             header('Content-Type: application/json');
             echo json_encode($response);
-        } catch (Exception $e) {
+            } catch (Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Exception: ' . $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
-        } catch (Throwable $e) {
+            } catch (Throwable $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Error: ' . $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+            }
         }
-    }
 
     /**
      * Determines the database type based on the version query.
      */
     private function getDatabaseType()
-    {
+        {
         $jobDB = $this->getJobDB();
         try {
             $result = $jobDB->query("SELECT VERSION()");
             $row = $jobDB->fetchAll($result);
             if (is_string($row[0]["VERSION()"])) {
                 return "MySQL";
+                }
+            } catch (Exception $e) {
             }
-        } catch (Exception $e) {
-        }
 
         try {
             $result = $jobDB->query("SELECT @@VERSION");
             $row = $jobDB->fetchAll($result);
             if (is_string(reset($row[0]))) {
                 return "MSSQL";
+                }
+            } catch (Exception $e) {
             }
-        } catch (Exception $e) {
-        }
         throw new Exception("Database could not be detected");
-    }
+        }
 
     private function getParam(string $key, $default = '')
-    {
+        {
         return isset($_POST[$key]) ? trim($_POST[$key]) : $default;
-    }
+        }
 
     private function handleRequest(): array
-    {
+        {
         $JobDB = $this->getJobDB();
         $dbType = $this->getDatabaseType();
 
@@ -73,9 +73,9 @@ class SavePreferences extends Widget
         $columnOrder = $this->getParam('column_order', null);
         $sortColumn = $this->getParam('sort_column', null);
         $sortDirection = $this->getParam('sort_direction', null);
-        $currentPage = max(1, (int)$this->getParam('current_page', 1));
-        $entriesPerPage = max(1, (int)$this->getParam('entries_per_page', 25));
-        $zoomLevel = (float)$this->getParam('zoom_level', 1.0);
+        $currentPage = max(1, (int) $this->getParam('current_page', 1));
+        $entriesPerPage = max(1, (int) $this->getParam('entries_per_page', 25));
+        $zoomLevel = (float) $this->getParam('zoom_level', 1.0);
 
         // Prepare data for SQL
         $safeUsername = addslashes($username);
@@ -105,7 +105,7 @@ class SavePreferences extends Widget
                         updated_at = CURRENT_TIMESTAMP
                     WHERE username = '{$safeUsername}'
                 ";
-            } else { // MSSQL
+                } else { // MSSQL
                 $updateQuery = "
                     UPDATE WIDGET_SIMPLIFYTABLE SET
                         filter = " . ($safeFilter ? "'{$safeFilter}'" : "NULL") . ",
@@ -118,9 +118,9 @@ class SavePreferences extends Widget
                         updated_at = GETDATE()
                     WHERE username = '{$safeUsername}'
                 ";
-            }
+                }
             $JobDB->exec($updateQuery);
-        } else {
+            } else {
             // Insert new record
             $insertQuery = "
                 INSERT INTO WIDGET_SIMPLIFYTABLE
@@ -137,13 +137,13 @@ class SavePreferences extends Widget
                 )
             ";
             $JobDB->exec($insertQuery);
-        }
+            }
 
         return [
             'success' => true,
             'message' => 'Preferences saved successfully'
         ];
+        }
     }
-}
 
 SavePreferences::execute();

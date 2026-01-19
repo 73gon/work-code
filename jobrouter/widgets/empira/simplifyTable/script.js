@@ -314,8 +314,18 @@ function setLoading(isLoading) {
   appState.loading = isLoading;
   const tbody = document.getElementById('simplifyTable_table-body');
   const tableWrapper = tbody ? tbody.closest('.simplifyTable_table-wrapper') : null;
+  const table = tableWrapper ? tableWrapper.querySelector('.simplifyTable_data-table') : null;
 
   if (isLoading && tbody) {
+    // Show table and skeleton rows during loading
+    if (table) table.style.display = '';
+
+    // Hide no-results message during loading
+    if (tableWrapper) {
+      const noResults = tableWrapper.querySelector('.simplifyTable_no-results');
+      if (noResults) noResults.style.display = 'none';
+    }
+
     // Show skeleton rows
     tbody.innerHTML = '';
     const skeletonRowCount = 25; // Number of skeleton rows to show
@@ -976,6 +986,7 @@ function createTable() {
   tableWrapper.appendChild(table);
 
   if (appState.filteredData.length === 0) {
+    table.style.display = 'none';
     const noResults = document.createElement('div');
     noResults.className = 'simplifyTable_no-results';
     noResults.innerHTML = '<i class="fas fa-clipboard-list"></i><p>Es wurden keine Einträge gefunden</p>';
@@ -1413,17 +1424,24 @@ function updateTable() {
   updateSortArrows();
 
   const tableWrapper = tbody.closest('.simplifyTable_table-wrapper');
+  const table = tableWrapper.querySelector('.simplifyTable_data-table');
   let noResults = tableWrapper.querySelector('.simplifyTable_no-results');
 
   if (appState.filteredData.length === 0) {
+    if (table) table.style.display = 'none';
     if (!noResults) {
       noResults = document.createElement('div');
       noResults.className = 'simplifyTable_no-results';
       noResults.innerHTML = '<i class="fas fa-clipboard-list"></i><p>Es wurden keine Einträge gefunden</p>';
       tableWrapper.appendChild(noResults);
+    } else {
+      noResults.style.display = '';
     }
-  } else if (noResults) {
-    noResults.remove();
+  } else {
+    if (table) table.style.display = '';
+    if (noResults) {
+      noResults.remove();
+    }
   }
 }
 

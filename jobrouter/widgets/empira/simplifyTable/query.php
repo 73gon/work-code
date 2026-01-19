@@ -9,48 +9,48 @@ use Throwable;
 require_once('../../../includes/central.php');
 
 class Query extends Widget
-{
+    {
     public function getTitle(): string
-    {
+        {
         return 'SimplifyTable Query';
-    }
+        }
     public static function execute(): void
-    {
+        {
         try {
             $widget = new static();
             $response = $widget->handleRequest();
             header('Content-Type: application/json');
             echo json_encode($response);
-        } catch (Exception $e) {
+            } catch (Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Exception: ' . $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
-        } catch (Throwable $e) {
+            } catch (Throwable $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Error: ' . $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+            }
         }
-    }
 
     private function getParam(string $key, $default = '')
-    {
+        {
         return isset($_GET[$key]) ? trim($_GET[$key]) : $default;
-    }
+        }
 
     private function handleRequest(): array
-    {
+        {
         $page = max(1, (int) $this->getParam('page', 1));
         $perPage = max(1, min(100, (int) $this->getParam('perPage', 25)));
         $offset = ($page - 1) * $perPage;
 
         $sortColumn = $this->getParam('sortColumn', '');
-		if ($sortColumn === 'historyLink') {
-			$sortColumn = '';
-		}
+        if ($sortColumn === 'historyLink') {
+            $sortColumn = '';
+            }
         $sortDirection = strtolower($this->getParam('sortDirection', 'asc')) === 'desc' ? 'desc' : 'asc';
 
-		if (empty($sortColumn)) {
-			$sortColumn = 'invoiceDate';
-			$sortDirection = 'desc';
-		}
+        if (empty($sortColumn)) {
+            $sortColumn = 'invoiceDate';
+            $sortDirection = 'desc';
+            }
 
         $username = $this->getParam('username', '');
 
@@ -100,10 +100,10 @@ class Query extends Widget
         $orderSql = '';
         if (!empty($sortColumn) && array_key_exists($sortColumn, $sortMap)) {
             $orderSql = 'ORDER BY ' . $sortMap[$sortColumn] . ' ' . $sortDirection;
-        } else {
+            } else {
             // SQL Server requires ORDER BY when using OFFSET/FETCH
             $orderSql = 'ORDER BY (SELECT NULL)';
-        }
+            }
 
         $where = $this->buildWhereClauses($filters, $username, $gesellschaftList, $fondsList, $schrittList);
         $whereSql = empty($where) ? '' : 'WHERE ' . implode(' AND ', $where);
@@ -118,13 +118,13 @@ class Query extends Widget
         $dataQuery = "SELECT * FROM V_UEBERSICHTEN_WIDGET {$whereSql} {$orderSql} OFFSET {$offset} ROWS FETCH NEXT {$perPage} ROWS ONLY";
         error_log('Data Query: ' . $dataQuery);
         $result = $JobDB->query($dataQuery);
-		$username = $this->getParam('username', '');
+        $username = $this->getParam('username', '');
 
         $data = [];
         while ($row = $JobDB->fetchRow($result)) {
             //$data[] = $this->mapRow($row);
-			$data[] = $this->mapRow($row, $username);
-        }
+            $data[] = $this->mapRow($row, $username);
+            }
 
         return [
             'page' => $page,
@@ -132,89 +132,89 @@ class Query extends Widget
             'total' => $total,
             'data' => $data,
         ];
-    }
+        }
 
     private function decodeListParam(string $value): array
-    {
+        {
         if (empty($value)) {
             return [];
-        }
+            }
         $decoded = json_decode($value, true);
         if (is_array($decoded)) {
             return $decoded;
-        }
+            }
         return [$value];
-    }
+        }
 
     private function buildWhereClauses(array $filters, string $username, array $gesellschaftList, array $fondsList, array $schrittList = []): array
-    {
+        {
         $where = [];
 
         if (!empty($username)) {
             $safeUser = addslashes($username);
             $where[] = "CONCAT(',', REPLACE(LOWER(berechtigung), ' ', ''), ',') LIKE CONCAT('%,', LOWER('{$safeUser}'), ',%')";
-        }
+            }
 
         if (!empty($filters['kreditor'])) {
             $value = addslashes(strtolower($filters['kreditor']));
             $where[] = "LOWER(kredname) LIKE '%{$value}%'";
-        }
+            }
 
         if (!empty($filters['weiterbelasten']) && $filters['weiterbelasten'] !== 'all') {
             error_log('Filter weiterbelasten: ' . $filters['weiterbelasten']);
             $value = addslashes($filters['weiterbelasten']);
             $where[] = "berechenbar = '{$value}'";
-        }
+            }
 
         if (!empty($filters['rolle'])) {
             $value = addslashes(strtolower($filters['rolle']));
             $where[] = "LOWER(jobfunction) LIKE '%{$value}%'";
-        }
+            }
 
         if (!empty($filters['rechnungstyp'])) {
             $value = addslashes(strtolower($filters['rechnungstyp']));
             $where[] = "LOWER(rechnungstyp) LIKE '%{$value}%'";
-        }
+            }
 
         if (!empty($filters['bruttobetragFrom'])) {
             $value = floatval($filters['bruttobetragFrom']);
             $where[] = "bruttobetrag >= {$value}";
-        }
+            }
 
         if (!empty($filters['bruttobetragTo'])) {
             $value = floatval($filters['bruttobetragTo']);
             $where[] = "bruttobetrag <= {$value}";
-        }
+            }
 
         if (!empty($filters['dokumentId'])) {
             $value = addslashes(strtolower($filters['dokumentId']));
             $where[] = "LOWER(dokumentid) LIKE '%{$value}%'";
-        }
+            }
 
         if (!empty($filters['bearbeiter'])) {
             $value = addslashes(strtolower($filters['bearbeiter']));
             $where[] = "LOWER(fullname) LIKE '%{$value}%'";
-        }
+            }
 
         if (!empty($filters['rechnungsnummer'])) {
             $value = addslashes(strtolower($filters['rechnungsnummer']));
             $where[] = "LOWER(rechnungsnummer) LIKE '%{$value}%'";
-        }
+            }
 
         if (!empty($schrittList)) {
             // Filter out 'all' values and empty strings
-            $schrittList = array_filter($schrittList, function($item) {
+            $schrittList = array_filter($schrittList, function ($item) {
                 return !empty($item) && strtolower($item) !== 'all';
-            });
+                });
 
             if (!empty($schrittList)) {
                 // step is an integer column, so we use numeric values
                 $values = array_map(function ($item) {
                     return intval($item);
-                }, $schrittList);
+                    }, $schrittList);
                 $where[] = 'step IN (' . implode(',', $values) . ')';
+                }
             }
-        }
 
         if (!empty($filters['status']) && $filters['status'] !== 'all') {
             $statusValue = strtolower($filters['status']);
@@ -248,8 +248,8 @@ class Query extends Widget
                 default:
                     $value = addslashes($filters['status']);
                     $where[] = "status = '{$value}'";
+                }
             }
-        }
 
         if (!empty($filters['laufzeit']) && $filters['laufzeit'] !== 'all') {
             $value = $filters['laufzeit'];
@@ -272,64 +272,64 @@ class Query extends Widget
                 default:
                     // Fallback: try to parse custom range like "X-Y Tage"
                     if (preg_match('/^(\d+)-(\d+)\s*Tage$/i', $value, $matches)) {
-                        $min = (int)$matches[1];
-                        $max = (int)$matches[2];
+                        $min = (int) $matches[1];
+                        $max = (int) $matches[2];
                         $where[] = "({$daysSql} >= {$min} AND {$daysSql} <= {$max})";
-                    } elseif (preg_match('/^(\d+)\+\s*Tage$/i', $value, $matches)) {
-                        $min = (int)$matches[1];
+                        } elseif (preg_match('/^(\d+)\+\s*Tage$/i', $value, $matches)) {
+                        $min = (int) $matches[1];
                         $where[] = "({$daysSql} >= {$min})";
-                    }
+                        }
+                }
             }
-        }
 
         if (!empty($filters['coor']) && $filters['coor'] !== 'all') {
             $value = strtolower($filters['coor']);
             if ($value === 'ja') {
                 $where[] = "coorflag = 1";
-            } elseif ($value === 'nein') {
+                } elseif ($value === 'nein') {
                 $where[] = "coorflag = 0";
+                }
             }
-        }
 
         if (!empty($filters['rechnungsdatumFrom'])) {
             $value = addslashes($filters['rechnungsdatumFrom']);
             $where[] = "rechnungsdatum >= '{$value}'";
-        }
+            }
 
         if (!empty($filters['rechnungsdatumTo'])) {
             $value = addslashes($filters['rechnungsdatumTo']);
             $where[] = "rechnungsdatum <= '{$value}'";
-        }
+            }
 
         if (!empty($gesellschaftList)) {
             $values = array_map(function ($item) {
                 return "'" . addslashes($item) . "'";
-            }, $gesellschaftList);
-            $where[] = 'mandantname IN (' . implode(',', $values) . ')';
-        }
+                }, $gesellschaftList);
+            $where[] = 'mandantnr IN (' . implode(',', $values) . ')';
+            }
 
         if (!empty($fondsList)) {
             $values = array_map(function ($item) {
                 return "'" . addslashes($item) . "'";
-            }, $fondsList);
+                }, $fondsList);
             $where[] = 'fond_abkuerzung IN (' . implode(',', $values) . ')';
-        }
+            }
 
         return $where;
-    }
+        }
 
-	private function mapRow(array $row, string $username): array
-    {
+    private function mapRow(array $row, string $username): array
+        {
         // Normalize keys to lowercase for consistent access
         $row = array_change_key_case($row, CASE_LOWER);
 
-		$processId = $row['processid'] ?? '';
+        $processId = $row['processid'] ?? '';
         $statusId = isset($row['status']) ? $row['status'] : '';
         $statusLabel = '';
 
         if ($statusId === 'completed') {
             $statusLabel = 'Beendet';
-        } else if ($statusId === 'rest') {
+            } else if ($statusId === 'rest') {
             // Check if eskalation (due date) <= today
             $eskalationDate = isset($row['eskalation']) ? $row['eskalation'] : '';
             if (!empty($eskalationDate)) {
@@ -338,21 +338,21 @@ class Query extends Widget
                 if ($eskalation <= $today) {
                     $statusId = 'due';
                     $statusLabel = 'Faellig';
-                } else {
+                    } else {
                     $statusId = 'not_due';
                     $statusLabel = 'Nicht Faellig';
-                }
-            } else {
+                    }
+                } else {
                 // No eskalation date, default to not due
                 $statusId = 'not_due';
                 $statusLabel = 'Nicht Faellig';
-            }
-        } else {
+                }
+            } else {
             $statusLabel = $statusId;
-        }
+            }
 
         return [
-			'historyLink' => $this->buildTrackingLink($processId, $username),
+            'historyLink' => $this->buildTrackingLink($processId, $username),
             'status' => $statusLabel,
             'entryDate' => isset($row['eingangsdatum']) ? $row['eingangsdatum'] : '',
             'stepLabel' => isset($row['steplabel']) ? $row['steplabel'] : '',
@@ -389,26 +389,26 @@ class Query extends Widget
             'coor' => isset($row['coorflag']) ? $row['coorflag'] : (isset($row['coor_orderid']) ? $row['coor_orderid'] : ''),
             'rechnungsdatum' => isset($row['rechnungsdatum']) ? $row['rechnungsdatum'] : '',
         ];
+        }
+
+    //private function buildTrackingLink(string $processId): string
+    private function buildTrackingLink(string $processId, string $username): string
+        {
+        if ($processId === '' || $username === '') {
+            return '';
+            }
+
+        $passphrase = '6unYY_z[&%z-S,t2';
+        $jrKey = md5($processId . $passphrase . strtolower($username));
+
+        return
+            'https://jobrouter.empira-invest.com/jobrouter/index.php'
+            . '?cmd=Tracking_ShowTracking'
+            . '&jrprocessid=' . urlencode($processId)
+            . '&display=popup'
+            . '&jrkey=' . $jrKey;
+        }
+
     }
-
-	//private function buildTrackingLink(string $processId): string
-	private function buildTrackingLink(string $processId, string $username): string
-	{
-		if ($processId === '' || $username === '') {
-			return '';
-		}
-
-		$passphrase = '6unYY_z[&%z-S,t2';
-		$jrKey = md5($processId . $passphrase . strtolower($username));
-
-		return
-			'https://jobrouter.empira-invest.com/jobrouter/index.php'
-			. '?cmd=Tracking_ShowTracking'
-			. '&jrprocessid=' . urlencode($processId)
-			. '&display=popup'
-			. '&jrkey=' . $jrKey;
-	}
-
-}
 
 Query::execute();

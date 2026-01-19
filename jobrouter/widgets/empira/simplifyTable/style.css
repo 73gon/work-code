@@ -566,7 +566,9 @@
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  transition: transform 0.2s ease, color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease;
 }
 
 .simplifyTable_invoice-icon {
@@ -588,7 +590,9 @@
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  transition: transform 0.2s ease, color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease;
 }
 
 .simplifyTable_history-icon {
@@ -620,7 +624,9 @@ td[data-column='actions'] {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  transition: transform 0.2s ease, color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease;
 }
 
 .simplifyTable_protocol-icon {
@@ -672,8 +678,8 @@ td[data-column='actions'] {
 
 /* Scrollbar */
 .simplifyTable_table-wrapper::-webkit-scrollbar {
-  width: 8px !important;
-  height: 8px !important;
+  width: 20px !important;
+  height: 20px !important;
 }
 
 .simplifyTable_table-wrapper::-webkit-scrollbar-track {
@@ -690,8 +696,8 @@ td[data-column='actions'] {
 }
 
 .simplifyTable_filter-container::-webkit-scrollbar {
-  width: 8px !important;
-  height: 8px !important;
+  width: 20px !important;
+  height: 20px !important;
 }
 
 .simplifyTable_filter-container::-webkit-scrollbar-track {
