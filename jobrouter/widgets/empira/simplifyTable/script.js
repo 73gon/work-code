@@ -161,11 +161,11 @@ function saveColumnOrder() {
   } catch (e) {
     console.warn('Could not save column order:', e);
   }
-  // Also save to database
   savePreferencesToDatabase();
 }
 
 function savePreferencesToDatabase() {
+  console.log('Saving preferences to database...');
   const preferences = {
     username: CURRENT_USER,
     filter: JSON.stringify(appState.filters),
@@ -1122,6 +1122,7 @@ function buildRequestParams(pageOverride) {
 }
 
 function fetchData(page = 1) {
+  console.log('Fetching data for page:', page);
   const params = buildRequestParams(page);
   setLoading(true);
   return $j
@@ -1138,7 +1139,9 @@ function fetchData(page = 1) {
       appState.filteredData = normalizeDataRows(response.data || []);
       updateTable();
       // Save preferences after successful data fetch (but not on initial load)
+      console.log('isInitialLoad:');
       if (!appState.isInitialLoad) {
+        console.log('saved');
         savePreferencesToDatabase();
       }
     })
