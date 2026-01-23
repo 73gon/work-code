@@ -462,8 +462,10 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 } else {
                 if ($httpcode == 404 && (300 / $resubTime) > $counter404) {
                     $this->setSystemActivityVar('COUNTER404', ++$counter404);
+                    return;
                     } elseif (!in_array($httpcode, self::SUCCESS_HTTP_CODES)) {
                     $this->setSystemActivityVar('FETCHCOUNTER', ++$counter);
+                    return;
                     }
                 }
 
@@ -1862,5 +1864,5 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
         }
     }
-//v1.10
+//v1.10.1
 
