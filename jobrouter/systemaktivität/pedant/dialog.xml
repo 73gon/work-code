@@ -62,7 +62,7 @@
                     <field id="costCenterTable" name="COSTCENTERTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
                     <list id="importCostCenter" name="IMPORTCOSTCENTER" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
                 </inputParameters>
-                <outputParameters>
+                <outputParameters> 
                 </outputParameters>
             </function>
             <function id='fetchData' name='FETCH' description='FETCH_DESC'>

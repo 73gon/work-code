@@ -1,72 +1,72 @@
 <?php
 class pedantSystemActivity extends AbstractSystemActivityAPI
-{
+    {
     private $recipientOutputFileName = "pedantRecipientOutput.csv";
     private $vendorOutputFileName = "pedantVendorOutput.csv";
     private $costCenterOutputFileName = "pedantCostCenterOutput.csv";
-    private $demoURL  = "https://api.demo.pedant.ai";
+    private $demoURL = "https://api.demo.pedant.ai";
     private $productiveURL = "https://api.pedant.ai";
     private $maxFileSize = 20;
 
     public function getActivityName()
-    {
+        {
         return 'Pedant';
-    }
+        }
 
 
     public function getActivityDescription()
-    {
+        {
         return READ_DESC;
-    }
+        }
 
 
     public function getDialogXml()
-    {
+        {
         return file_get_contents(__DIR__ . '/dialog.xml');
-    }
+        }
 
     protected function pedant()
-    {
+        {
         $this->maxFileSize = $this->resolveInputParameter('maxFileSize') ?: 20;
         $this->setResubmission($this->resolveInputParameter('new') ? 17520 : $this->resolveInputParameter('intervalOld'), $this->resolveInputParameter('new') ? 'h' : 'm');
 
         if (!date_default_timezone_get()) {
             date_default_timezone_set('Europe/Berlin');
-        }
+            }
 
         if (!$this->getSystemActivityVar('UPLOADCOUNTER')) {
             $this->setSystemActivityVar('UPLOADCOUNTER', 0);
-        }
+            }
 
         if ($this->getSystemActivityVar('FILEID')) {
             $this->checkFile();
-        }
+            }
 
         if (!$this->getSystemActivityVar('FILEID')) {
             $this->uploadFile();
+            }
         }
-    }
 
     protected function importVendorCSV()
-    {
+        {
         $this->importVendor();
         $this->markActivityAsCompleted();
-    }
+        }
 
     protected function importRecipientCSV()
-    {
+        {
         $this->importRecipient();
         $this->markActivityAsCompleted();
-    }
+        }
 
     protected function importCostCenterCSV()
-    {
+        {
         $this->importCostCenter();
         $this->markActivityAsCompleted();
-    }
+        }
 
     protected function fetchData()
-    {
+        {
         $this->markActivityAsPending();
 
         $interval = $this->resolveInputParameter('interval');
@@ -79,32 +79,32 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if ($weekend) {
             if ($currentHour >= $startTime && $currentHour < $endTime) {
                 $this->setResubmission($interval, 'm');
-            } else {
+                } else {
                 $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
                 $this->setResubmission($hoursToStart, 'h');
-            }
-        } else {
+                }
+            } else {
             if ($currentDayOfWeek >= 1 && $currentDayOfWeek <= 5) {
                 if ($currentHour >= $startTime && $currentHour < $endTime) {
                     $this->setResubmission($interval, 'm');
-                } else {
+                    } else {
                     $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
                     $this->setResubmission($hoursToStart, 'h');
-                }
-            } else {
+                    }
+                } else {
                 $hoursToStart = ($currentHour < $startTime) ? $startTime - $currentHour : 24 - $currentHour + $startTime;
                 if ($currentDayOfWeek == 6) {
                     $hoursToStart += 24;
-                }
+                    }
                 $this->setResubmission($hoursToStart, 'h');
+                }
             }
-        }
         $this->fetchInvoices();
-    }
+        }
 
 
     protected function uploadFile()
-    {
+        {
         $curl = curl_init();
         $file = $this->getUploadPath() . $this->resolveInputParameter('inputFile');
         $fileExtension = pathinfo($file, PATHINFO_EXTENSION);
@@ -112,7 +112,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $fileSizeMB = $fileSizeB / (1024 * 1024);
         if ($fileSizeMB > $this->maxFileSize) {
             throw new JobRouterException("File size exceeds the maximum limit of $this->maxFileSize MB. Actual size: $fileSizeMB MB.");
-        }
+            }
 
         $url = ($this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL) .
             (strtolower($fileExtension) == 'xml' ? "/v2/external/documents/invoices/upload" : ($this->resolveInputParameter('zugferd') == '1' ? "/v1/external/documents/invoices/upload" : "/v2/external/documents/invoices/upload"));
@@ -126,13 +126,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 $flag = $flagXML;
                 if (!in_array($flag, $validFlags)) {
                     throw new Exception('Invalid input parameter value for FLAGXML: ' . $flag);
+                    }
                 }
             }
-        }
 
         if (!in_array($flag, $validFlags)) {
             throw new Exception('Invalid input parameter value for FLAG: ' . $flag);
-        }
+            }
 
         $action = $flag;
 
@@ -167,18 +167,18 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if ($counter > $maxCounter && !in_array($httpcode, [200, 201, 404, 503, 502, 500, 0])) {
             $this->setSystemActivityVar('UPLOADCOUNTER', 0);
             throw new JobRouterException('Error occurred during upload after maximum retries (' . $counter . '). HTTP Error Code: ' . $httpcode);
-        } else {
+            } else {
             $this->setSystemActivityVar('UPLOADCOUNTER', ++$counter);
-        }
+            }
 
         try {
             $this->storeOutputParameter('counterSummary', "Upload attempts: {$counter}, HTTP Code: {$httpcode}");
-        } catch (Exception $e) {
-        }
+            } catch (Exception $e) {
+            }
 
         curl_close($curl);
 
-        $fileId =  $data['files'][0]['fileId'];
+        $fileId = $data['files'][0]['fileId'];
         $invoiceId = $data['files'][0]['invoiceId'];
         $type = $data['files'][0]['type'];
 
@@ -188,12 +188,12 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $this->setSystemActivityVar('FETCHCOUNTER', 0);
         $this->setSystemActivityVar('TYPE', $type);
         $this->setSystemActivityVar('COUNTER404', 0);
-    }
+        }
     protected function checkFile()
-    {
+        {
         if (!empty($this->resolveInputParameter('vendorTable'))) {
             $this->importVendor();
-        }
+            }
 
         $baseURL = $this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL;
         $fileId = $this->getSystemActivityVar('FILEID');
@@ -227,18 +227,18 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         if ($counter > $maxCounter && !in_array($httpcode, [200, 404, 503, 502, 500, 0])) {
             $this->setSystemActivityVar('FETCHCOUNTER', 0);
             throw new JobRouterException('Error occurred during file extraction after maximum retries (' . $counter . '). HTTP Error Code: ' . $httpcode);
-        } else {
+            } else {
             if ($httpcode == 404 && (300 / $resubTime) > $counter404) {
                 $this->setSystemActivityVar('COUNTER404', ++$counter404);
-            } elseif ($httpcode != 200) {
+                } elseif ($httpcode != 200) {
                 $this->setSystemActivityVar('FETCHCOUNTER', ++$counter);
+                }
             }
-        }
 
         try {
             $this->storeOutputParameter('counterSummary', "Fetch attempts: {$counter}, HTTP Code: {$httpcode}");
-        } catch (Exception $e) {
-        }
+            } catch (Exception $e) {
+            }
 
         curl_close($curl);
 
@@ -250,44 +250,44 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         if ($dataItem["status"] == "uploaded") {
             $this->storeOutputParameter('tempJSON', json_encode($data));
-        }
+            }
 
         if (in_array($dataItem["status"], $falseStates) === false) {
             $check = true;
             $this->storeList($data);
-        }
+            }
 
         if ($check === true) {
             if ($type = "e_invoice") {
                 $pdfPath = $this->getSystemActivityVar('PDFPATH');
                 if (file_exists($pdfPath)) {
                     unlink($pdfPath);
-                }
+                    }
 
                 $reportPath = $this->getSystemActivityVar('REPORTPATH');
                 if (file_exists($reportPath)) {
                     unlink($reportPath);
-                }
+                    }
 
                 $index = 0;
                 while (true) {
                     $attachmentPath = $this->getSystemActivityVar('ATTACHMENTPATH' . $index);
                     if (!$attachmentPath) {
                         break;
-                    }
+                        }
                     if (file_exists($attachmentPath)) {
                         unlink($attachmentPath);
-                    }
+                        }
                     $index++;
+                    }
                 }
-            }
             $this->setResubmission(1, "s");
             $this->markActivityAsCompleted();
+            }
         }
-    }
 
     protected function importVendor()
-    {
+        {
         $table = $this->resolveInputParameter('vendorTable');
         $listfields = $this->resolveInputParameterListValues('importVendor');
         $fields = ['internalVendorNumber', 'vendorProfileName', 'company', 'street', 'zipCode', 'city', 'country', 'iban', 'taxNumber', 'vatNumber', 'recipientNumber', 'kvk', 'currency', 'blocked', 'sortCode', 'accountNumber'];
@@ -295,12 +295,12 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $list = array();
         foreach ($listfields as $listindex => $listvalue) {
             $list[$listindex] = $listvalue;
-        }
+            }
         ksort($list);
 
         if (empty($table)) {
             return;
-        }
+            }
 
         $JobDB = $this->getJobDB();
 
@@ -309,17 +309,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         foreach ($list as $listindex => $listvalue) {
             if (!empty($listvalue)) {
                 $lastKey = $listindex;
+                }
             }
-        }
 
         foreach ($list as $listindex => $listvalue) {
             if (!empty($listvalue)) {
                 $temp .= $listvalue . " AS " . $fields[$listindex - 1];
                 if ($listindex !== $lastKey) {
                     $temp .= ", ";
+                    }
                 }
             }
-        }
 
         $temp .= " FROM " . $table;
         $result = $JobDB->query($temp);
@@ -337,13 +337,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     $normalized = is_string($value) ? strtolower(trim($value)) : strval($value);
 
                     $data[$field] = in_array($normalized, $truthy) ? 'TRUE' : 'FALSE';
-                } else {
+                    } else {
                     $data[$field] = !empty($value) ? $value : '';
+                    }
                 }
-            }
 
             $payloads[] = $data;
-        }
+            }
 
         $csvData = [];
         $csvData[] = $fields;
@@ -352,16 +352,16 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $rowData = [];
             foreach ($fields as $field) {
                 $rowData[] = isset($payload[$field]) ? $payload[$field] : '';
-            }
+                }
             $csvData[] = $rowData;
-        }
+            }
 
         $csvFilePath = __DIR__ . '/' . $this->vendorOutputFileName;
         $csvFile = fopen($csvFilePath, 'w');
 
         foreach ($csvData as $row) {
             fputcsv($csvFile, $row);
-        }
+            }
 
         fclose($csvFile);
 
@@ -407,14 +407,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         if ($httpcode != 200) {
             throw new JobRouterException('Error occurred during vendor update. HTTP Error Code: ' . $httpcode);
-        }
+            }
 
         curl_close($curl);
         unlink($csvFilePath);
-    }
+        }
 
     protected function importRecipient()
-    {
+        {
         $table = $this->resolveInputParameter('recipientTable');
         $listfields = $this->resolveInputParameterListValues('importRecipient');
         $fields = ['internalRecipientNumber', 'recipientProfileName', 'country', 'city', 'zipCode', 'street', 'company', 'vatNumber'];
@@ -422,12 +422,12 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $list = array();
         foreach ($listfields as $listindex => $listvalue) {
             $list[$listindex] = $listvalue;
-        }
+            }
         ksort($list);
 
         if (empty($table)) {
             return;
-        }
+            }
 
         $JobDB = $this->getJobDB();
 
@@ -436,17 +436,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         foreach ($list as $listindex => $listvalue) {
             if (!empty($listvalue)) {
                 $lastKey = $listindex;
+                }
             }
-        }
 
         foreach ($list as $listindex => $listvalue) {
             if (!empty($listvalue)) {
                 $temp .= $listvalue . " AS " . $fields[$listindex - 1];
                 if ($listindex !== $lastKey) {
                     $temp .= ", ";
+                    }
                 }
             }
-        }
 
         $temp .= " FROM " . $table;
         $result = $JobDB->query($temp);
@@ -457,9 +457,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             foreach ($fields as $index => $field) {
                 $value = isset($row[$fields[$index]]) ? $row[$fields[$index]] : '';
                 $data[$field] = !empty($value) ? $value : '';
-            }
+                }
             $payloads[] = $data;
-        }
+            }
 
         $csvData = [$fields];
 
@@ -467,16 +467,16 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $rowData = [];
             foreach ($fields as $field) {
                 $rowData[] = isset($payload[$field]) ? $payload[$field] : '';
-            }
+                }
             $csvData[] = $rowData;
-        }
+            }
 
         $csvFilePath = __DIR__ . '/' . $this->recipientOutputFileName;
         $csvFile = fopen($csvFilePath, 'w');
 
         foreach ($csvData as $row) {
             fputcsv($csvFile, $row);
-        }
+            }
 
         fclose($csvFile);
 
@@ -514,14 +514,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         if ($httpcode != 200) {
             throw new JobRouterException('Error occurred during recipient update. HTTP Error Code: ' . $httpcode);
-        }
+            }
 
         curl_close($curl);
         unlink($csvFilePath);
-    }
+        }
 
     protected function importCostCenter()
-    {
+        {
         $table = $this->resolveInputParameter('costCenterTable');
         $listfields = $this->resolveInputParameterListValues('importCostCenter');
         $fields = ['internalCostCenterNumber', 'costCenterProfileName', 'recipientNumber'];
@@ -529,12 +529,12 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $list = array();
         foreach ($listfields as $listindex => $listvalue) {
             $list[$listindex] = $listvalue;
-        }
+            }
         ksort($list);
 
         if (empty($table)) {
             return;
-        }
+            }
 
         $JobDB = $this->getJobDB();
 
@@ -543,17 +543,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         foreach ($list as $listindex => $listvalue) {
             if (!empty($listvalue)) {
                 $lastKey = $listindex;
+                }
             }
-        }
 
         foreach ($list as $listindex => $listvalue) {
             if (!empty($listvalue)) {
                 $temp .= $listvalue . " AS " . $fields[$listindex - 1];
                 if ($listindex !== $lastKey) {
                     $temp .= ", ";
+                    }
                 }
             }
-        }
 
         $temp .= " FROM " . $table;
         $result = $JobDB->query($temp);
@@ -564,9 +564,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             foreach ($fields as $index => $field) {
                 $value = isset($row[$fields[$index]]) ? $row[$fields[$index]] : '';
                 $data[$field] = !empty($value) ? $value : '';
-            }
+                }
             $payloads[] = $data;
-        }
+            }
 
         $csvData = [$fields];
 
@@ -574,16 +574,16 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $rowData = [];
             foreach ($fields as $field) {
                 $rowData[] = isset($payload[$field]) ? $payload[$field] : '';
-            }
+                }
             $csvData[] = $rowData;
-        }
+            }
 
         $csvFilePath = __DIR__ . '/' . $this->costCenterOutputFileName;
         $csvFile = fopen($csvFilePath, 'w');
 
         foreach ($csvData as $row) {
             fputcsv($csvFile, $row);
-        }
+            }
 
         fclose($csvFile);
 
@@ -616,11 +616,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         if ($httpcode != 200) {
             throw new JobRouterException('Error occurred during costCenter update. HTTP Error Code: ' . $httpcode);
-        }
+            }
 
         curl_close($curl);
         unlink($csvFilePath);
-    }
+        }
 
     /**
      * Fetches invoices from the Pedant API and updates the resubmission date in the database.
@@ -628,7 +628,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
      * @throws Exception If the database type is unsupported or if the query fails.
      */
     protected function fetchInvoices()
-    {
+        {
         $curl = curl_init();
 
         $baseURL = $this->resolveInputParameter('demo') == '1' ? $this->demoURL : $this->productiveURL;
@@ -669,7 +669,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 SET j.resubmission_date = '$formattedTime'
                 WHERE t.step = $stepID AND t.T_FILEID = '$id';
                 ";
-                } elseif ($dbType === "MSSQL") {
+                    } elseif ($dbType === "MSSQL") {
                     $query = "
                 UPDATE j
                 SET j.resubmission_date = '$formattedTime'
@@ -677,19 +677,19 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 JOIN $table_head AS t ON t.step_id = j.process_step_id
                 WHERE t.step = $stepID AND t.T_FILEID = '$id';
                 ";
-                } else {
+                    } else {
                     throw new Exception("Unsupported database type");
-                }
+                    }
                 try {
                     $jobDB = $this->getJobDB();
                     $jobDB->exec($query);
-                } catch (Exception $e) {
+                    } catch (Exception $e) {
                     throw new Exception("Failed to execute query: " . $e->getMessage());
+                    }
                 }
             }
-        }
         curl_close($curl);
-    }
+        }
 
     /**
      * Determines the database type based on the version query.
@@ -698,27 +698,27 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
      * @throws Exception If the database type cannot be detected.
      */
     public function getDatabaseType()
-    {
+        {
         $jobDB = $this->getJobDB();
         try {
             $result = $jobDB->query("SELECT VERSION()");
             $row = $jobDB->fetchAll($result);
             if (is_string($row[0]["VERSION()"])) {
                 return "MySQL";
+                }
+            } catch (Exception $e) {
             }
-        } catch (Exception $e) {
-        }
 
         try {
             $result = $jobDB->query("SELECT @@VERSION");
             $row = $jobDB->fetchAll($result);
             if (is_string(reset($row[0]))) {
                 return "MSSQL";
+                }
+            } catch (Exception $e) {
             }
-        } catch (Exception $e) {
-        }
         throw new Exception("Database could not be detected");
-    }
+        }
 
     /**
      * Stores the list of invoice details in the system activity.
@@ -726,7 +726,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
      * @param array $data The data containing invoice details.
      */
     public function storeList($data)
-    {
+        {
         $type = $this->getSystemActivityVar('TYPE');
 
         $dataItem = $data['data'][0];
@@ -763,7 +763,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         foreach ($attributes1 as $attribute) {
             $this->setTableValue($attribute['value'], $values1[$attribute['id']]);
-        }
+            }
 
         $attributes2 = $this->resolveOutputParameterListAttributes('vendorDetails'); //vendorDetails
         $values2 = ($type == "e_invoice") ? [
@@ -797,7 +797,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         foreach ($attributes2 as $attribute) {
             $this->setTableValue($attribute['value'], $values2[$attribute['id']]);
-        }
+            }
 
         $attributes3 = $this->resolveOutputParameterListAttributes('invoiceDetails'); //invoiceDetails
 
@@ -861,7 +861,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         foreach ($attributes3 as $attribute) {
             $this->setTableValue($attribute['value'], $values3[$attribute['id']]);
-        }
+            }
 
         $attributes4 = $this->resolveOutputParameterListAttributes('auditTrailDetails'); //auditTrailDetails
         $auditTrail = $type == "e_invoice" ? $auditTrailItem : $dataItem["auditTrail"];
@@ -878,7 +878,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         foreach ($attributes4 as $attribute) {
             $this->setTableValue($attribute['value'], $values4[$attribute['id']]);
-        }
+            }
 
         $attributes5 = $this->resolveOutputParameterListAttributes('rejectionDetails'); //rejectionDetails
 
@@ -892,15 +892,15 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             foreach ($dataItem['violations'] as $violation) {
                 $messages = implode(', ', $violation['messages']);
                 $violations[] = $violation['level'] . ': ' . $messages;
-            }
+                }
             $values5['violations'] = implode(" --- ", $violations);
-        } else {
+            } else {
             $values5['violations'] = '';
-        }
+            }
 
         foreach ($attributes5 as $attribute) {
             $this->setTableValue($attribute['value'], $values5[$attribute['id']]);
-        }
+            }
 
 
         $attributes6 = $this->resolveOutputParameterListAttributes('attachments'); //attachments
@@ -914,7 +914,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
             if (!is_dir($savePath)) {
                 mkdir($savePath, 0777, true);
-            }
+                }
 
             $ch = curl_init($urlPDF);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -934,7 +934,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
             if (!is_dir($savePath)) {
                 mkdir($savePath, 0777, true);
-            }
+                }
 
             $ch = curl_init($urlReport);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -955,7 +955,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             foreach ($attachments as $index => $url) {
                 if ($index >= 3) {
                     break;
-                }
+                    }
                 $ch = curl_init($url);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
@@ -970,8 +970,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     file_put_contents($attachmentPath, $dataAttachment);
                     $this->setSystemActivityVar('ATTACHMENTPATH' . $index, $attachmentPath);
                     $attachmentFiles[] = $attachmentPath;
+                    }
                 }
-            }
 
             $values6 = [
                 'e_invoicePDF' => $eInvoicePDF,
@@ -981,26 +981,26 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
             foreach ($attachmentFiles as $i => $attachmentPath) {
                 $values6['e_invoiceAttachments'][] = $attachmentPath;
-            }
-        } else {
+                }
+            } else {
             $values6 = [
                 'e_invoicePDF' => '',
                 'e_invoiceReport' => '',
                 'e_invoiceAttachments' => []
             ];
-        }
+            }
 
         foreach ($attributes6 as $attribute) {
             $value = $values6[$attribute['id']];
             if ($attribute['subtable'] == "") {
                 $this->attachFile($attribute['value'], $value);
-            } else {
+                } else {
                 $attachments = is_array($value) ? $value : [$value];
                 foreach ($attachments as $attachment) {
                     $this->attachSubtableFile($attribute['subtable'], $this->getSubtableCount($attribute['subtable']) + 1, $attribute['value'], $attachment);
+                    }
                 }
             }
-        }
 
         $attributes7 = $this->resolveOutputParameterListAttributes('positionDetails'); //positionDetails
 
@@ -1029,16 +1029,16 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 $values7['articleName'][] = $line['itemInformationItemName'];
                 $values7['itemDescription'][] = $line['itemInformationItemDescription'];
                 $values7['vatRatePerLine'][] = $line['lineVatInformationInvoicedItemVatRate'];
+                }
             }
-        }
 
         foreach ($invoiceLine as $index => $line) {
             $rowID = $this->getSubtableCount($attributes7[0]['subtable']) + 1;
             foreach ($attributes7 as $attribute) {
                 $value = $values7[$attribute['id']][$index];
                 $this->setSubtableValue($attribute['subtable'], $rowID + $index, $attribute['value'], $value);
+                }
             }
-        }
 
         $attributes8 = $this->resolveOutputParameterListAttributes('workflowDetails'); //workflowDetails
 
@@ -1050,8 +1050,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
         foreach ($attributes8 as $attribute) {
             $this->setTableValue($attribute['value'], $values8[$attribute['id']]);
+            }
         }
-    }
 
 
     /**
@@ -1062,7 +1062,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
      * @return array The UDL as an array of name-value pairs.
      */
     public function getUDL($udl, $elementID)
-    {
+        {
         if ($elementID == 'importVendor') {
             return [
                 ['name' => '-', 'value' => ''],
@@ -1083,7 +1083,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => SORTCODE, 'value' => '15'],
                 ['name' => ACCOUNTNUMBER, 'value' => '16'],
             ];
-        }
+            }
 
         if ($elementID == 'importRecipient') {
             return [
@@ -1097,7 +1097,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => RECIPIENTNAME, 'value' => '7'],
                 ['name' => VAT, 'value' => '8'],
             ];
-        }
+            }
 
         if ($elementID == 'importCostCenter') {
             return [
@@ -1106,7 +1106,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => PROFILNAME, 'value' => '2'],
                 ['name' => RECIPIENTNAME, 'value' => '3'],
             ];
-        }
+            }
 
         if ($elementID == 'recipientDetails') {
             return [
@@ -1120,7 +1120,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => RECIPIENTVATNUMBER, 'value' => 'recipientVatNumber'],
                 ['name' => INTERNALNUMBER, 'value' => 'recipientInternalNumber']
             ];
-        }
+            }
 
         if ($elementID == 'vendorDetails') {
             return [
@@ -1139,7 +1139,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => COMPANYREGISTRATIONNUMBER, 'value' => 'vendorCompanyRegistrationNumber'],
                 ['name' => EMAIL, 'value' => 'vendorEmail']
             ];
-        }
+            }
 
         if ($elementID == 'invoiceDetails') {
             return [
@@ -1172,7 +1172,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => HASPROCESSINGISSUES, 'value' => 'hasProcessingIssues'],
                 ['name' => DELIVERYDATE, 'value' => 'deliveryDate'],
             ];
-        }
+            }
 
         if ($elementID == 'positionDetails') {
             return [
@@ -1187,7 +1187,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => ITEMDESCRIPTION, 'value' => 'itemDescription'],
                 ['name' => VATRATEPERINVOICELINE, 'value' => 'vatRatePerLine']
             ];
-        }
+            }
 
         if ($elementID == 'auditTrailDetails') {
             return [
@@ -1197,7 +1197,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => SUBTYPE, 'value' => 'auditTrailSubType'],
                 ['name' => COMMENT, 'value' => 'auditTrailComment']
             ];
-        }
+            }
 
         if ($elementID == 'rejectionDetails') {
             return [
@@ -1207,7 +1207,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => TYPE, 'value' => 'rejectionType'],
                 ['name' => VIOLATIONS, 'value' => 'violations']
             ];
-        }
+            }
 
         if ($elementID == 'attachments') {
             return [
@@ -1216,15 +1216,16 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => E_INVOICEREPORT, 'value' => 'e_invoiceReport'],
                 ['name' => E_INVOICEATTACHMENT1, 'value' => 'e_invoiceAttachments']
             ];
-        }
+            }
 
         if ($elementID == 'workflowDetails') {
             return [
                 ['name' => '-', 'value' => ''],
                 ['name' => DIREKT, 'value' => 'direkt']
             ];
-        }
+            }
         return null;
+        }
     }
-}
 //Version 1.7.2.1
+
