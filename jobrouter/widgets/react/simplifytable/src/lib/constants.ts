@@ -4,7 +4,7 @@ import type { Column, DropdownOptions, FilterConfig, FilterPreset, TableRow } fr
 // COLUMNS CONFIGURATION (from SimplifyTable.php)
 // ============================================
 
-export const COLUMNS: Column[] = [
+export const DEFAULT_COLUMNS: Column[] = [
   { id: 'actions', label: '', type: 'actions', align: 'center', visible: true },
   { id: 'status', label: 'Status', type: 'status', align: 'center', visible: true },
   { id: 'entryDate', label: 'Eingangsdatum', type: 'date', align: 'left', visible: true },
@@ -31,7 +31,7 @@ export const COLUMNS: Column[] = [
 // DROPDOWN OPTIONS (from SimplifyTable.php - with mock data)
 // ============================================
 
-export const DROPDOWN_OPTIONS: DropdownOptions = {
+export const DEFAULT_DROPDOWN_OPTIONS: DropdownOptions = {
   status: [
     { id: 'completed', label: 'Beendet' },
     { id: 'aktiv_alle', label: 'Aktiv Alle' },
@@ -78,9 +78,9 @@ export const DROPDOWN_OPTIONS: DropdownOptions = {
 // FILTER CONFIGURATION
 // ============================================
 
-export const FILTER_CONFIG: FilterConfig[] = [
-  { id: 'status', label: 'Status', type: 'dropdown', filterKey: 'status', options: DROPDOWN_OPTIONS.status, visible: true },
-  { id: 'schritt', label: 'Schritt', type: 'autocomplete', filterKey: 'schritt', options: DROPDOWN_OPTIONS.schritt, visible: true },
+export const buildFilterConfig = (dropdownOptions: DropdownOptions): FilterConfig[] => [
+  { id: 'status', label: 'Status', type: 'dropdown', filterKey: 'status', options: dropdownOptions.status, visible: true },
+  { id: 'schritt', label: 'Schritt', type: 'autocomplete', filterKey: 'schritt', options: dropdownOptions.schritt, visible: true },
   { id: 'dokumentId', label: 'DokumentId', type: 'text', filterKey: 'dokumentId', visible: true },
   { id: 'bearbeiter', label: 'Bearbeiter', type: 'text', filterKey: 'bearbeiter', visible: true },
   { id: 'rolle', label: 'Rolle', type: 'text', filterKey: 'rolle', visible: true },
@@ -89,10 +89,10 @@ export const FILTER_CONFIG: FilterConfig[] = [
     label: 'Gesellschaft',
     type: 'autocomplete',
     filterKey: 'gesellschaft',
-    options: DROPDOWN_OPTIONS.gesellschaft,
+    options: dropdownOptions.gesellschaft,
     visible: true,
   },
-  { id: 'fonds', label: 'Fonds', type: 'autocomplete', filterKey: 'fonds', options: DROPDOWN_OPTIONS.fonds, visible: true },
+  { id: 'fonds', label: 'Fonds', type: 'autocomplete', filterKey: 'fonds', options: dropdownOptions.fonds, visible: true },
   { id: 'kreditor', label: 'Kreditor', type: 'text', filterKey: 'kreditor', visible: true },
   { id: 'rechnungsnummer', label: 'Rechnungsnummer', type: 'text', filterKey: 'rechnungsnummer', visible: true },
   { id: 'rechnungstyp', label: 'Rechnungstyp', type: 'text', filterKey: 'rechnungstyp', visible: true },
@@ -117,12 +117,14 @@ export const FILTER_CONFIG: FilterConfig[] = [
     label: 'Weiterbelasten',
     type: 'dropdown',
     filterKey: 'weiterbelasten',
-    options: DROPDOWN_OPTIONS.weiterbelasten,
+    options: dropdownOptions.weiterbelasten,
     visible: true,
   },
-  { id: 'laufzeit', label: 'Laufzeit', type: 'dropdown', filterKey: 'laufzeit', options: DROPDOWN_OPTIONS.laufzeit, visible: true },
-  { id: 'coor', label: 'Coor', type: 'dropdown', filterKey: 'coor', options: DROPDOWN_OPTIONS.coor, visible: true },
+  { id: 'laufzeit', label: 'Laufzeit', type: 'dropdown', filterKey: 'laufzeit', options: dropdownOptions.laufzeit, visible: true },
+  { id: 'coor', label: 'Coor', type: 'dropdown', filterKey: 'coor', options: dropdownOptions.coor, visible: true },
 ];
+
+export const DEFAULT_FILTER_CONFIG = buildFilterConfig(DEFAULT_DROPDOWN_OPTIONS);
 
 // ============================================
 // DEFAULT FILTER PRESETS
@@ -174,9 +176,9 @@ const randomFromArray = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.l
 
 export const generateMockData = (count: number = 50): TableRow[] => {
   const statuses = ['completed', 'faellig', 'not_faellig'];
-  const steps = DROPDOWN_OPTIONS.schritt;
-  const companies = DROPDOWN_OPTIONS.gesellschaft;
-  const funds = DROPDOWN_OPTIONS.fonds;
+  const steps = DEFAULT_DROPDOWN_OPTIONS.schritt;
+  const companies = DEFAULT_DROPDOWN_OPTIONS.gesellschaft;
+  const funds = DEFAULT_DROPDOWN_OPTIONS.fonds;
   const names = ['Max Müller', 'Anna Schmidt', 'Peter Weber', 'Maria Fischer', 'Thomas Wagner'];
   const roles = ['Sachbearbeiter', 'Teamleiter', 'Controller', 'Manager', 'Buchhalter'];
   const invoiceTypes = ['Eingangsrechnung', 'Gutschrift', 'Abschlagsrechnung', 'Schlussrechnung'];

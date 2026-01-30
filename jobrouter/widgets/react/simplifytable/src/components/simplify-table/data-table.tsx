@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useLayoutEffect, useRef } from 'react';
 import { useSimplifyTable } from '@/lib/simplify-table-context';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,6 +22,9 @@ export function DataTable() {
   const { state, columns, setSort, setColumnOrder } = useSimplifyTable();
   const [draggedColumn, setDraggedColumn] = useState<number | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<number | null>(null);
+  const [rowHeight, setRowHeight] = useState<number | null>(null);
+  const bodyContainerRef = useRef<HTMLDivElement | null>(null);
+  const headerRowRef = useRef<HTMLTableRowElement | null>(null);
 
   // Get visible columns
   const visibleColumns = useMemo(() => columns.filter((col) => col.visible !== false), [columns]);
@@ -32,6 +35,31 @@ export function DataTable() {
     const end = start + state.itemsPerPage;
     return state.filteredData.slice(start, end);
   }, [state.filteredData, state.currentPage, state.itemsPerPage]);
+
+  useLayoutEffect(() => {
+    const container = bodyContainerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      const containerHeight = container.clientHeight;
+      const headerHeight = headerRowRef.current?.offsetHeight ?? 0;
+      const availableHeight = Math.max(containerHeight - headerHeight, 0);
+      const rowCount = Math.max(3, Math.min(paginatedData.length || 0, state.itemsPerPage));
+      if (!availableHeight || !rowCount) {
+        setRowHeight(null);
+        return;
+      }
+
+      const preferred = 32;
+      const min = 22;
+      const computed = Math.floor(availableHeight / rowCount);
+      const next = Math.max(min, Math.min(preferred, computed));
+      setRowHeight(next);
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [paginatedData.length, state.itemsPerPage]);
 
   const handleSort = (columnId: string) => {
     if (columnId === 'actions') return;
@@ -99,11 +127,20 @@ export function DataTable() {
   }
 
   return (
-    <div className='rounded-xl border overflow-hidden flex flex-col h-full'>
-      <div className='overflow-auto flex-1 min-h-0'>
+    <div
+      className='rounded-xl border overflow-hidden flex flex-col h-full'
+      style={
+        rowHeight
+          ? ({
+              '--table-row-height': `${rowHeight}px`,
+            } as React.CSSProperties)
+          : undefined
+      }
+    >
+      <div ref={bodyContainerRef} className='overflow-auto flex-1 min-h-0'>
         <Table className='border-separate border-spacing-0'>
           <TableHeader className='bg-card z-10'>
-            <TableRow className='hover:bg-transparent'>
+            <TableRow ref={headerRowRef} className='hover:bg-transparent'>
               {visibleColumns.map((column, index) => (
                 <TableHead
                   key={column.id}
@@ -241,11 +278,11 @@ function StatusCell({ status, runtime, dueDate }: StatusCellProps) {
 
   if (statusLower === 'beendet' || statusLower === 'completed') {
     icon = CheckmarkCircle02Icon;
-    color = 'text-green-500';
+      color = '!text-green-500';
     tooltip = runtime ? `Beendet - Laufzeit: ${runtime}` : 'Beendet';
   } else if (statusLower === 'fällig' || statusLower === 'faellig' || statusLower === 'due') {
     icon = AlertCircleIcon;
-    color = 'text-red-500';
+      color = '!text-red-500';
 
     if (dueDate) {
       const dueDateObj = new Date(dueDate);
@@ -260,7 +297,7 @@ function StatusCell({ status, runtime, dueDate }: StatusCellProps) {
     }
   } else if (statusLower === 'nicht fällig' || statusLower === 'nicht faellig' || statusLower === 'not_due' || statusLower === 'not_faellig') {
     icon = Clock01Icon;
-    color = 'text-yellow-500';
+      color = '!text-yellow-500';
     tooltip = runtime ? `Nicht Fällig - Laufzeit: ${runtime}` : 'Nicht Fällig';
   }
 
@@ -293,7 +330,7 @@ function ActionsCell({ row }: ActionsCellProps) {
               e.preventDefault();
               window.open(row.historyLink, '_blank', 'width=1000,height=700,resizable=yes,scrollbars=yes');
             }}
-            className={`p-1 rounded transition-colors ${row.historyLink ? 'text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 cursor-pointer' : 'text-muted-foreground/30 cursor-not-allowed'}`}
+            className={`p-1 rounded transition-colors ${row.historyLink ? '!text-blue-500 hover:!text-blue-600 hover:bg-blue-500/10 cursor-pointer' : 'text-muted-foreground/30 cursor-not-allowed'}`}
             disabled={!row.historyLink}
           >
             <HugeiconsIcon icon={TimeQuarterIcon} size={19} />
@@ -308,7 +345,7 @@ function ActionsCell({ row }: ActionsCellProps) {
         <Tooltip>
           <TooltipTrigger
             onClick={() => row.invoice && window.open(`#invoice/${row.invoice}`, '_blank')}
-            className={`p-1 rounded transition-colors ${row.invoice ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 cursor-pointer' : 'text-muted-foreground/30 cursor-not-allowed'}`}
+            className={`p-1 rounded transition-colors ${row.invoice ? '!text-amber-500 hover:!text-amber-600 hover:bg-amber-500/10 cursor-pointer' : 'text-muted-foreground/30 cursor-not-allowed'}`}
             disabled={!row.invoice}
           >
             <HugeiconsIcon icon={Invoice03Icon} size={19} />
@@ -323,7 +360,7 @@ function ActionsCell({ row }: ActionsCellProps) {
         <Tooltip>
           <TooltipTrigger
             onClick={() => row.protocol && window.open(`#protocol/${row.protocol}`, '_blank')}
-            className={`p-1 rounded transition-colors ${row.protocol ? 'text-purple-500 hover:text-purple-600 hover:bg-purple-500/10 cursor-pointer' : 'text-muted-foreground/30 cursor-not-allowed'}`}
+            className={`p-1 rounded transition-colors ${row.protocol ? '!text-purple-500 hover:!text-purple-600 hover:bg-purple-500/10 cursor-pointer' : 'text-muted-foreground/30 cursor-not-allowed'}`}
             disabled={!row.protocol}
           >
             <HugeiconsIcon icon={File01Icon} size={19} />

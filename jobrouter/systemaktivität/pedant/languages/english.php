@@ -130,3 +130,5 @@ define('COSTCENTERTABLE', 'Cost Center Table');
 define('COUNTERSUMMARY', 'Counter Summary');
 define('AUDITTRAIL', 'Audit Trail');
 define('AUDITTRAILCSV', 'Audit Trail CSV');
+define('INVOICE_STATUS', 'Invoice Status (comma separated)');
+define('SYNONYMS', 'Synonyms');

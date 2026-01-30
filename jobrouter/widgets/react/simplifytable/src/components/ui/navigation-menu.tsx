@@ -2,6 +2,7 @@ import { NavigationMenu as NavigationMenuPrimitive } from "@base-ui/react/naviga
 import { cva } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
+import { usePortalContainer } from "@/lib/portal-container"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 
@@ -99,8 +100,10 @@ function NavigationMenuPositioner({
   alignOffset = 0,
   ...props
 }: NavigationMenuPrimitive.Positioner.Props) {
+  const portalContainer = usePortalContainer()
+
   return (
-    <NavigationMenuPrimitive.Portal>
+    <NavigationMenuPrimitive.Portal container={portalContainer}>
       <NavigationMenuPrimitive.Positioner
         side={side}
         sideOffset={sideOffset}

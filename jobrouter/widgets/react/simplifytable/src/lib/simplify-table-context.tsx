@@ -1,7 +1,14 @@
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
-import type { AppState, Filters, FilterPreset, TableRow, Column, FilterConfig } from './types';
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from 'react';
+import type { AppState, Filters, FilterPreset, Column, FilterConfig } from './types';
 import { DEFAULT_FILTERS } from './types';
-import { COLUMNS, MOCK_DATA, DEFAULT_FILTER_PRESETS, FILTER_CONFIG } from './constants';
+import {
+  DEFAULT_COLUMNS,
+  DEFAULT_DROPDOWN_OPTIONS,
+  DEFAULT_FILTER_CONFIG,
+  DEFAULT_FILTER_PRESETS,
+  MOCK_DATA,
+  buildFilterConfig,
+} from './constants';
 
 interface SimplifyTableContextType {
   state: AppState;
@@ -25,7 +32,13 @@ interface SimplifyTableContextType {
   applyPreset: (presetId: string) => void;
   setSelectedPreset: (presetId: string | null) => void;
   setZoom: (level: number) => void;
-  fetchData: () => void;
+  fetchData: (overrides?: {
+    filters?: Filters;
+    currentPage?: number;
+    itemsPerPage?: number;
+    sortColumn?: string | null;
+    sortDirection?: 'asc' | 'desc';
+  }) => void;
 }
 
 const SimplifyTableContext = createContext<SimplifyTableContextType | null>(null);
@@ -53,199 +66,317 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
     sortColumn: null,
     sortDirection: 'asc',
     loading: false,
-    columnOrder: COLUMNS.map((c) => c.id),
-    visibleColumns: COLUMNS.map((c) => c.id),
-    visibleFilters: FILTER_CONFIG.map((f) => f.id),
+    columnOrder: DEFAULT_COLUMNS.map((c) => c.id),
+    visibleColumns: DEFAULT_COLUMNS.map((c) => c.id),
+    visibleFilters: DEFAULT_FILTER_CONFIG.map((f) => f.id),
     filterPresets: DEFAULT_FILTER_PRESETS,
     selectedPreset: null,
     zoomLevel: 1.0,
   }));
 
+  const [columnsConfig, setColumnsConfig] = useState<Column[]>(DEFAULT_COLUMNS);
+  const [dropdownOptions, setDropdownOptions] = useState(DEFAULT_DROPDOWN_OPTIONS);
+  const currentUserRef = useRef('');
+  const [isInitialized, setIsInitialized] = useState(false);
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
   const columns = useMemo(() => {
     return state.columnOrder
-      .map((id) => COLUMNS.find((c) => c.id === id))
+      .map((id) => columnsConfig.find((c) => c.id === id))
       .filter((c): c is Column => c !== undefined)
       .map((c) => ({ ...c, visible: state.visibleColumns.includes(c.id) }));
-  }, [state.columnOrder, state.visibleColumns]);
+  }, [state.columnOrder, state.visibleColumns, columnsConfig]);
 
   const filterConfigs = useMemo(() => {
-    return FILTER_CONFIG.map((f) => ({
+    const baseConfig = buildFilterConfig(dropdownOptions);
+    return baseConfig.map((f) => ({
       ...f,
       visible: state.visibleFilters.includes(f.id),
     }));
-  }, [state.visibleFilters]);
+  }, [state.visibleFilters, dropdownOptions]);
 
-  // Apply filters and sorting to data
-  const applyFiltersAndSort = useCallback(
-    (data: TableRow[], filters: Filters, sortColumn: string | null, sortDirection: 'asc' | 'desc'): TableRow[] => {
-      let result = [...data];
+  const buildEndpoint = useCallback((fileName: string) => {
+    return new URL(fileName, window.location.href).toString();
+  }, []);
 
-      // Apply filters
-      if (filters.status !== 'all') {
-        result = result.filter((row) => {
-          const status = (row.status || '').toLowerCase();
-          if (filters.status === 'completed') return status === 'completed' || status === 'beendet';
-          if (filters.status === 'aktiv_alle') return status !== 'completed' && status !== 'beendet';
-          if (filters.status === 'faellig') return status === 'faellig' || status === 'fällig' || status === 'due';
-          if (filters.status === 'not_faellig') return status === 'not_faellig' || status === 'nicht fällig' || status === 'not_due';
-          return true;
-        });
-      }
+  const fetchJson = useCallback(async (url: string, options?: RequestInit) => {
+    const response = await fetch(url, {
+      credentials: 'same-origin',
+      ...options,
+    });
 
-      if (filters.schritt.length > 0) {
-        result = result.filter((row) => {
-          const stepLabel = (row.stepLabel || '').toLowerCase();
-          return filters.schritt.some((s) => stepLabel.includes(s.toLowerCase()));
-        });
-      }
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
 
-      if (filters.kreditor) {
-        result = result.filter((row) => (row.creditorName || '').toLowerCase().includes(filters.kreditor.toLowerCase()));
-      }
+    return response.json();
+  }, []);
 
-      if (filters.dokumentId) {
-        result = result.filter((row) => (row.documentId || '').toLowerCase().includes(filters.dokumentId.toLowerCase()));
-      }
+  type QuerySnapshot = Pick<
+    AppState,
+    'currentPage' | 'itemsPerPage' | 'sortColumn' | 'sortDirection' | 'filters'
+  >;
 
-      if (filters.bearbeiter) {
-        result = result.filter((row) => (row.fullName || '').toLowerCase().includes(filters.bearbeiter.toLowerCase()));
-      }
+  const queryServer = useCallback(
+    async (snapshot: QuerySnapshot) => {
+      const url = new URL(buildEndpoint('query.php'));
+      const { filters } = snapshot;
 
-      if (filters.rolle) {
-        result = result.filter((row) => (row.jobFunction || '').toLowerCase().includes(filters.rolle.toLowerCase()));
-      }
+      url.searchParams.set('page', String(snapshot.currentPage));
+      url.searchParams.set('perPage', String(snapshot.itemsPerPage));
+      url.searchParams.set('sortColumn', snapshot.sortColumn ?? '');
+      url.searchParams.set('sortDirection', snapshot.sortDirection);
+      url.searchParams.set('username', currentUserRef.current);
 
-      if (filters.rechnungsnummer) {
-        result = result.filter((row) => (row.invoiceNumber || '').toLowerCase().includes(filters.rechnungsnummer.toLowerCase()));
-      }
-
-      if (filters.rechnungstyp) {
-        result = result.filter((row) => (row.invoiceType || '').toLowerCase().includes(filters.rechnungstyp.toLowerCase()));
-      }
+      if (filters.kreditor) url.searchParams.set('kreditor', filters.kreditor);
+      if (filters.weiterbelasten) url.searchParams.set('weiterbelasten', filters.weiterbelasten);
+      if (filters.rolle) url.searchParams.set('rolle', filters.rolle);
+      if (filters.rechnungstyp) url.searchParams.set('rechnungstyp', filters.rechnungstyp);
+      if (filters.bruttobetragFrom) url.searchParams.set('bruttobetragFrom', filters.bruttobetragFrom);
+      if (filters.bruttobetragTo) url.searchParams.set('bruttobetragTo', filters.bruttobetragTo);
+      if (filters.dokumentId) url.searchParams.set('dokumentId', filters.dokumentId);
+      if (filters.bearbeiter) url.searchParams.set('bearbeiter', filters.bearbeiter);
+      if (filters.rechnungsnummer) url.searchParams.set('rechnungsnummer', filters.rechnungsnummer);
+      if (filters.status) url.searchParams.set('status', filters.status);
+      if (filters.laufzeit) url.searchParams.set('laufzeit', filters.laufzeit);
+      if (filters.coor) url.searchParams.set('coor', filters.coor);
+      if (filters.rechnungsdatumFrom) url.searchParams.set('rechnungsdatumFrom', filters.rechnungsdatumFrom);
+      if (filters.rechnungsdatumTo) url.searchParams.set('rechnungsdatumTo', filters.rechnungsdatumTo);
 
       if (filters.gesellschaft.length > 0) {
-        result = result.filter((row) => filters.gesellschaft.some((g) => (row.companyName || '').toLowerCase().includes(g.toLowerCase())));
+        url.searchParams.set('gesellschaft', JSON.stringify(filters.gesellschaft));
       }
-
       if (filters.fonds.length > 0) {
-        result = result.filter((row) => filters.fonds.some((f) => (row.fund || '').toLowerCase().includes(f.toLowerCase())));
+        url.searchParams.set('fonds', JSON.stringify(filters.fonds));
+      }
+      if (filters.schritt.length > 0) {
+        url.searchParams.set('schritt', JSON.stringify(filters.schritt));
       }
 
-      if (filters.rechnungsdatumFrom) {
-        result = result.filter((row) => row.invoiceDate && row.invoiceDate >= filters.rechnungsdatumFrom);
-      }
-
-      if (filters.rechnungsdatumTo) {
-        result = result.filter((row) => row.invoiceDate && row.invoiceDate <= filters.rechnungsdatumTo);
-      }
-
-      if (filters.bruttobetragFrom) {
-        const minAmount = parseFloat(filters.bruttobetragFrom);
-        result = result.filter((row) => {
-          const amount = typeof row.grossAmount === 'number' ? row.grossAmount : parseFloat(row.grossAmount || '0');
-          return amount >= minAmount;
-        });
-      }
-
-      if (filters.bruttobetragTo) {
-        const maxAmount = parseFloat(filters.bruttobetragTo);
-        result = result.filter((row) => {
-          const amount = typeof row.grossAmount === 'number' ? row.grossAmount : parseFloat(row.grossAmount || '0');
-          return amount <= maxAmount;
-        });
-      }
-
-      if (filters.weiterbelasten !== 'all') {
-        result = result.filter((row) => (row.chargeable || '').toLowerCase() === filters.weiterbelasten.toLowerCase());
-      }
-
-      if (filters.coor !== 'all') {
-        result = result.filter((row) => {
-          const hasCoor = !!row.orderId;
-          return filters.coor === 'Ja' ? hasCoor : !hasCoor;
-        });
-      }
-
-      // Apply sorting
-      if (sortColumn) {
-        result.sort((a, b) => {
-          const aVal = a[sortColumn];
-          const bVal = b[sortColumn];
-
-          if (aVal === null || aVal === undefined) return 1;
-          if (bVal === null || bVal === undefined) return -1;
-
-          let comparison = 0;
-          if (typeof aVal === 'number' && typeof bVal === 'number') {
-            comparison = aVal - bVal;
-          } else {
-            comparison = String(aVal).localeCompare(String(bVal), 'de');
-          }
-
-          return sortDirection === 'asc' ? comparison : -comparison;
-        });
-      }
-
-      return result;
+      return fetchJson(url.toString());
     },
-    [],
+    [buildEndpoint, fetchJson],
   );
+
+  const fetchData = useCallback(
+    async (overrides?: Partial<QuerySnapshot>) => {
+      const snapshot: QuerySnapshot = {
+        currentPage: overrides?.currentPage ?? stateRef.current.currentPage,
+        itemsPerPage: overrides?.itemsPerPage ?? stateRef.current.itemsPerPage,
+        sortColumn: overrides?.sortColumn ?? stateRef.current.sortColumn,
+        sortDirection: overrides?.sortDirection ?? stateRef.current.sortDirection,
+        filters: overrides?.filters ?? stateRef.current.filters,
+      };
+
+      setState((prev) => ({ ...prev, loading: true }));
+
+      try {
+        const response = await queryServer(snapshot);
+        const data = Array.isArray(response?.data) ? response.data : [];
+        const total = typeof response?.total === 'number' ? response.total : data.length;
+
+        setState((prev) => ({
+          ...prev,
+          data,
+          filteredData: data,
+          totalItems: total,
+          loading: false,
+        }));
+      } catch (error) {
+        setState((prev) => ({ ...prev, loading: false }));
+      }
+    },
+    [queryServer],
+  );
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const initialize = async () => {
+      setState((prev) => ({ ...prev, loading: true }));
+
+      try {
+        const url = new URL(window.location.href);
+        const username = url.searchParams.get('username') ?? '';
+        currentUserRef.current = username;
+
+        const initUrl = new URL(buildEndpoint('init.php'));
+        if (username) {
+          initUrl.searchParams.set('username', username);
+        }
+
+        const initResponse = await fetchJson(initUrl.toString());
+
+        if (isCancelled) return;
+
+        const initColumns = Array.isArray(initResponse?.columns) ? initResponse.columns : DEFAULT_COLUMNS;
+        const initDropdowns = initResponse?.dropdownOptions ?? DEFAULT_DROPDOWN_OPTIONS;
+        const preferences = initResponse?.userPreferences ?? null;
+
+        setColumnsConfig(initColumns);
+        setDropdownOptions(initDropdowns);
+
+        const defaultColumnOrder = initColumns.map((c: Column) => c.id);
+        const defaultVisibleFilters = buildFilterConfig(initDropdowns).map((f) => f.id);
+
+        const nextFilters = preferences?.filter
+          ? { ...DEFAULT_FILTERS, ...preferences.filter }
+          : stateRef.current.filters;
+
+        const nextSortColumn = preferences?.sort_column ?? stateRef.current.sortColumn;
+        const nextSortDirection = preferences?.sort_direction ?? stateRef.current.sortDirection;
+        const nextCurrentPage = preferences?.current_page ?? stateRef.current.currentPage;
+        const nextItemsPerPage = preferences?.entries_per_page ?? stateRef.current.itemsPerPage;
+
+        setState((prev) => ({
+          ...prev,
+          filters: nextFilters,
+          sortColumn: nextSortColumn,
+          sortDirection: nextSortDirection,
+          currentPage: nextCurrentPage,
+          itemsPerPage: nextItemsPerPage,
+          zoomLevel: preferences?.zoom_level ?? prev.zoomLevel,
+          columnOrder: preferences?.column_order?.length ? preferences.column_order : defaultColumnOrder,
+          visibleColumns: preferences?.visible_columns?.length ? preferences.visible_columns : defaultColumnOrder,
+          visibleFilters: preferences?.visible_filters?.length ? preferences.visible_filters : defaultVisibleFilters,
+          filterPresets: preferences?.filter_presets?.length ? preferences.filter_presets : prev.filterPresets,
+        }));
+
+        await fetchData({
+          filters: nextFilters,
+          sortColumn: nextSortColumn,
+          sortDirection: nextSortDirection,
+          currentPage: nextCurrentPage,
+          itemsPerPage: nextItemsPerPage,
+        });
+      } catch (error) {
+        setState((prev) => ({ ...prev, loading: false }));
+      } finally {
+        if (!isCancelled) {
+          setIsInitialized(true);
+        }
+      }
+    };
+
+    void initialize();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [buildEndpoint, fetchJson, fetchData]);
+
+  const savePreferences = useCallback(async () => {
+    if (!currentUserRef.current) return;
+
+    const payload = new URLSearchParams();
+    payload.set('username', currentUserRef.current);
+    payload.set('filter', JSON.stringify(stateRef.current.filters));
+    payload.set('column_order', JSON.stringify(stateRef.current.columnOrder));
+    payload.set('sort_column', stateRef.current.sortColumn ?? '');
+    payload.set('sort_direction', stateRef.current.sortDirection);
+    payload.set('current_page', String(stateRef.current.currentPage));
+    payload.set('entries_per_page', String(stateRef.current.itemsPerPage));
+    payload.set('zoom_level', String(stateRef.current.zoomLevel));
+    payload.set('visible_columns', JSON.stringify(stateRef.current.visibleColumns));
+    payload.set('visible_filters', JSON.stringify(stateRef.current.visibleFilters));
+    payload.set('filter_presets', JSON.stringify(stateRef.current.filterPresets));
+
+    try {
+      await fetch(buildEndpoint('savepreferences.php'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: payload.toString(),
+        credentials: 'same-origin',
+      });
+    } catch (error) {
+      // ignore save errors for now
+    }
+  }, [buildEndpoint]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const timer = window.setTimeout(() => {
+      void savePreferences();
+    }, 600);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    isInitialized,
+    savePreferences,
+    state.filters,
+    state.columnOrder,
+    state.sortColumn,
+    state.sortDirection,
+    state.currentPage,
+    state.itemsPerPage,
+    state.zoomLevel,
+    state.visibleColumns,
+    state.visibleFilters,
+    state.filterPresets,
+  ]);
 
   const setFilters = useCallback(
     (newFilters: Partial<Filters>) => {
       setState((prev) => {
         const updatedFilters = { ...prev.filters, ...newFilters };
-        const filteredData = applyFiltersAndSort(prev.data, updatedFilters, prev.sortColumn, prev.sortDirection);
         return {
           ...prev,
           filters: updatedFilters,
-          filteredData,
-          totalItems: filteredData.length,
           currentPage: 1,
-          selectedPreset: 'individual', // Mark as individual when filters change
+          selectedPreset: 'individual',
         };
       });
+
+      void fetchData({ filters: { ...stateRef.current.filters, ...newFilters }, currentPage: 1 });
     },
-    [applyFiltersAndSort],
+    [fetchData],
   );
 
   const resetFilters = useCallback(() => {
-    setState((prev) => {
-      const filteredData = applyFiltersAndSort(prev.data, DEFAULT_FILTERS, prev.sortColumn, prev.sortDirection);
-      return {
-        ...prev,
-        filters: { ...DEFAULT_FILTERS },
-        filteredData,
-        totalItems: filteredData.length,
-        currentPage: 1,
-        selectedPreset: null,
-      };
-    });
-  }, [applyFiltersAndSort]);
+    setState((prev) => ({
+      ...prev,
+      filters: { ...DEFAULT_FILTERS },
+      currentPage: 1,
+      selectedPreset: null,
+    }));
+
+    void fetchData({ filters: { ...DEFAULT_FILTERS }, currentPage: 1 });
+  }, [fetchData]);
 
   const setSort = useCallback(
     (column: string | null, direction: 'asc' | 'desc') => {
-      setState((prev) => {
-        const filteredData = applyFiltersAndSort(prev.data, prev.filters, column, direction);
-        return {
-          ...prev,
-          sortColumn: column,
-          sortDirection: direction,
-          filteredData,
-          currentPage: 1,
-        };
-      });
+      setState((prev) => ({
+        ...prev,
+        sortColumn: column,
+        sortDirection: direction,
+        currentPage: 1,
+      }));
+
+      void fetchData({ sortColumn: column, sortDirection: direction, currentPage: 1 });
     },
-    [applyFiltersAndSort],
+    [fetchData],
   );
 
-  const setPage = useCallback((page: number) => {
-    setState((prev) => ({ ...prev, currentPage: page }));
-  }, []);
+  const setPage = useCallback(
+    (page: number) => {
+      setState((prev) => ({ ...prev, currentPage: page }));
+      void fetchData({ currentPage: page });
+    },
+    [fetchData],
+  );
 
-  const setItemsPerPage = useCallback((count: number) => {
-    setState((prev) => ({ ...prev, itemsPerPage: count, currentPage: 1 }));
-  }, []);
+  const setItemsPerPage = useCallback(
+    (count: number) => {
+      setState((prev) => ({ ...prev, itemsPerPage: count, currentPage: 1 }));
+      void fetchData({ itemsPerPage: count, currentPage: 1 });
+    },
+    [fetchData],
+  );
 
   const setColumnOrder = useCallback((order: string[]) => {
     setState((prev) => ({ ...prev, columnOrder: order }));
@@ -315,21 +446,25 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
         const newFilters = { ...DEFAULT_FILTERS, ...preset.filters };
         const sortColumn = preset.sort?.column ?? prev.sortColumn;
         const sortDirection = preset.sort?.direction ?? prev.sortDirection;
-        const filteredData = applyFiltersAndSort(prev.data, newFilters, sortColumn, sortDirection);
+
+        void fetchData({
+          filters: newFilters,
+          sortColumn,
+          sortDirection,
+          currentPage: 1,
+        });
 
         return {
           ...prev,
           filters: newFilters,
           sortColumn,
           sortDirection,
-          filteredData,
-          totalItems: filteredData.length,
           currentPage: 1,
           selectedPreset: presetId,
         };
       });
     },
-    [applyFiltersAndSort],
+    [fetchData],
   );
 
   const setSelectedPreset = useCallback((presetId: string | null) => {
@@ -340,17 +475,6 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
     const clampedLevel = Math.max(0.5, Math.min(2.0, level));
     setState((prev) => ({ ...prev, zoomLevel: clampedLevel }));
   }, []);
-
-  const fetchData = useCallback(() => {
-    setState((prev) => {
-      const filteredData = applyFiltersAndSort(prev.data, prev.filters, prev.sortColumn, prev.sortDirection);
-      return {
-        ...prev,
-        filteredData,
-        totalItems: filteredData.length,
-      };
-    });
-  }, [applyFiltersAndSort]);
 
   const value = useMemo(
     () => ({

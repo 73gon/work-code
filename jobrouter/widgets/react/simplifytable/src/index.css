@@ -5,7 +5,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
+.simplifytable-widget {
   --radius: 0.625rem;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -40,7 +40,7 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-.dark {
+.simplifytable-widget.dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -117,13 +117,44 @@
 }
 
 @layer base {
-  * {
+  .simplifytable-widget,
+  .simplifytable-widget * {
     @apply border-border outline-ring/50;
+    box-sizing: border-box;
   }
-  body {
+  .simplifytable-widget {
     @apply font-sans bg-background text-foreground;
+    position: relative;
   }
-  html {
-    @apply font-sans;
+  .simplifytable-widget :where(input, select, textarea, button) {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    float: none !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    margin: 0;
+  }
+  .simplifytable-widget :where(input, select, textarea) {
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+  }
+  .simplifytable-widget :where([data-slot='input'], [data-slot='select-trigger'], [data-slot='input-group'], [data-slot='combobox-chips']) {
+    display: inline-flex !important;
+    position: relative;
+  }
+}
+
+@layer components {
+  .simplifytable-widget [data-slot='table-body'] [data-slot='table-row'] {
+    height: var(--table-row-height, auto);
+  }
+  .simplifytable-widget [data-slot='table-body'] [data-slot='table-cell'] {
+    padding-top: calc(var(--table-row-height, 32px) / 6);
+    padding-bottom: calc(var(--table-row-height, 32px) / 6);
   }
 }

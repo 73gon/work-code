@@ -130,3 +130,5 @@ define('COSTCENTERTABLE', 'Kostenstellentabelle');
 define('COUNTERSUMMARY', 'Counter Zusammenfassung');
 define('AUDITTRAIL', 'Audit Trail');
 define('AUDITTRAILCSV', 'Audit Trail CSV');
+define('INVOICE_STATUS', 'Rechnungsstatus (kommagetrennt)');
+define('SYNONYMS', 'Synonyme');

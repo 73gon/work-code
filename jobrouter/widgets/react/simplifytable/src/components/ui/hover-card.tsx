@@ -1,6 +1,7 @@
 import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card"
 
 import { cn } from "@/lib/utils"
+import { usePortalContainer } from "@/lib/portal-container"
 
 function HoverCard({ ...props }: PreviewCardPrimitive.Root.Props) {
   return <PreviewCardPrimitive.Root data-slot="hover-card" {...props} />
@@ -24,8 +25,10 @@ function HoverCardContent({
     PreviewCardPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  const portalContainer = usePortalContainer()
+
   return (
-    <PreviewCardPrimitive.Portal data-slot="hover-card-portal">
+    <PreviewCardPrimitive.Portal data-slot="hover-card-portal" container={portalContainer}>
       <PreviewCardPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

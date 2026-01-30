@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useSimplifyTable } from '@/lib/simplify-table-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,7 +15,6 @@ import {
   DragDropVerticalIcon,
   Delete02Icon,
 } from '@hugeicons/core-free-icons';
-import { COLUMNS, FILTER_CONFIG } from '@/lib/constants';
 
 export function SettingsModal() {
   const [open, setOpen] = useState(false);
@@ -65,14 +64,15 @@ export function SettingsModal() {
 }
 
 function FilterSettingsTab() {
-  const { state, toggleFilterVisibility } = useSimplifyTable();
+  const { state, toggleFilterVisibility, filterConfigs } = useSimplifyTable();
+  const filters = useMemo(() => filterConfigs, [filterConfigs]);
 
   return (
     <div className='space-y-4'>
       <p className='text-sm text-muted-foreground'>Wählen Sie aus, welche Filter angezeigt werden sollen.</p>
       <ScrollArea className='h-100 pr-4'>
         <div className='space-y-0.5'>
-          {FILTER_CONFIG.map((filter) => {
+          {filters.map((filter) => {
             const isVisible = state.visibleFilters.includes(filter.id);
             return (
               <div key={filter.id} className='flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50 transition-colors'>
@@ -95,14 +95,15 @@ function FilterSettingsTab() {
 }
 
 function ColumnSettingsTab() {
-  const { state, toggleColumnVisibility } = useSimplifyTable();
+  const { state, toggleColumnVisibility, columns } = useSimplifyTable();
+  const selectableColumns = useMemo(() => columns.filter((col) => col.id !== 'actions'), [columns]);
 
   return (
     <div className='space-y-4'>
       <p className='text-sm text-muted-foreground'>Blenden Sie Spalten ein oder aus, indem Sie auf das Auge klicken.</p>
       <ScrollArea className='h-100 pr-4'>
         <div className='space-y-0.5'>
-          {COLUMNS.filter((col) => col.id !== 'actions').map((column) => {
+          {selectableColumns.map((column) => {
             const isVisible = state.visibleColumns.includes(column.id);
             return (
               <div key={column.id} className='flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50 transition-colors'>

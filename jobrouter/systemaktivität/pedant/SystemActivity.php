@@ -8,6 +8,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     private const SUCCESS_HTTP_CODES = [200, 201];
     private const RETRY_HTTP_CODES = [404, 500, 502, 503, 0];
     private const FALSE_STATES = ['processing', 'failed', 'uploaded', ''];
+    private const VALID_INVOICE_STATUSES = ['reviewed', 'exported', 'rejected', 'archived'];
 
     // Properties
     private string $recipientOutputFileName = "pedantRecipientOutput.csv";
@@ -272,13 +273,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
     protected function uploadFile(): void
         {
-        $curl = null;
         try {
-            $curl = curl_init();
-            if ($curl === false) {
-                throw new JobRouterException('Failed to initialize cURL for file upload');
-                }
-
             $file = $this->getUploadPath() . $this->resolveInputParameter('inputFile');
 
             if (!file_exists($file)) {
@@ -317,33 +312,19 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
             $action = $flag;
 
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => [
+            $responseData = $this->makeApiRequest(
+                $url,
+                'POST',
+                [
                     'file' => new CURLFILE($file),
                     'recipientInternalNumber' => $this->resolveInputParameter('internalNumber'),
                     'action' => $action,
                     'note' => $this->resolveInputParameter('note'),
-                ],
-                CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->getApiKey()],
-                CURLOPT_SSL_VERIFYHOST => 0,
-                CURLOPT_SSL_VERIFYPEER => 0
-            ));
-            $response = curl_exec($curl);
+                ]
+            );
 
-            if ($response === false) {
-                $curlError = curl_error($curl);
-                $curlErrno = curl_errno($curl);
-                $this->logError('cURL upload failed', null, ['curl_error' => $curlError, 'curl_errno' => $curlErrno]);
-                throw new JobRouterException('cURL upload failed: ' . $curlError);
-                }
+            $response = $responseData['response'];
+            $httpcode = $responseData['httpCode'];
 
             $data = json_decode($response, TRUE);
 
@@ -351,8 +332,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 $this->logError('Failed to parse upload response JSON', null, ['json_error' => json_last_error_msg(), 'response' => substr($response, 0, 500)]);
                 throw new JobRouterException('Failed to parse API response: ' . json_last_error_msg());
                 }
-
-            $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
             $maxCounter = $this->resolveInputParameter('maxCounter');
             $counter = $this->getSystemActivityVar('UPLOADCOUNTER');
@@ -370,9 +349,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 } catch (Exception $e) {
                 $this->logError('Failed to store counterSummary output parameter', $e);
                 }
-
-            curl_close($curl);
-            $curl = null;
 
             if (!isset($data['files'][0])) {
                 $this->logError('Invalid upload response structure', null, ['response' => $response]);
@@ -394,21 +370,14 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $this->setSystemActivityVar('TYPE', $type);
             $this->setSystemActivityVar('COUNTER404', 0);
             } catch (JobRouterException $e) {
-            if ($curl !== null) {
-                curl_close($curl);
-                }
             throw $e;
             } catch (Exception $e) {
-            if ($curl !== null) {
-                curl_close($curl);
-                }
             $this->logError('Unexpected error in uploadFile', $e);
             throw new JobRouterException('Upload error: ' . $e->getMessage());
             }
         }
     protected function checkFile(): void
         {
-        $curl = null;
         try {
             if (!empty($this->resolveInputParameter('vendorTable'))) {
                 $this->importVendor();
@@ -421,35 +390,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $url = "$baseURL/v1/external/documents/$urlType?" . ($urlType == 'e-invoices' ? "documentId=$fileId" : "fileId=$fileId") . "&auditTrail=true";
             $maxCounter = $this->resolveInputParameter('maxCounter');
 
-            $curl = curl_init();
-            if ($curl === false) {
-                throw new JobRouterException('Failed to initialize cURL for file check');
-                }
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'GET',
-                CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->getApiKey()],
-                CURLOPT_SSL_VERIFYHOST => 0,
-                CURLOPT_SSL_VERIFYPEER => 0
-            ));
-
-            $response = curl_exec($curl);
-
-            if ($response === false) {
-                $curlError = curl_error($curl);
-                $curlErrno = curl_errno($curl);
-                $this->logError('cURL checkFile failed', null, ['curl_error' => $curlError, 'curl_errno' => $curlErrno]);
-                throw new JobRouterException('cURL request failed: ' . $curlError);
-                }
-
-            $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+            $responseData = $this->makeApiRequest($url, 'GET');
+            $response = $responseData['response'];
+            $httpcode = $responseData['httpCode'];
 
             $counter = $this->getSystemActivityVar('FETCHCOUNTER');
             $counter404 = $this->getSystemActivityVar('COUNTER404');
@@ -474,9 +417,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 } catch (Exception $e) {
                 $this->logError('Failed to store counterSummary output parameter', $e);
                 }
-
-            curl_close($curl);
-            $curl = null;
 
             $data = json_decode($response, TRUE);
 
@@ -555,14 +495,8 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 $this->markActivityAsCompleted();
                 }
             } catch (JobRouterException $e) {
-            if ($curl !== null) {
-                curl_close($curl);
-                }
             throw $e;
             } catch (Exception $e) {
-            if ($curl !== null) {
-                curl_close($curl);
-                }
             $this->logError('Unexpected error in checkFile', $e);
             throw new JobRouterException('Check file error: ' . $e->getMessage());
             }
@@ -570,7 +504,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
     protected function importVendor(): void
         {
-        $curl = null;
         $csvFilePath = null;
         try {
             $table = $this->resolveInputParameter('vendorTable');
@@ -656,21 +589,10 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
             $url = $this->getEntityUrl() . "/v2/external/entities/vendors/import";
 
-            $curl = curl_init();
-            if ($curl === false) {
-                throw new JobRouterException('Failed to initialize cURL for vendor import');
-                }
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => array(
+            $responseData = $this->makeApiRequest(
+                $url,
+                'POST',
+                [
                     'internalNumber' => 'internalVendorNumber',
                     'profileName' => 'vendorProfileName',
                     'name' => 'company',
@@ -688,44 +610,25 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     'sortCode' => 'sortCode',
                     'accountNumber' => 'accountNumber',
                     'file' => new CURLFILE($csvFilePath)
-                ),
-                CURLOPT_HTTPHEADER => array('x-api-key: ' . $this->getApiKey()),
-                CURLOPT_SSL_VERIFYHOST => 0,
-                CURLOPT_SSL_VERIFYPEER => 0
-            ));
+                ]
+            );
 
-            $response = curl_exec($curl);
-
-            if ($response === false) {
-                $curlError = curl_error($curl);
-                $this->logError('cURL vendor import failed', null, ['curl_error' => $curlError]);
-                throw new JobRouterException('cURL vendor import failed: ' . $curlError);
-                }
-
-            $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+            $response = $responseData['response'];
+            $httpcode = $responseData['httpCode'];
             if (!in_array($httpcode, self::SUCCESS_HTTP_CODES)) {
                 $this->logError('Vendor import failed', null, ['httpcode' => $httpcode, 'response' => substr($response, 0, 500)]);
                 throw new JobRouterException('Error occurred during vendor update. HTTP Error Code: ' . $httpcode);
                 }
 
-            curl_close($curl);
-            $curl = null;
-
             if (file_exists($csvFilePath)) {
                 unlink($csvFilePath);
                 }
             } catch (JobRouterException $e) {
-            if ($curl !== null) {
-                curl_close($curl);
-                }
             if ($csvFilePath && file_exists($csvFilePath)) {
                 unlink($csvFilePath);
                 }
             throw $e;
             } catch (Exception $e) {
-            if ($curl !== null) {
-                curl_close($curl);
-                }
             if ($csvFilePath && file_exists($csvFilePath)) {
                 unlink($csvFilePath);
                 }
@@ -736,12 +639,11 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
     protected function importRecipient(): void
         {
-        $curl = null;
         $csvFilePath = null;
         try {
             $table = $this->resolveInputParameter('recipientTable');
             $listfields = $this->resolveInputParameterListValues('importRecipient');
-            $fields = ['internalRecipientNumber', 'recipientProfileName', 'country', 'city', 'zipCode', 'street', 'company', 'vatNumber'];
+            $fields = ['internalRecipientNumber', 'recipientProfileName', 'country', 'city', 'zipCode', 'street', 'company', 'vatNumber', 'synonyms'];
 
             $list = array();
             foreach ($listfields as $listindex => $listvalue) {
@@ -810,21 +712,10 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
             $url = $this->getEntityUrl() . "/v2/external/entities/recipient-groups/import";
 
-            $curl = curl_init();
-            if ($curl === false) {
-                throw new JobRouterException('Failed to initialize cURL for recipient import');
-                }
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => array(
+            $responseData = $this->makeApiRequest(
+                $url,
+                'POST',
+                [
                     'internalNumber' => 'internalRecipientNumber',
                     'profileName' => 'recipientProfileName',
                     'country' => 'country',
@@ -833,45 +724,27 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     'street' => 'street',
                     'name' => 'company',
                     'vatNumber' => 'vatNumber',
+                    'synonyms' => 'synonyms',
                     'file' => new CURLFILE($csvFilePath)
-                ),
-                CURLOPT_HTTPHEADER => array('x-api-key: ' . $this->getApiKey()),
-                CURLOPT_SSL_VERIFYHOST => 0,
-                CURLOPT_SSL_VERIFYPEER => 0
-            ));
+                ]
+            );
 
-            $response = curl_exec($curl);
-
-            if ($response === false) {
-                $curlError = curl_error($curl);
-                $this->logError('cURL recipient import failed', null, ['curl_error' => $curlError]);
-                throw new JobRouterException('cURL recipient import failed: ' . $curlError);
-                }
-
-            $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+            $response = $responseData['response'];
+            $httpcode = $responseData['httpCode'];
             if (!in_array($httpcode, self::SUCCESS_HTTP_CODES)) {
                 $this->logError('Recipient import failed', null, ['httpcode' => $httpcode, 'response' => substr($response, 0, 500)]);
                 throw new JobRouterException('Error occurred during recipient update. HTTP Error Code: ' . $httpcode);
                 }
 
-            curl_close($curl);
-            $curl = null;
-
             if (file_exists($csvFilePath)) {
                 unlink($csvFilePath);
                 }
             } catch (JobRouterException $e) {
-            if ($curl !== null) {
-                curl_close($curl);
-                }
             if ($csvFilePath && file_exists($csvFilePath)) {
                 unlink($csvFilePath);
                 }
             throw $e;
             } catch (Exception $e) {
-            if ($curl !== null) {
-                curl_close($curl);
-                }
             if ($csvFilePath && file_exists($csvFilePath)) {
                 unlink($csvFilePath);
                 }
@@ -882,7 +755,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
     protected function importCostCenter(): void
         {
-        $curl = null;
         $csvFilePath = null;
         try {
             $table = $this->resolveInputParameter('costCenterTable');
@@ -956,63 +828,33 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
             $url = $this->getEntityUrl() . "/v1/external/entities/cost-centers/import";
 
-            $curl = curl_init();
-            if ($curl === false) {
-                throw new JobRouterException('Failed to initialize cURL for cost center import');
-                }
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => array(
+            $responseData = $this->makeApiRequest(
+                $url,
+                'POST',
+                [
                     'internalNumber' => 'internalCostCenterNumber',
                     'name' => 'costCenterProfileName',
                     'recipientNumber' => 'recipientNumber',
                     'file' => new CURLFILE($csvFilePath)
-                ),
-                CURLOPT_HTTPHEADER => array('x-api-key: ' . $this->getApiKey()),
-                CURLOPT_SSL_VERIFYHOST => 0,
-                CURLOPT_SSL_VERIFYPEER => 0
-            ));
+                ]
+            );
 
-            $response = curl_exec($curl);
-
-            if ($response === false) {
-                $curlError = curl_error($curl);
-                $this->logError('cURL cost center import failed', null, ['curl_error' => $curlError]);
-                throw new JobRouterException('cURL cost center import failed: ' . $curlError);
-                }
-
-            $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+            $response = $responseData['response'];
+            $httpcode = $responseData['httpCode'];
             if (!in_array($httpcode, self::SUCCESS_HTTP_CODES)) {
                 $this->logError('Cost center import failed', null, ['httpcode' => $httpcode, 'response' => substr($response, 0, 500)]);
                 throw new JobRouterException('Error occurred during costCenter update. HTTP Error Code: ' . $httpcode);
                 }
 
-            curl_close($curl);
-            $curl = null;
-
             if (file_exists($csvFilePath)) {
                 unlink($csvFilePath);
                 }
             } catch (JobRouterException $e) {
-            if ($curl !== null) {
-                curl_close($curl);
-                }
             if ($csvFilePath && file_exists($csvFilePath)) {
                 unlink($csvFilePath);
                 }
             throw $e;
             } catch (Exception $e) {
-            if ($curl !== null) {
-                curl_close($curl);
-                }
             if ($csvFilePath && file_exists($csvFilePath)) {
                 unlink($csvFilePath);
                 }
@@ -1028,36 +870,44 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
      */
     protected function fetchInvoices(): void
         {
-        $curl = null;
         try {
-            $curl = curl_init();
-            if ($curl === false) {
-                throw new JobRouterException('Failed to initialize cURL for fetching invoices');
+            $invoice_status = $this->resolveInputParameter('invoice_status');
+            if (empty($invoice_status)) {
+                $invoice_status = 'reviewed';
+                }
+            $statusValues = [];
+            if (!empty($invoice_status)) {
+                $parts = array_map('trim', explode(',', $invoice_status));
+                $parts = array_values(array_filter($parts, static fn($status) => $status !== ''));
+
+                foreach ($parts as $status) {
+                    if (!in_array($status, self::VALID_INVOICE_STATUSES, true)) {
+                        $this->logError('Invalid invoice status', null, ['status' => $status]);
+                        throw new JobRouterException('Invalid invoice status: ' . $status);
+                        }
+                    $statusValues[] = $status;
+                    }
+                }
+
+            $statusQuery = '';
+            if (!empty($statusValues)) {
+                $queryParts = [];
+                foreach ($statusValues as $status) {
+                    $queryParts[] = 'status=' . rawurlencode($status);
+                    }
+                $statusQuery = '?' . implode('&', $queryParts);
                 }
 
             $baseURL = $this->getBaseUrl();
-            $url_invoice = "$baseURL/v1/external/documents/invoices/to-export";
-            $url_einvoice = "$baseURL/v1/external/documents/e-invoices/to-export";
+            $url_invoice = "$baseURL/v1/external/documents/invoices/to-export" . $statusQuery;
+            $url_einvoice = "$baseURL/v1/external/documents/e-invoices/to-export" . $statusQuery;
 
             foreach ([$url_invoice, $url_einvoice] as $url) {
-                curl_setopt_array($curl, array(
-                    CURLOPT_URL => $url,
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_ENCODING => '',
-                    CURLOPT_MAXREDIRS => 10,
-                    CURLOPT_TIMEOUT => 0,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    CURLOPT_CUSTOMREQUEST => 'GET',
-                    CURLOPT_HTTPHEADER => ['X-API-KEY: ' . $this->getApiKey()],
-                    CURLOPT_SSL_VERIFYHOST => 0,
-                    CURLOPT_SSL_VERIFYPEER => 0
-                ));
-                $response = curl_exec($curl);
-
-                if ($response === false) {
-                    $curlError = curl_error($curl);
-                    $this->logError('cURL fetch invoices failed', null, ['curl_error' => $curlError, 'url' => $url]);
+                try {
+                    $responseData = $this->makeApiRequest($url, 'GET');
+                    $response = $responseData['response'];
+                    } catch (JobRouterException $e) {
+                    $this->logError('cURL fetch invoices failed', $e, ['url' => $url]);
                     continue; // Continue to next URL instead of failing completely
                     }
 
@@ -1076,6 +926,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 $ids = $data["data"];
                 $table_head = $this->resolveInputParameter('table_head');
                 $stepID = $this->resolveInputParameter('stepID');
+                $fileid = $this->resolveInputParameter('fileid');
 
                 $currentTime = new DateTime();
                 $currentTime->modify('+10 seconds');
@@ -1089,7 +940,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                         UPDATE jrincidents j
                         JOIN $table_head t ON t.step_id = j.process_step_id
                         SET j.resubmission_date = '$formattedTime'
-                        WHERE t.step = $stepID AND t.T_FILEID = '$id';
+                        WHERE t.step = $stepID AND t.$fileid = '$id';
                         ";
                             } elseif ($dbType === "MSSQL") {
                             $query = "
@@ -1097,7 +948,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                         SET j.resubmission_date = '$formattedTime'
                         FROM jrincidents AS j
                         JOIN $table_head AS t ON t.step_id = j.process_step_id
-                        WHERE t.step = $stepID AND t.T_FILEID = '$id';
+                        WHERE t.step = $stepID AND t.$fileid = '$id';
                         ";
                             } else {
                             $this->logError('Unsupported database type', null, ['dbType' => $dbType]);
@@ -1113,17 +964,9 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     }
                 }
 
-            curl_close($curl);
-            $curl = null;
             } catch (JobRouterException $e) {
-            if ($curl instanceof \CurlHandle) {
-                curl_close($curl);
-                }
             throw $e;
             } catch (Exception $e) {
-            if ($curl instanceof \CurlHandle) {
-                curl_close($curl);
-                }
             $this->logError('Unexpected error in fetchInvoices', $e);
             throw new JobRouterException('Fetch invoices error: ' . $e->getMessage());
             }
@@ -1458,19 +1301,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     mkdir($savePath, 0777, true);
                     }
 
-                $ch = curl_init($urlPDF);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-
-                $dataPDF = curl_exec($ch);
-
-                if ($dataPDF === false) {
-                    $this->logError('Failed to download e-invoice PDF', null, ['url' => $urlPDF, 'curl_error' => curl_error($ch)]);
+                $dataPDF = false;
+                try {
+                    $responseData = $this->makeApiRequest($urlPDF, 'GET');
+                    if (in_array($responseData['httpCode'], self::SUCCESS_HTTP_CODES)) {
+                        $dataPDF = $responseData['response'];
+                        } else {
+                        $this->logError('Failed to download e-invoice PDF', null, ['url' => $urlPDF, 'httpcode' => $responseData['httpCode']]);
+                        }
+                    } catch (JobRouterException $e) {
+                    $this->logError('Failed to download e-invoice PDF', $e, ['url' => $urlPDF]);
                     }
-
-                curl_close($ch);
 
                 $eInvoicePDF = $savePath . "/" . $tempFileName . "_PDF_.pdf";
 
@@ -1490,19 +1331,17 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     mkdir($savePath, 0777, true);
                     }
 
-                $ch = curl_init($urlReport);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-
-                $dataReport = curl_exec($ch);
-
-                if ($dataReport === false) {
-                    $this->logError('Failed to download e-invoice report', null, ['url' => $urlReport, 'curl_error' => curl_error($ch)]);
+                $dataReport = false;
+                try {
+                    $responseData = $this->makeApiRequest($urlReport, 'GET');
+                    if (in_array($responseData['httpCode'], self::SUCCESS_HTTP_CODES)) {
+                        $dataReport = $responseData['response'];
+                        } else {
+                        $this->logError('Failed to download e-invoice report', null, ['url' => $urlReport, 'httpcode' => $responseData['httpCode']]);
+                        }
+                    } catch (JobRouterException $e) {
+                    $this->logError('Failed to download e-invoice report', $e, ['url' => $urlReport]);
                     }
-
-                curl_close($ch);
 
                 $eInvoiceReport = $savePath . "/" . $tempFileName . "_REPORT_.xml";
 
@@ -1524,26 +1363,13 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                         }
 
                     try {
-                        $ch = curl_init($url);
-                        if ($ch === false) {
-                            $this->logError('Failed to initialize cURL for attachment', null, ['url' => $url, 'index' => $index]);
+                        $responseData = $this->makeApiRequest($url, 'GET');
+                        if (!in_array($responseData['httpCode'], self::SUCCESS_HTTP_CODES)) {
+                            $this->logError('Failed to download attachment', null, ['url' => $url, 'index' => $index, 'httpcode' => $responseData['httpCode']]);
                             continue;
                             }
 
-                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-                        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-
-                        $dataAttachment = curl_exec($ch);
-
-                        if ($dataAttachment === false) {
-                            $this->logError('Failed to download attachment', null, ['url' => $url, 'index' => $index, 'curl_error' => curl_error($ch)]);
-                            curl_close($ch);
-                            continue;
-                            }
-
-                        curl_close($ch);
+                        $dataAttachment = $responseData['response'];
 
                         $attachmentPath = $savePath . "/" . $tempFileName . "_ATTACHMENT_" . ($index + 1) . ".pdf";
                         $writeResult = file_put_contents($attachmentPath, $dataAttachment);
@@ -1732,6 +1558,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => STREET, 'value' => '6'],
                 ['name' => RECIPIENTNAME, 'value' => '7'],
                 ['name' => VAT, 'value' => '8'],
+                ['name' => SYNONYMS, 'value' => '9']
             ];
             }
 
@@ -1864,5 +1691,5 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
         }
     }
-//v1.10.1
+//v1.11
 

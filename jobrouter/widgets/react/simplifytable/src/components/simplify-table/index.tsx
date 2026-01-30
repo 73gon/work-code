@@ -30,7 +30,7 @@ function SimplifyTableContent() {
 export function SimplifyTable() {
   return (
     <SimplifyTableProvider>
-      <div className='w-full h-screen overflow-hidden'>
+      <div className='w-full h-full overflow-hidden'>
         <SimplifyTableContent />
       </div>
     </SimplifyTableProvider>
