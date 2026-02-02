@@ -385,7 +385,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
             $baseURL = $this->getBaseUrl();
             $fileId = $this->getSystemActivityVar('FILEID');
-            $type = $this->getSystemActivityVar('TYPE'); // Keep original type (e_invoice or invoice)
+            $type = $this->getSystemActivityVar('TYPE');
             $urlType = $type == 'e_invoice' ? 'e-invoices' : 'invoices';
             $url = "$baseURL/v1/external/documents/$urlType?" . ($urlType == 'e-invoices' ? "documentId=$fileId" : "fileId=$fileId") . "&auditTrail=true";
             $maxCounter = $this->resolveInputParameter('maxCounter');
@@ -589,28 +589,66 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
 
             $url = $this->getEntityUrl() . "/v2/external/entities/vendors/import";
 
+            $payload = [
+                'internalNumber' => 'internalVendorNumber',
+                'profileName' => 'vendorProfileName',
+                'name' => 'company',
+                'street' => 'street',
+                'zipCode' => 'zipCode',
+                'city' => 'city',
+                'country' => 'country',
+                'iban' => 'iban',
+                'taxNumber' => 'taxNumber',
+                'vatNumber' => 'vatNumber',
+                'recipientNumber' => 'recipientNumber',
+                'kvk' => 'kvk',
+                'currency' => 'currency',
+                'blocked' => 'blocked',
+                'sortCode' => 'sortCode',
+                'accountNumber' => 'accountNumber',
+                'file' => new CURLFILE($csvFilePath)
+            ];
+
+            // Map API field names to CSV field names for checking values
+            $fieldMapping = [
+                'internalNumber' => 'internalVendorNumber',
+                'profileName' => 'vendorProfileName',
+                'name' => 'company',
+                'street' => 'street',
+                'zipCode' => 'zipCode',
+                'city' => 'city',
+                'country' => 'country',
+                'iban' => 'iban',
+                'taxNumber' => 'taxNumber',
+                'vatNumber' => 'vatNumber',
+                'recipientNumber' => 'recipientNumber',
+                'kvk' => 'kvk',
+                'currency' => 'currency',
+                'blocked' => 'blocked',
+                'sortCode' => 'sortCode',
+                'accountNumber' => 'accountNumber'
+            ];
+
+            if (!empty($payloads)) {
+                $firstRecord = $payloads[0];
+                foreach ($fieldMapping as $apiField => $csvField) {
+                    if ($apiField === 'blocked') {
+                        continue;
+                        }
+
+                    $fieldValue = isset($firstRecord[$csvField]) ? $firstRecord[$csvField] : '';
+                    $hasValue = !empty($fieldValue);
+
+                    if ($hasValue) {
+                        $payload['override' . ucfirst($apiField)] = 'true';
+                        }
+                    }
+                }
+
             $responseData = $this->makeApiRequest(
                 $url,
                 'POST',
-                [
-                    'internalNumber' => 'internalVendorNumber',
-                    'profileName' => 'vendorProfileName',
-                    'name' => 'company',
-                    'street' => 'street',
-                    'zipCode' => 'zipCode',
-                    'city' => 'city',
-                    'country' => 'country',
-                    'iban' => 'iban',
-                    'taxNumber' => 'taxNumber',
-                    'vatNumber' => 'vatNumber',
-                    'recipientNumber' => 'recipientNumber',
-                    'kvk' => 'kvk',
-                    'currency' => 'currency',
-                    'blocked' => 'blocked',
-                    'sortCode' => 'sortCode',
-                    'accountNumber' => 'accountNumber',
-                    'file' => new CURLFILE($csvFilePath)
-                ]
+                $payload
             );
 
             $response = $responseData['response'];
@@ -902,7 +940,15 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             $url_invoice = "$baseURL/v1/external/documents/invoices/to-export" . $statusQuery;
             $url_einvoice = "$baseURL/v1/external/documents/e-invoices/to-export" . $statusQuery;
 
-            foreach ([$url_invoice, $url_einvoice] as $url) {
+            foreach ([$url_invoice, $url_einvoice] as $baseUrl) {
+                $allIds = [];
+                $pageCount = 1;
+                $currentPage = 1;
+
+                // Fetch first page to get pageCount
+                $pageParam = (strpos($baseUrl, '?') !== false) ? '&page=1' : '?page=1';
+                $url = $baseUrl . $pageParam;
+
                 try {
                     $responseData = $this->makeApiRequest($url, 'GET');
                     $response = $responseData['response'];
@@ -923,7 +969,41 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                     continue;
                     }
 
-                $ids = $data["data"];
+                // Get pageCount from response
+                $pageCount = isset($data['pageCount']) ? (int) $data['pageCount'] : 1;
+
+                // Collect IDs from first page
+                $allIds = array_merge($allIds, $data['data']);
+
+                // Fetch remaining pages if pageCount > 1
+                for ($currentPage = 2; $currentPage <= $pageCount; $currentPage++) {
+                    $pageParam = (strpos($baseUrl, '?') !== false) ? "&page=$currentPage" : "?page=$currentPage";
+                    $url = $baseUrl . $pageParam;
+
+                    try {
+                        $responseData = $this->makeApiRequest($url, 'GET');
+                        $response = $responseData['response'];
+                        } catch (JobRouterException $e) {
+                        $this->logError('cURL fetch invoices failed on page', $e, ['url' => $url, 'page' => $currentPage]);
+                        continue; // Continue to next page
+                        }
+
+                    $data = json_decode($response, TRUE);
+
+                    if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+                        $this->logError('Failed to parse fetch invoices response', null, ['json_error' => json_last_error_msg(), 'url' => $url, 'page' => $currentPage]);
+                        continue;
+                        }
+
+                    if (!isset($data['data']) || !is_array($data['data'])) {
+                        $this->logError('Invalid fetch invoices response structure', null, ['url' => $url, 'page' => $currentPage]);
+                        continue;
+                        }
+
+                    $allIds = array_merge($allIds, $data['data']);
+                    }
+
+                // Process all collected IDs
                 $table_head = $this->resolveInputParameter('table_head');
                 $stepID = $this->resolveInputParameter('stepID');
                 $fileid = $this->resolveInputParameter('fileid');
@@ -932,7 +1012,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 $currentTime->modify('+10 seconds');
                 $formattedTime = $currentTime->format('Y-m-d H:i:s');
 
-                foreach ($ids as $id) {
+                foreach ($allIds as $id) {
                     try {
                         $dbType = $this->getDatabaseType();
                         if ($dbType === "MySQL") {
@@ -1691,5 +1771,5 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
         }
     }
-//v1.11
+//v1.12
 
