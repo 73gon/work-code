@@ -9,17 +9,14 @@ function SimplifyTableContent() {
 
   return (
     <div
-      className='p-4 h-full flex flex-col bg-background'
+      className='p-4 h-full max-h-full flex flex-col bg-background overflow-hidden'
       style={{
-        transform: `scale(${state.zoomLevel})`,
-        transformOrigin: 'top left',
-        width: `${100 / state.zoomLevel}%`,
-        height: `${100 / state.zoomLevel}%`,
+        zoom: state.zoomLevel,
       }}
     >
       <TableHeader />
       <FilterBar />
-      <div className='flex-1 min-h-0'>
+      <div className='flex-1 min-h-0 overflow-hidden'>
         <DataTable />
       </div>
       <Pagination />
@@ -30,7 +27,7 @@ function SimplifyTableContent() {
 export function SimplifyTable() {
   return (
     <SimplifyTableProvider>
-      <div className='w-full h-full overflow-hidden'>
+      <div className='w-full h-full max-h-full overflow-hidden'>
         <SimplifyTableContent />
       </div>
     </SimplifyTableProvider>
@@ -42,3 +39,4 @@ export { DataTable } from './data-table';
 export { Pagination } from './pagination';
 export { TableHeader } from './table-header';
 export { SettingsModal } from './settings-modal';
+

@@ -119,7 +119,7 @@ export function DataTable() {
 
   if (paginatedData.length === 0) {
     return (
-      <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
+      <div className='flex flex-col items-center justify-center h-full text-muted-foreground rounded-xl border'>
         <HugeiconsIcon icon={ClipboardIcon} size={48} className='mb-4 opacity-50' />
         <p className='text-lg'>Es wurden keine Einträge gefunden</p>
       </div>
@@ -128,7 +128,8 @@ export function DataTable() {
 
   return (
     <div
-      className='rounded-xl border overflow-hidden flex flex-col h-full'
+      ref={bodyContainerRef}
+      className='rounded-xl border overflow-auto flex flex-col h-full scrollbar-thumb-[#FFCC00] scrollbar-track-transparent'
       style={
         rowHeight
           ? ({
@@ -137,44 +138,42 @@ export function DataTable() {
           : undefined
       }
     >
-      <div ref={bodyContainerRef} className='overflow-auto flex-1 min-h-0'>
-        <Table className='border-separate border-spacing-0'>
-          <TableHeader className='bg-card z-10'>
-            <TableRow ref={headerRowRef} className='hover:bg-transparent'>
-              {visibleColumns.map((column, index) => (
-                <TableHead
-                  key={column.id}
-                  className={`
-                    sticky top-0 bg-card z-20 shadow-[0_1px_0_0_rgba(0,0,0,0.1)]
-                    whitespace-nowrap select-none
-                    ${column.id !== 'actions' ? 'cursor-pointer hover:bg-muted/50' : ''}
-                    ${draggedColumn === index ? 'opacity-50' : ''}
-                    ${dragOverColumn === index ? 'border-l-2 border-primary' : ''}
-                  `}
-                  style={{ textAlign: column.align }}
-                  draggable={column.id !== 'actions'}
-                  onDragStart={(e) => handleDragStart(e, index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, index)}
-                  onDragEnd={handleDragEnd}
-                  onClick={() => handleSort(column.id)}
-                >
-                  <div className='flex items-center gap-1'>
-                    <span>{column.label}</span>
-                    {column.id !== 'actions' && <SortIndicator active={state.sortColumn === column.id} direction={state.sortDirection} />}
-                  </div>
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedData.map((row) => (
-              <DataTableRow key={row.id} row={row} columns={visibleColumns} />
+      <Table className='border-separate border-spacing-0 min-w-max'>
+        <TableHeader className='bg-card sticky top-0 z-10'>
+          <TableRow ref={headerRowRef} className='hover:bg-transparent'>
+            {visibleColumns.map((column, index) => (
+              <TableHead
+                key={column.id}
+                className={`
+                  bg-card shadow-[0_1px_0_0_rgba(0,0,0,0.1)]
+                  whitespace-nowrap select-none
+                  ${column.id !== 'actions' ? 'cursor-pointer hover:bg-muted/50' : ''}
+                  ${draggedColumn === index ? 'opacity-50' : ''}
+                  ${dragOverColumn === index ? 'border-l-2 border-primary' : ''}
+                `}
+                style={{ textAlign: column.align }}
+                draggable={column.id !== 'actions'}
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index)}
+                onDragEnd={handleDragEnd}
+                onClick={() => handleSort(column.id)}
+              >
+                <div className='flex items-center gap-1'>
+                  <span>{column.label}</span>
+                  {column.id !== 'actions' && <SortIndicator active={state.sortColumn === column.id} direction={state.sortDirection} />}
+                </div>
+              </TableHead>
             ))}
-          </TableBody>
-        </Table>
-      </div>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {paginatedData.map((row) => (
+            <DataTableRow key={row.id} row={row} columns={visibleColumns} />
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -278,11 +277,11 @@ function StatusCell({ status, runtime, dueDate }: StatusCellProps) {
 
   if (statusLower === 'beendet' || statusLower === 'completed') {
     icon = CheckmarkCircle02Icon;
-      color = '!text-green-500';
+    color = '!text-green-500';
     tooltip = runtime ? `Beendet - Laufzeit: ${runtime}` : 'Beendet';
   } else if (statusLower === 'fällig' || statusLower === 'faellig' || statusLower === 'due') {
     icon = AlertCircleIcon;
-      color = '!text-red-500';
+    color = '!text-red-500';
 
     if (dueDate) {
       const dueDateObj = new Date(dueDate);
@@ -297,7 +296,7 @@ function StatusCell({ status, runtime, dueDate }: StatusCellProps) {
     }
   } else if (statusLower === 'nicht fällig' || statusLower === 'nicht faellig' || statusLower === 'not_due' || statusLower === 'not_faellig') {
     icon = Clock01Icon;
-      color = '!text-yellow-500';
+    color = '!text-yellow-500';
     tooltip = runtime ? `Nicht Fällig - Laufzeit: ${runtime}` : 'Nicht Fällig';
   }
 
@@ -320,6 +319,9 @@ interface ActionsCellProps {
 }
 
 function ActionsCell({ row }: ActionsCellProps) {
+  const statusLower = (row.status || '').toLowerCase();
+  const isCompleted = statusLower === 'beendet' || statusLower === 'completed';
+
   return (
     <div className='flex items-center justify-center gap-0'>
       <TooltipProvider>
@@ -344,8 +346,8 @@ function ActionsCell({ row }: ActionsCellProps) {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger
-            onClick={() => row.invoice && window.open(`#invoice/${row.invoice}`, '_blank')}
-            className={`p-1 rounded transition-colors ${row.invoice ? '!text-amber-500 hover:!text-amber-600 hover:bg-amber-500/10 cursor-pointer' : 'text-muted-foreground/30 cursor-not-allowed'}`}
+            onClick={() => row.invoice && window.open(`https://jobrouter.empira-invest.com/jobrouter/FIBU_URL.php?dokument=${row.invoice}`, '_blank')}
+            className={`p-1 rounded transition-colors ${row.invoice ? 'text-amber-500! hover:text-amber-600! hover:bg-amber-500/10 cursor-pointer' : 'text-muted-foreground/30 cursor-not-allowed'}`}
             disabled={!row.invoice}
           >
             <HugeiconsIcon icon={Invoice03Icon} size={19} />
@@ -359,14 +361,24 @@ function ActionsCell({ row }: ActionsCellProps) {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger
-            onClick={() => row.protocol && window.open(`#protocol/${row.protocol}`, '_blank')}
-            className={`p-1 rounded transition-colors ${row.protocol ? '!text-purple-500 hover:!text-purple-600 hover:bg-purple-500/10 cursor-pointer' : 'text-muted-foreground/30 cursor-not-allowed'}`}
-            disabled={!row.protocol}
+            onClick={() =>
+              row.protocol &&
+              isCompleted &&
+              window.open(`https://jobrouter.empira-invest.com/jobrouter/PROTOCOL_URL.php?dokument=${row.protocol}`, '_blank')
+            }
+            className={`p-1 rounded transition-colors ${row.protocol && isCompleted ? 'text-purple-500! hover:text-purple-600! hover:bg-purple-500/10 cursor-pointer' : 'text-muted-foreground/30 cursor-not-allowed'}`}
+            disabled={!row.protocol || !isCompleted}
           >
             <HugeiconsIcon icon={File01Icon} size={19} />
           </TooltipTrigger>
           <TooltipContent>
-            <p>{row.protocol ? `Protokoll öffnen: ${row.protocol}` : 'Kein Protokoll verfügbar'}</p>
+            <p>
+              {row.protocol && isCompleted
+                ? `Protokoll öffnen: ${row.protocol}`
+                : !isCompleted
+                  ? 'Protokoll nur verfügbar wenn Status "Beendet" ist'
+                  : 'Kein Protokoll verfügbar'}
+            </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -380,7 +392,7 @@ interface LoadingSkeletonProps {
 
 function LoadingSkeleton({ columns }: LoadingSkeletonProps) {
   return (
-    <div className='rounded-xl border overflow-hidden'>
+    <div className='rounded-xl border overflow-hidden h-full'>
       <Table>
         <TableHeader>
           <TableRow>

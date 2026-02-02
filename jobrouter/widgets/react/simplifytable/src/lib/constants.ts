@@ -146,20 +146,6 @@ export const DEFAULT_FILTER_PRESETS: FilterPreset[] = [
     visible: true,
     isCustom: false,
   },
-  {
-    id: 'all_active',
-    label: 'Alle Aktiven',
-    filters: { status: 'aktiv_alle' },
-    visible: true,
-    isCustom: false,
-  },
-  {
-    id: 'completed',
-    label: 'Beendet',
-    filters: { status: 'completed' },
-    visible: true,
-    isCustom: false,
-  },
 ];
 
 // ============================================

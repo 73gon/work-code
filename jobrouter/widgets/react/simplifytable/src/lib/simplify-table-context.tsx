@@ -1,14 +1,7 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from 'react';
 import type { AppState, Filters, FilterPreset, Column, FilterConfig } from './types';
 import { DEFAULT_FILTERS } from './types';
-import {
-  DEFAULT_COLUMNS,
-  DEFAULT_DROPDOWN_OPTIONS,
-  DEFAULT_FILTER_CONFIG,
-  DEFAULT_FILTER_PRESETS,
-  MOCK_DATA,
-  buildFilterConfig,
-} from './constants';
+import { DEFAULT_COLUMNS, DEFAULT_DROPDOWN_OPTIONS, DEFAULT_FILTER_CONFIG, DEFAULT_FILTER_PRESETS, MOCK_DATA, buildFilterConfig } from './constants';
 
 interface SimplifyTableContextType {
   state: AppState;
@@ -116,10 +109,7 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
     return response.json();
   }, []);
 
-  type QuerySnapshot = Pick<
-    AppState,
-    'currentPage' | 'itemsPerPage' | 'sortColumn' | 'sortDirection' | 'filters'
-  >;
+  type QuerySnapshot = Pick<AppState, 'currentPage' | 'itemsPerPage' | 'sortColumn' | 'sortDirection' | 'filters'>;
 
   const queryServer = useCallback(
     async (snapshot: QuerySnapshot) => {
@@ -223,9 +213,7 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
         const defaultColumnOrder = initColumns.map((c: Column) => c.id);
         const defaultVisibleFilters = buildFilterConfig(initDropdowns).map((f) => f.id);
 
-        const nextFilters = preferences?.filter
-          ? { ...DEFAULT_FILTERS, ...preferences.filter }
-          : stateRef.current.filters;
+        const nextFilters = preferences?.filter ? { ...DEFAULT_FILTERS, ...preferences.filter } : stateRef.current.filters;
 
         const nextSortColumn = preferences?.sort_column ?? stateRef.current.sortColumn;
         const nextSortDirection = preferences?.sort_direction ?? stateRef.current.sortDirection;
@@ -320,22 +308,17 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
     state.filterPresets,
   ]);
 
-  const setFilters = useCallback(
-    (newFilters: Partial<Filters>) => {
-      setState((prev) => {
-        const updatedFilters = { ...prev.filters, ...newFilters };
-        return {
-          ...prev,
-          filters: updatedFilters,
-          currentPage: 1,
-          selectedPreset: 'individual',
-        };
-      });
-
-      void fetchData({ filters: { ...stateRef.current.filters, ...newFilters }, currentPage: 1 });
-    },
-    [fetchData],
-  );
+  const setFilters = useCallback((newFilters: Partial<Filters>) => {
+    setState((prev) => {
+      const updatedFilters = { ...prev.filters, ...newFilters };
+      return {
+        ...prev,
+        filters: updatedFilters,
+        currentPage: 1,
+        selectedPreset: 'individual',
+      };
+    });
+  }, []);
 
   const resetFilters = useCallback(() => {
     setState((prev) => ({

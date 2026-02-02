@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DatePicker } from '@/components/ui/date-picker';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { FilterIcon, FilterRemoveIcon, Tick01Icon, Cancel01Icon, FloppyDiskIcon } from '@hugeicons/core-free-icons';
+import { FilterIcon, FilterRemoveIcon, Tick01Icon, Cancel01Icon, FloppyDiskIcon, ArrowUp01Icon, ArrowDown01Icon } from '@hugeicons/core-free-icons';
 import type { FilterConfig, DropdownOption, Filters } from '@/lib/types';
 
 export function FilterBar() {
@@ -15,6 +16,7 @@ export function FilterBar() {
 
   const [savingPreset, setSavingPreset] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const presetNameInputRef = useRef<HTMLInputElement>(null);
 
   // Get visible presets for the select
@@ -50,90 +52,102 @@ export function FilterBar() {
   };
 
   const handleApplyFilters = () => {
-    fetchData();
+    fetchData({ filters: state.filters });
   };
 
   return (
-    <div className='bg-card rounded-xl border p-4 mb-4 space-y-4'>
-      {/* Filter Grid */}
-      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
-        {filterConfigs
-          .filter((f) => f.visible)
-          .map((config) => (
-            <FilterItem key={config.id} config={config} />
-          ))}
+    <div className='bg-card rounded-xl border p-4 mb-4 shrink-0'>
+      {/* Header with collapse toggle */}
+      <div className={`flex items-center justify-between ${isCollapsed ? '' : 'mb-4'}`}>
+        <span className='text-sm font-medium text-muted-foreground'>Filter</span>
+        <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => setIsCollapsed(!isCollapsed)}>
+          <HugeiconsIcon icon={isCollapsed ? ArrowDown01Icon : ArrowUp01Icon} size={14} />
+        </Button>
       </div>
 
-      {/* Actions Row */}
-      <div className='flex flex-wrap items-center justify-between gap-4 pt-2 border-t'>
-        {/* Preset Select and Save */}
-        <div className='flex items-center gap-2'>
-          <Select value={state.selectedPreset || 'individual'} onValueChange={handlePresetChange}>
-            <SelectTrigger className='w-50'>
-              <SelectValue>
-                {state.selectedPreset === 'individual' || !state.selectedPreset
-                  ? 'Individuell'
-                  : visiblePresets.find((p) => p.id === state.selectedPreset)?.label || 'Filter auswählen...'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='individual'>Individuell</SelectItem>
-              {visiblePresets.map((preset) => (
-                <SelectItem key={preset.id} value={preset.id}>
-                  {preset.label}
-                </SelectItem>
+      {!isCollapsed && (
+        <>
+          {/* Filter Grid */}
+          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4'>
+            {filterConfigs
+              .filter((f) => f.visible)
+              .map((config) => (
+                <FilterItem key={config.id} config={config} />
               ))}
-            </SelectContent>
-          </Select>
+          </div>
 
-          {!savingPreset ? (
-            <Button variant='outline' onClick={() => setSavingPreset(true)} className='gap-1'>
-              <HugeiconsIcon icon={FloppyDiskIcon} size={16} />
-              Filter speichern
-            </Button>
-          ) : (
-            <div className='relative flex items-center'>
-              <Input
-                ref={presetNameInputRef}
-                value={newPresetName}
-                onChange={(e) => setNewPresetName(e.target.value)}
-                placeholder='Filtername...'
-                className='w-38.75 h-7 pr-14'
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSavePreset();
-                  if (e.key === 'Escape') handleCancelSave();
-                }}
-                autoFocus
-              />
-              <div className='absolute right-1 flex items-center gap-0.5'>
-                <button
-                  type='button'
-                  className='p-1 rounded text-green-500 hover:text-green-600 hover:bg-green-500/10 disabled:opacity-50 disabled:cursor-not-allowed'
-                  onClick={handleSavePreset}
-                  disabled={!newPresetName.trim()}
-                >
-                  <HugeiconsIcon icon={Tick01Icon} size={16} />
-                </button>
-                <button type='button' className='p-1 rounded text-red-500 hover:text-red-600 hover:bg-red-500/10' onClick={handleCancelSave}>
-                  <HugeiconsIcon icon={Cancel01Icon} size={16} />
-                </button>
-              </div>
+          {/* Actions Row */}
+          <div className='flex flex-wrap items-center justify-between gap-4 pt-2 border-t'>
+            {/* Preset Select and Save */}
+            <div className='flex items-center gap-2'>
+              <Select value={state.selectedPreset || 'individual'} onValueChange={handlePresetChange}>
+                <SelectTrigger className='w-50'>
+                  <SelectValue>
+                    {state.selectedPreset === 'individual' || !state.selectedPreset
+                      ? 'Individuell'
+                      : visiblePresets.find((p) => p.id === state.selectedPreset)?.label || 'Filter auswählen...'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='individual'>Individuell</SelectItem>
+                  {visiblePresets.map((preset) => (
+                    <SelectItem key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {!savingPreset ? (
+                <Button variant='outline' onClick={() => setSavingPreset(true)} className='gap-1 h-7.25'>
+                  <HugeiconsIcon icon={FloppyDiskIcon} size={16} />
+                  Filter speichern
+                </Button>
+              ) : (
+                <div className='relative flex items-center'>
+                  <Input
+                    ref={presetNameInputRef}
+                    value={newPresetName}
+                    onChange={(e) => setNewPresetName(e.target.value)}
+                    placeholder='Filtername...'
+                    className='w-38.75 h-7 pr-14'
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSavePreset();
+                      if (e.key === 'Escape') handleCancelSave();
+                    }}
+                    autoFocus
+                  />
+                  <div className='absolute right-1 flex items-center gap-0.5'>
+                    <button
+                      type='button'
+                      className='p-1 rounded text-green-500 hover:text-green-600 hover:bg-green-500/10 disabled:opacity-50 disabled:cursor-not-allowed'
+                      onClick={handleSavePreset}
+                      disabled={!newPresetName.trim()}
+                    >
+                      <HugeiconsIcon icon={Tick01Icon} size={16} />
+                    </button>
+                    <button type='button' className='p-1 rounded text-red-500 hover:text-red-600 hover:bg-red-500/10' onClick={handleCancelSave}>
+                      <HugeiconsIcon icon={Cancel01Icon} size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Apply and Reset Buttons */}
-        <div className='flex items-center gap-2'>
-          <Button onClick={handleApplyFilters} className='gap-1'>
-            <HugeiconsIcon icon={FilterIcon} size={16} />
-            Filter anwenden
-          </Button>
-          <Button variant='destructive' onClick={resetFilters} className='gap-1'>
-            <HugeiconsIcon icon={FilterRemoveIcon} size={16} />
-            Zurücksetzen
-          </Button>
-        </div>
-      </div>
+            {/* Apply and Reset Buttons */}
+            <div className='flex items-center gap-2'>
+              <Button onClick={handleApplyFilters} className='gap-1'>
+                <HugeiconsIcon icon={FilterIcon} size={16} />
+                Filter anwenden
+              </Button>
+              <Button variant='destructive' onClick={resetFilters} className='gap-1'>
+                <HugeiconsIcon icon={FilterRemoveIcon} size={16} />
+                Zurücksetzen
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -183,12 +197,11 @@ function FilterItem({ config }: FilterItemProps) {
     const toValue = state.filters[rangeOptions.toId as keyof Filters] as string;
 
     return (
-      <div className='space-y-1.5'>
+      <div className='space-y-3'>
         <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>{config.label}</label>
-        <div className='flex items-center gap-2'>
-          <Input type='date' value={fromValue || ''} onChange={(e) => setFilters({ [rangeOptions.fromId]: e.target.value })} className='flex-1' />
-          <span className='text-muted-foreground'>-</span>
-          <Input type='date' value={toValue || ''} onChange={(e) => setFilters({ [rangeOptions.toId]: e.target.value })} className='flex-1' />
+        <div className='grid grid-cols-2 gap-2'>
+          <DatePicker value={fromValue} onChange={(date) => setFilters({ [rangeOptions.fromId]: date })} placeholder='Von' />
+          <DatePicker value={toValue} onChange={(date) => setFilters({ [rangeOptions.toId]: date })} placeholder='Bis' />
         </div>
       </div>
     );

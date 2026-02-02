@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useSimplifyTable } from '@/lib/simplify-table-context';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,10 +27,9 @@ export function SettingsModal() {
       <DialogContent className='max-w-2xl max-h-[85vh]'>
         <DialogHeader>
           <DialogTitle>Einstellungen</DialogTitle>
-          <DialogDescription>Passen Sie die Ansicht und Filter nach Ihren Wünschen an.</DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue='filters' className='mt-4'>
+        <Tabs defaultValue='filters' className='mt-2'>
           <TabsList className='grid w-full grid-cols-3'>
             <TabsTrigger value='filters' className='gap-2'>
               <HugeiconsIcon icon={FilterIcon} size={16} />
@@ -185,7 +184,6 @@ function PresetSettingsTab() {
               <div className='flex items-center gap-2'>
                 <HugeiconsIcon icon={DragDropVerticalIcon} size={14} className='text-muted-foreground' />
                 <span className='text-sm'>{preset.label}</span>
-                {preset.isCustom && <span className='text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded'>Eigene</span>}
               </div>
               <div className='flex items-center gap-0.5'>
                 <Button
@@ -199,8 +197,8 @@ function PresetSettingsTab() {
                 <Button
                   variant='ghost'
                   size='icon'
-                  className={`h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10`}
-                  onClick={() => preset.isCustom && removeFilterPreset(preset.id)}
+                  className='h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10'
+                  onClick={() => removeFilterPreset(preset.id)}
                 >
                   <HugeiconsIcon icon={Delete02Icon} size={18} />
                 </Button>

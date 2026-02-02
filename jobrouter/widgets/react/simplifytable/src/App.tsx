@@ -6,7 +6,7 @@ export function App() {
   const portalContainerRef = useRef<HTMLDivElement | null>(null);
 
   return (
-    <div ref={portalContainerRef} className='simplifytable-widget h-full'>
+    <div ref={portalContainerRef} className='simplifytable-widget h-full max-h-full overflow-hidden'>
       <PortalContainerProvider containerRef={portalContainerRef}>
         <SimplifyTable />
       </PortalContainerProvider>

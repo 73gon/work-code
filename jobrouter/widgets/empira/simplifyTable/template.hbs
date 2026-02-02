@@ -1,20 +1,32 @@
-<link
-  rel='stylesheet'
-  href='https://use.fontawesome.com/releases/v5.15.4/css/all.css'
-  integrity='sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm'
-  crossorigin='anonymous'
-/>
-<link rel='stylesheet' href='https://unicons.iconscout.com/release/v4.0.8/css/line.css' />
-<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css' type='text/css' />
-<link rel='stylesheet' href='//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css' />
-
-<script src='./dashboard/MyWidgets/SimplifyTable/script.js'></script>
-<link rel='stylesheet' href='./dashboard/MyWidgets/SimplifyTable/style.css' />
-
-<div id='simplifyTable_columns' style='display:none;'>{{columns}}</div>
-<div id='simplifyTable_dropdownOptions' style='display:none;'>{{dropdownOptions}}</div>
-<div id='simplifyTable_tableData' style='display:none;'>{{tableData}}</div>
-<div id='simplifyTable_currentUser' style='display:none;'>{{currentUser}}</div>
-<div id='simplifyTable_userPreferences' style='display:none;'>{{userPreferences}}</div>
-
-<div id='simplifyTable_app'></div>
+<html lang='en'>
+  <head>
+    <meta charset='UTF-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Widget</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+      }
+      .widget-container {
+        flex: 1;
+        width: 100%;
+        height: 98%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='widget-container'>
+      <iframe
+        src='/jobrouter/dashboard/MyWidgets/SimplifyTable/widget.html?username={{currentUser}}'
+        style='width:100%; height:100%; border:0;'
+      ></iframe>
+    </div>
+  </body>
+</html>

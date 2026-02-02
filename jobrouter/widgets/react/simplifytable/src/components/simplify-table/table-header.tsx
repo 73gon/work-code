@@ -12,9 +12,9 @@ export function TableHeader() {
   const handleZoomReset = () => setZoom(1.0);
 
   return (
-    <div className='flex items-center justify-between mb-2'>
+    <div className='flex items-center justify-between mb-2 shrink-0'>
       <div className='flex items-center gap-2'>
-        <h2 className='text-base font-semibold'>Umlauftabelle</h2>
+        <h2 className='text-base font-semibold'></h2>
       </div>
 
       <div className='flex items-center gap-1.5'>
