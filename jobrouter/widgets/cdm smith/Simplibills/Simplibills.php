@@ -5,15 +5,15 @@ namespace dashboard\MyWidgets\Simplibills;
 use JobRouter\Api\Dashboard\v1\Widget;
 
 class Simplibills extends Widget
-{
+    {
 
     public function getTitle()
-    {
+        {
         return 'Ueberfaellige und unbezahlte Rechnungen';
-    }
+        }
 
     public function getDimensions()
-    {
+        {
 
         return [
             'minHeight' => 4,
@@ -21,17 +21,17 @@ class Simplibills extends Widget
             'maxHeight' => 4,
             'maxWidth' => 2,
         ];
-    }
+        }
 
 
     public function isAuthorized()
-    {
+        {
         return $this->getUser()->isInJobFunction('Widgets');
-    }
+        }
 
 
     public function getData()
-    {
+        {
         return [
             'incidents' => $this->getIncidents(),
             'labels' => json_encode([
@@ -40,7 +40,7 @@ class Simplibills extends Widget
                 "Pruefung",
                 "Freigabe",
                 "Buchhaltung DE",
-                "Buchhaltung Kredikarte",
+                "Buchhaltung Kreditkarte",
                 "Fuhrpark",
                 "Einkauf",
                 "Buchhaltung IFSC",
@@ -50,23 +50,24 @@ class Simplibills extends Widget
                 "ausstehende Zahlungen (Archivstatus Zahlungsfreigabe)",
                 "Gebuchte Rechnungen (Archivstatus gebucht)",
             ]),
-            'einheit' => $this->getEinheit()
+            'einheit' => $this->getEinheit(),
+            'usernames' => $this->getUsernames()
         ];
-    }
+        }
 
     public function getIncidents()
-    {
+        {
         $bearbeitung = $this->getBearbeitung();
         $gebucht_zahlung = $this->getGebuchtAndZahlungsfreigabe();
 
         $incidents = array_merge($bearbeitung, $gebucht_zahlung);
 
-        array_unshift($incidents, (string)array_sum($incidents));
+        array_unshift($incidents, (string) array_sum($incidents));
 
         return json_encode($incidents);
-    }
+        }
     public function getGebuchtAndZahlungsfreigabe()
-    {
+        {
         $JobDB = $this->getJobDB();
         $query = "
             WITH LatestRevisions AS (
@@ -89,13 +90,13 @@ class Simplibills extends Widget
         while ($row = $JobDB->fetchRow($result)) {
             if (isset($gebucht_zahlung[$row["STATUS"]])) {
                 $gebucht_zahlung[$row["STATUS"]] = $row["COUNTROW"];
+                }
             }
-        }
         return array_values($gebucht_zahlung);
-    }
+        }
 
     public function getBearbeitung()
-    {
+        {
         $JobDB = $this->getJobDB();
         $query = "
                     WITH RankedRows AS (
@@ -144,13 +145,13 @@ class Simplibills extends Widget
             if (isset($stepMapping[$step])) {
                 $index = $stepMapping[$step];
                 $bearbeitung[$index] += (int) $row["COUNTROW"];
+                }
             }
-        }
         return $bearbeitung;
-    }
+        }
 
     public function getEinheit()
-    {
+        {
         $JobDB = $this->getJobDB();
         $query = "SELECT NAME, CODE FROM EINHEIT";
         $result = $JobDB->query($query);
@@ -161,7 +162,60 @@ class Simplibills extends Widget
         while ($row = $JobDB->fetchRow($result)) {
             $einheit['einheit'][] = "{$row['NAME']} | {$row['CODE']}";
             $einheit['einheitsnummer'][] = $row['CODE'];
-        }
+            }
         return json_encode($einheit);
+        }
+
+    public function getUsernames()
+        {
+        $JobDB = $this->getJobDB();
+        $currentUser = $this->getUser()->getUsername();
+
+        $query = "
+            SELECT DISTINCT
+                u.username,
+                u.prename,
+                u.lastname
+            FROM FREIGABEMATRIX fm
+            JOIN JRUSERS u
+                ON u.username IN (
+                    fm.PRUEFER,
+                    fm.BL,
+                    fm.GBL,
+                    fm.GF
+                )
+            WHERE
+                (
+                    fm.GF = '" . $currentUser . "'
+                    AND u.username IN (fm.GF, fm.GBL, fm.BL, fm.PRUEFER)
+                )
+                OR
+                (
+                    fm.GBL = '" . $currentUser . "'
+                    AND u.username IN (fm.GBL, fm.BL, fm.PRUEFER)
+                )
+                OR
+                (
+                    fm.BL = '" . $currentUser . "'
+                    AND u.username IN (fm.BL, fm.PRUEFER)
+                )
+                OR
+                (
+                    fm.PRUEFER = '" . $currentUser . "'
+                    AND u.username = fm.PRUEFER
+                )
+            ORDER BY u.lastname, u.prename
+        ";
+
+        $result = $JobDB->query($query);
+        $usernames = [];
+        while ($row = $JobDB->fetchRow($result)) {
+            $usernames[] = [
+                'username' => $row['username'],
+                'prename' => $row['prename'],
+                'lastname' => $row['lastname']
+            ];
+            }
+        return json_encode($usernames);
+        }
     }
-}

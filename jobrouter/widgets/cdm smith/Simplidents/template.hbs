@@ -6,14 +6,43 @@ let invisLabel = JSON.parse(document.getElementById("simplidents_invisLabel").in
 let invisIncident = JSON.parse(document.getElementById("simplidents_invisIncident").innerHTML);
 let invisEinheit = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML).einheit;
 let invisEinheitsnummer = JSON.parse(document.getElementById("simplidents_invisEinheit").innerHTML).einheitsnummer;
+let allowedUsers = JSON.parse(document.getElementById("simplidents_invisUsernames").innerHTML);
 let username = '';
-
 
 simplidentsWidget();
 $j('#simplidents_outerBox').parent().toggleClass('simplidents_background', true);
 
+$j(function() {
+    $j("#simplidents_username").autocomplete({
+        appendTo: "#simplidents_outerBox",
+        source: function(request, response) {
+            let term = request.term.toLowerCase();
+            let filtered = allowedUsers.filter(function(user) {
+                return user.username.toLowerCase().indexOf(term) !== -1 ||
+                       user.prename.toLowerCase().indexOf(term) !== -1 ||
+                       user.lastname.toLowerCase().indexOf(term) !== -1;
+            });
+            response(filtered.map(function(user) {
+                return {
+                    label: user.prename + ' ' + user.lastname + ' (' + user.username + ')',
+                    value: user.username
+                };
+            }));
+        },
+        minLength: 0,
+        select: function(event, ui) {
+            $j("#simplidents_username").val(ui.item.value);
+            username = ui.item.value;
+            simplidentsUpdate();
+            return false;
+        }
+    }).on('focus', function() {
+        $j(this).autocomplete("search", "");
+    });
+});
+
 function simplidentsWidget(){
-	let outerBox = document.getElementById("simplidents_outerBox");
+    let outerBox = document.getElementById("simplidents_outerBox");
 
     let dropDownContainer = document.createElement("div");
     dropDownContainer.setAttribute("class", "simplidents_dropDownContainer");
@@ -22,8 +51,9 @@ function simplidentsWidget(){
     let dropDown = document.createElement("select");
     dropDown.id = "simplidents_dropDown";
     dropDown.setAttribute("class", "simplidents_dropDown");
-    dropDown.addEventListener("change", function() {simplidentsUpdate();});
-
+    dropDown.addEventListener("change", function() {
+        simplidentsUpdate();
+    });
     for (let i = 0; i < invisEinheit.length; i++) {
         let option = document.createElement("option");
         option.value = invisEinheit[i];
@@ -45,18 +75,26 @@ function simplidentsWidget(){
     sendButton.id = "simplidents_sendButton";
     sendButton.setAttribute("class", "fa-solid fa-paper-plane");
     sendButton.addEventListener("click", function(){
-        username = usernameInput.value;
-        simplidentsUpdate();
+        let inputVal = usernameInput.value.trim();
+        if (inputVal === '' || allowedUsers.some(function(u) { return u.username === inputVal; })) {
+            username = inputVal;
+            simplidentsUpdate();
+        } else {
+            let toast = document.createElement("div");
+            toast.setAttribute("id", "simplidents_toast");
+            toast.innerText = "Benutzer nicht berechtigt!";
+            document.getElementById("simplidents_outerBox").appendChild(toast);
+            setTimeout(function(){ document.getElementById("simplidents_outerBox").removeChild(toast); }, 3000);
+        }
     });
     inputWrapper.appendChild(sendButton);
 
     dropDownContainer.appendChild(inputWrapper);
 
     let gridContainer = document.createElement("div");
-        gridContainer.id = "simplidents_gridContainer";
-        gridContainer.setAttribute("class", "simplidents_gridContainer");
+    gridContainer.id = "simplidents_gridContainer";
+    gridContainer.setAttribute("class", "simplidents_gridContainer");
     outerBox.appendChild(gridContainer);
-
     simplidentsCreateTable();
 }
 
@@ -67,16 +105,22 @@ function simplidentsCreateTable(){
     gridBoxLeft.setAttribute("class", "simplidents_gridBox");
     gridContainer.appendChild(gridBoxLeft);
     let gridBoxRight = document.createElement("div");
-        gridBoxRight.setAttribute("class", "simplidents_gridBox");
+    gridBoxRight.setAttribute("class", "simplidents_gridBox");
     gridContainer.appendChild(gridBoxRight);
     for(let i = 0; i < invisLabel.length; i++){
         let label = document.createElement("div");
-            label.setAttribute("class", "simplidents_label");
-            label.innerHTML = invisLabel[i];
+        label.setAttribute("class", "simplidents_label");
+        if (i === 0) {
+            label.classList.add('simplidents_total-row');
+        }
+        label.innerHTML = invisLabel[i];
         gridBoxLeft.appendChild(label);
         let incident = document.createElement("div");
-            incident.setAttribute("class", "simplidents_incident");
-            incident.innerHTML = invisIncident[i];
+        incident.setAttribute("class", "simplidents_incident");
+        if (i === 0) {
+            incident.classList.add('simplidents_total-row');
+        }
+        incident.innerHTML = invisIncident[i];
         gridBoxRight.appendChild(incident);
     }
 }
@@ -90,7 +134,18 @@ function simplidentsUpdate() {
     einheit = document.getElementById("simplidents_dropDown").value;
     let einheitIndex = invisEinheit.indexOf(einheit);
     let einheitsnummer = invisEinheitsnummer[einheitIndex];
-    username = document.getElementById("simplidents_username").value;
+    username = document.getElementById("simplidents_username").value.trim();
+
+    if (username !== '' && !allowedUsers.some(function(u) { return u.username === username; })) {
+        loader.style.opacity = '0';
+        outerBox.style.opacity = '100';
+        let toast = document.createElement("div");
+        toast.setAttribute("id", "simplidents_toast");
+        toast.innerText = "Benutzer nicht berechtigt!";
+        outerBox.appendChild(toast);
+        setTimeout(function(){ outerBox.removeChild(toast); }, 3000);
+        return;
+    }
 
     $j.ajax({
         url: "dashboard/MyWidgets/Simplidents/query.php",
@@ -105,23 +160,17 @@ function simplidentsUpdate() {
                 toast.setAttribute("id", "simplidents_toast");
                 toast.innerText = "User existiert nicht!";
                 outerBox.appendChild(toast);
-                setTimeout(function(){
-                    outerBox.removeChild(toast);
-                }, 3000);
+                setTimeout(function(){ outerBox.removeChild(toast); }, 3000);
             }else if (!data){
                 let toast = document.createElement("div");
                 toast.setAttribute("id", "simplidents_toast");
                 toast.innerText = "Keine Daten vorhanden!";
                 outerBox.appendChild(toast);
-                setTimeout(function(){
-                    outerBox.removeChild(toast);
-                }, 3000);
+                setTimeout(function(){ outerBox.removeChild(toast); }, 3000);
             }else{
                 invisIncident = JSON.parse(data);
                 simplidentsCreateTable();
             }
-
-
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(textStatus, errorThrown);
@@ -152,22 +201,10 @@ function simplidentsUpdate() {
 }
 
 @keyframes fadeInOut {
-    0% {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    10% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    90% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    100% {
-        opacity: 0;
-        transform: translateY(20px);
-    }
+    0% { opacity: 0; transform: translateY(20px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(20px); }
 }
 
 .simplidents_dropDownContainer{
@@ -236,14 +273,50 @@ function simplidentsUpdate() {
     border-bottom: 1px solid #252730;
     white-space: nowrap;
     overflow: hidden;
-	text-overflow: ellipsis;
+    text-overflow: ellipsis;
 }
 
 .simplidents_incident{
     text-align: right;
     border-bottom: 1px solid #252730;
     overflow: hidden;
-	text-overflow: ellipsis;
+    text-overflow: ellipsis;
+}
+
+.simplidents_total-row {
+    border-bottom: 1px solid #FFCC0D !important;
+    font-weight: bold;
+}
+
+#simplidents_outerBox .ui-autocomplete {
+    background-color: #242730;
+    border: 1px solid #FFCC0D;
+    border-radius: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 10000;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#simplidents_outerBox .ui-menu-item {
+    padding: 0;
+}
+
+#simplidents_outerBox .ui-menu-item-wrapper {
+    color: #FFCC0D;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+#simplidents_outerBox .ui-menu-item-wrapper.ui-state-active,
+#simplidents_outerBox .ui-menu-item-wrapper:hover {
+    background-color: #3B3E4D;
+    color: #FFCC0D;
+    border: none;
 }
 
 #simplidents_loader {
@@ -274,5 +347,6 @@ function simplidentsUpdate() {
 <div id="simplidents_invisIncident">{{incidents}}</div>
 <div id="simplidents_invisLabel">{{labels}}</div>
 <div id="simplidents_invisEinheit">{{einheit}}</div>
+<div id="simplidents_invisUsernames">{{usernames}}</div>
 <div id="simplidents_loader"></div>
 <div id="simplidents_outerBox"></div>

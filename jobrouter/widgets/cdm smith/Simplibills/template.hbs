@@ -6,14 +6,43 @@ let invisLabel= JSON.parse(document.getElementById("simplibills_invisLabel").inn
 let invisIncident= JSON.parse(document.getElementById("simplibills_invisIncident").innerHTML);
 let invisEinheit = JSON.parse(document.getElementById("simplibills_invisEinheit").innerHTML).einheit;
 let invisEinheitsnummer = JSON.parse(document.getElementById("simplibills_invisEinheit").innerHTML).einheitsnummer;
+let allowedUsers = JSON.parse(document.getElementById("simplibills_invisUsernames").innerHTML);
 let username = '';
-
 
 simplibillsWidget();
 $j('#simplibills_outerBox').parent().toggleClass('simplibills_background', true);
 
+$j(function() {
+    $j("#simplibills_username").autocomplete({
+        appendTo: "#simplibills_outerBox",
+        source: function(request, response) {
+            let term = request.term.toLowerCase();
+            let filtered = allowedUsers.filter(function(user) {
+                return user.username.toLowerCase().indexOf(term) !== -1 ||
+                       user.prename.toLowerCase().indexOf(term) !== -1 ||
+                       user.lastname.toLowerCase().indexOf(term) !== -1;
+            });
+            response(filtered.map(function(user) {
+                return {
+                    label: user.prename + ' ' + user.lastname + ' (' + user.username + ')',
+                    value: user.username
+                };
+            }));
+        },
+        minLength: 0,
+        select: function(event, ui) {
+            $j("#simplibills_username").val(ui.item.value);
+            username = ui.item.value;
+            simplibillsUpdate();
+            return false;
+        }
+    }).on('focus', function() {
+        $j(this).autocomplete("search", "");
+    });
+});
+
 function simplibillsWidget(){
-	let outerBox = document.getElementById("simplibills_outerBox");
+    let outerBox = document.getElementById("simplibills_outerBox");
 
     let dropDownContainer = document.createElement("div");
     dropDownContainer.setAttribute("class", "simplibills_dropDownContainer");
@@ -46,37 +75,78 @@ function simplibillsWidget(){
     sendButton.id = "simplibills_sendButton";
     sendButton.setAttribute("class", "fa-solid fa-paper-plane");
     sendButton.addEventListener("click", function(){
-        username = usernameInput.value;
-        simplibillsUpdate();
+        let inputVal = usernameInput.value.trim();
+        if (inputVal === '' || allowedUsers.some(function(u) { return u.username === inputVal; })) {
+            username = inputVal;
+            simplibillsUpdate();
+        } else {
+            let toast = document.createElement("div");
+            toast.setAttribute("id", "simplibills_toast");
+            toast.innerText = "Benutzer nicht berechtigt!";
+            document.getElementById("simplibills_outerBox").appendChild(toast);
+            setTimeout(function(){ document.getElementById("simplibills_outerBox").removeChild(toast); }, 3000);
+        }
     });
     inputWrapper.appendChild(sendButton);
 
     dropDownContainer.appendChild(inputWrapper);
 
     let gridContainer = document.createElement("div");
-        gridContainer.id = "simplibills_gridContainer";
-        gridContainer.setAttribute("class", "simplibills_gridContainer");
+    gridContainer.id = "simplibills_gridContainer";
+    gridContainer.setAttribute("class", "simplibills_gridContainer");
     outerBox.appendChild(gridContainer);
     simplibillsCreateTable();
 }
 
 function simplibillsCreateTable(){
     let gridContainer = document.getElementById("simplibills_gridContainer");
-        gridContainer.innerHTML = "";
+    gridContainer.innerHTML = "";
     let gridBoxLeft = document.createElement("div");
-        gridBoxLeft.setAttribute("class", "simplibills_gridBox");
+    gridBoxLeft.setAttribute("class", "simplibills_gridBox");
     gridContainer.appendChild(gridBoxLeft);
     let gridBoxRight = document.createElement("div");
-        gridBoxRight.setAttribute("class", "simplibills_gridBox");
+    gridBoxRight.setAttribute("class", "simplibills_gridBox");
     gridContainer.appendChild(gridBoxRight);
     for(let i = 0; i < invisLabel.length; i++){
         let label = document.createElement("div");
-            label.setAttribute("class", "simplibills_label");
+        label.setAttribute("class", "simplibills_label");
+        if (i === 0) {
+            label.classList.add('simplibills_total-row');
+        }
+        if (i === invisLabel.length - 2) {
+            label.classList.add('simplibills_before-payment');
+        }
+        if (i >= invisLabel.length - 2) {
+            let match = invisLabel[i].match(/^(.+?)\s*\((.+?)\)$/);
+            if (match) {
+                let textSpan = document.createElement("span");
+                textSpan.textContent = match[1];
+                label.appendChild(textSpan);
+                let tooltipWrapper = document.createElement("span");
+                tooltipWrapper.setAttribute("class", "simplibills_tooltip-icon");
+                label.classList.add('simplibills_has-tooltip');
+                tooltipWrapper.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+                let tooltipText = document.createElement("span");
+                tooltipText.setAttribute("class", "simplibills_tooltip-text");
+                tooltipText.textContent = match[2];
+                tooltipWrapper.appendChild(tooltipText);
+                label.appendChild(tooltipWrapper);
+            } else {
+                label.innerHTML = invisLabel[i];
+            }
+        } else {
             label.innerHTML = invisLabel[i];
+        }
         gridBoxLeft.appendChild(label);
         let incident = document.createElement("div");
-            incident.setAttribute("class", "simplibills_incident");
-            incident.innerHTML = invisIncident[i];
+        incident.setAttribute("class", "simplibills_incident");
+        if (i === 0) {
+            incident.classList.add('simplibills_total-row');
+        }
+        if (i === invisLabel.length - 2) {
+            incident.classList.add('simplibills_before-payment');
+        }
+        incident.innerHTML = invisIncident[i];
         gridBoxRight.appendChild(incident);
     }
 }
@@ -90,7 +160,18 @@ function simplibillsUpdate() {
     einheit = document.getElementById("simplibills_dropDown").value;
     let einheitIndex = invisEinheit.indexOf(einheit);
     let einheitsnummer = invisEinheitsnummer[einheitIndex];
-    username = document.getElementById("simplibills_username").value;
+    username = document.getElementById("simplibills_username").value.trim();
+
+    if (username !== '' && !allowedUsers.some(function(u) { return u.username === username; })) {
+        loader.style.opacity = '0';
+        outerBox.style.opacity = '100';
+        let toast = document.createElement("div");
+        toast.setAttribute("id", "simplibills_toast");
+        toast.innerText = "Benutzer nicht berechtigt!";
+        outerBox.appendChild(toast);
+        setTimeout(function(){ outerBox.removeChild(toast); }, 3000);
+        return;
+    }
 
     $j.ajax({
         url: "dashboard/MyWidgets/Simplibills/query.php",
@@ -105,17 +186,13 @@ function simplibillsUpdate() {
                 toast.setAttribute("id", "simplibills_toast");
                 toast.innerText = "User existiert nicht!";
                 outerBox.appendChild(toast);
-                setTimeout(function(){
-                    outerBox.removeChild(toast);
-                }, 3000);
+                setTimeout(function(){ outerBox.removeChild(toast); }, 3000);
             }else if (!data){
                 let toast = document.createElement("div");
                 toast.setAttribute("id", "simplibills_toast");
                 toast.innerText = "Keine Daten vorhanden!";
                 outerBox.appendChild(toast);
-                setTimeout(function(){
-                    outerBox.removeChild(toast);
-                }, 3000);
+                setTimeout(function(){ outerBox.removeChild(toast); }, 3000);
             }else{
                 invisIncident = JSON.parse(data);
                 simplibillsCreateTable();
@@ -147,6 +224,13 @@ function simplibillsUpdate() {
     z-index: 9999;
     opacity: 0;
     animation: fadeInOut 3s forwards;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(20px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(20px); }
 }
 
 .simplibills_dropDownContainer{
@@ -215,14 +299,86 @@ function simplibillsUpdate() {
     border-bottom: 1px solid #252730;
     white-space: nowrap;
     overflow: hidden;
-	text-overflow: ellipsis;
+    text-overflow: ellipsis;
 }
 
 .simplibills_incident{
     text-align: right;
     border-bottom: 1px solid #252730;
     overflow: hidden;
-	text-overflow: ellipsis;
+    text-overflow: ellipsis;
+}
+
+.simplibills_total-row {
+    border-bottom: 1px solid #FFCC0D !important;
+    font-weight: bold;
+}
+
+.simplibills_before-payment {
+    border-top: 1px solid #FFCC0D !important;
+}
+
+.simplibills_has-tooltip {
+    overflow: visible !important;
+}
+
+.simplibills_tooltip-icon {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+.simplibills_tooltip-text {
+    visibility: hidden;
+    background-color: #242730;
+    color: #FFCC0D;
+    text-align: center;
+    padding: 5px 10px;
+    border-radius: 5px;
+    position: absolute;
+    z-index: 10001;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 12px;
+    border: 1px solid #FFCC0D;
+}
+
+.simplibills_tooltip-icon:hover .simplibills_tooltip-text {
+    visibility: visible;
+}
+
+#simplibills_outerBox .ui-autocomplete {
+    background-color: #242730;
+    border: 1px solid #FFCC0D;
+    border-radius: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 10000;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#simplibills_outerBox .ui-menu-item {
+    padding: 0;
+}
+
+#simplibills_outerBox .ui-menu-item-wrapper {
+    color: #FFCC0D;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+#simplibills_outerBox .ui-menu-item-wrapper.ui-state-active,
+#simplibills_outerBox .ui-menu-item-wrapper:hover {
+    background-color: #3B3E4D;
+    color: #FFCC0D;
+    border: none;
 }
 
 #simplibills_loader {
@@ -253,5 +409,6 @@ function simplibillsUpdate() {
 <div id="simplibills_invisIncident">{{incidents}}</div>
 <div id="simplibills_invisLabel">{{labels}}</div>
 <div id="simplibills_invisEinheit">{{einheit}}</div>
+<div id="simplibills_invisUsernames">{{usernames}}</div>
 <div id="simplibills_loader"></div>
 <div id="simplibills_outerBox"></div>

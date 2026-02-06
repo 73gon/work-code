@@ -1,5 +1,5 @@
-<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous" />
-<link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous">
+<link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" type="text/css">
 <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
 
@@ -8,6 +8,7 @@ let invisLabel = JSON.parse(document.getElementById("simplidone_invisLabel").inn
 let invisIncident = JSON.parse(document.getElementById("simplidone_invisIncident").innerHTML);
 let invisEinheit = JSON.parse(document.getElementById("simplidone_invisEinheit").innerHTML).einheit;
 let invisEinheitsnummer = JSON.parse(document.getElementById("simplidone_invisEinheit").innerHTML).einheitsnummer;
+let allowedUsers = JSON.parse(document.getElementById("simplidone_invisUsernames").innerHTML);
 let username = '';
 
 simplidoneWidget();
@@ -47,8 +48,17 @@ function simplidoneWidget() {
     sendButton.id = "simplidone_sendButton";
     sendButton.setAttribute("class", "fa-solid fa-paper-plane");
     sendButton.addEventListener("click", function(){
-        username = usernameInput.value;
-        simplidoneUpdate();
+        let inputVal = usernameInput.value.trim();
+        if (inputVal === '' || allowedUsers.some(function(u) { return u.username === inputVal; })) {
+            username = inputVal;
+            simplidoneUpdate();
+        } else {
+            let toast = document.createElement("div");
+            toast.setAttribute("id", "simplidone_toast");
+            toast.innerText = "Benutzer nicht berechtigt!";
+            document.getElementById("simplidone_outerBox").appendChild(toast);
+            setTimeout(function(){ document.getElementById("simplidone_outerBox").removeChild(toast); }, 3000);
+        }
     });
     inputWrapper.appendChild(sendButton);
 
@@ -56,7 +66,6 @@ function simplidoneWidget() {
 
     let dateFromWrapper = document.createElement("div");
     dateFromWrapper.setAttribute("class", "simplidone_dateWrapper");
-
     let dateFrom = document.createElement("input");
     dateFrom.id = "simplidone_dateFrom";
     dateFrom.placeholder = "Startdatum";
@@ -67,7 +76,6 @@ function simplidoneWidget() {
         simplidoneUpdate();
     });
     dateFromWrapper.appendChild(dateFrom);
-
     let deleteFromButton = document.createElement("button");
     deleteFromButton.setAttribute("class", "fa-solid fa-trash");
     deleteFromButton.addEventListener("click", function() {
@@ -75,12 +83,10 @@ function simplidoneWidget() {
         simplidoneUpdate();
     });
     dateFromWrapper.appendChild(deleteFromButton);
-
     dateRange.appendChild(dateFromWrapper);
 
     let dateToWrapper = document.createElement("div");
     dateToWrapper.setAttribute("class", "simplidone_dateWrapper");
-
     let dateTo = document.createElement("input");
     dateTo.id = "simplidone_dateTo";
     dateTo.placeholder = "Enddatum";
@@ -89,7 +95,6 @@ function simplidoneWidget() {
         simplidoneUpdate();
     });
     dateToWrapper.appendChild(dateTo);
-
     let deleteToButton = document.createElement("button");
     deleteToButton.setAttribute("class", "fa-solid fa-trash");
     deleteToButton.addEventListener("click", function() {
@@ -97,7 +102,6 @@ function simplidoneWidget() {
         simplidoneUpdate();
     });
     dateToWrapper.appendChild(deleteToButton);
-
     dateRange.appendChild(dateToWrapper);
 
     $j(function () {
@@ -114,17 +118,17 @@ function simplidoneWidget() {
                 })
                 .on("change", function () {
                     to.datepicker("option", "minDate", getDate(this));
-
                 }),
-            to = $j("#simplidone_dateTo").datepicker({
-                defaultDate: "+1w",
-                changeMonth: true,
-                numberOfMonths: 1,
-                dateFormat: dateFormat,
-                onSelect: function(dateText, inst) {
-                    simplidoneUpdate();
-                }
-            })
+            to = $j("#simplidone_dateTo")
+                .datepicker({
+                    defaultDate: "+1w",
+                    changeMonth: true,
+                    numberOfMonths: 1,
+                    dateFormat: dateFormat,
+                    onSelect: function(dateText, inst) {
+                        simplidoneUpdate();
+                    }
+                })
                 .on("change", function () {
                     from.datepicker("option", "maxDate", getDate(this));
                 });
@@ -136,55 +140,86 @@ function simplidoneWidget() {
             } catch (error) {
                 date = null;
             }
-
             return date;
         }
+
+        $j("#simplidone_username").autocomplete({
+            appendTo: "#simplidone_outerBox",
+            source: function(request, response) {
+                let term = request.term.toLowerCase();
+                let filtered = allowedUsers.filter(function(user) {
+                    return user.username.toLowerCase().indexOf(term) !== -1 ||
+                           user.prename.toLowerCase().indexOf(term) !== -1 ||
+                           user.lastname.toLowerCase().indexOf(term) !== -1;
+                });
+                response(filtered.map(function(user) {
+                    return {
+                        label: user.prename + ' ' + user.lastname + ' (' + user.username + ')',
+                        value: user.username
+                    };
+                }));
+            },
+            minLength: 0,
+            select: function(event, ui) {
+                $j("#simplidone_username").val(ui.item.value);
+                username = ui.item.value;
+                simplidoneUpdate();
+                return false;
+            }
+        }).on('focus', function() {
+            $j(this).autocomplete("search", "");
+        });
     });
+
     let gridContainer = document.createElement("div");
     gridContainer.setAttribute("class", "simplidone_gridContainer");
     gridContainer.id = "simplidone_gridContainer";
     outerBox.appendChild(gridContainer);
-
     simplidoneCreateTable();
 }
 
 function simplidoneCreateTable(){
     let gridContainer = document.getElementById("simplidone_gridContainer");
     gridContainer.innerHTML = '';
-
     let gridBoxLeft = document.createElement("div");
     gridBoxLeft.setAttribute("class", "simplidone_gridBox");
     gridContainer.appendChild(gridBoxLeft);
-
     let gridBoxOne = document.createElement("div");
     gridBoxOne.setAttribute("class", "simplidone_gridBox");
     gridContainer.appendChild(gridBoxOne);
-
     let gridBoxTwo = document.createElement("div");
     gridBoxTwo.setAttribute("class", "simplidone_gridBox");
     gridContainer.appendChild(gridBoxTwo);
-
     let gridBoxThree = document.createElement("div");
     gridBoxThree.setAttribute("class", "simplidone_gridBox");
     gridContainer.appendChild(gridBoxThree);
-
     for (let i = 0; i < invisLabel.length; i++) {
         let label = document.createElement("div");
         label.setAttribute("class", "simplidone_label");
         if (i === 0) {
             label.classList.add('first-index');
         }
+        if (i === 1) {
+            label.classList.add('simplidone_total-row');
+        }
+        if (i === 14) {
+            label.classList.add('simplidone_before-overdue');
+        }
         label.innerHTML = invisLabel[i];
         gridBoxLeft.appendChild(label);
-
         let amount = document.createElement("div");
         amount.setAttribute("class", "simplidone_incident");
         if (i === 0) {
             amount.classList.add('first-index');
         }
+        if (i === 1) {
+            amount.classList.add('simplidone_total-row');
+        }
+        if (i === 14) {
+            amount.classList.add('simplidone_before-overdue');
+        }
         amount.innerHTML = invisIncident[i][0];
         gridBoxOne.appendChild(amount);
-
         /* Summe Dauer auskommentiert
         let avg = document.createElement("div");
         avg.setAttribute("class", "simplidone_incident");
@@ -194,11 +229,16 @@ function simplidoneCreateTable(){
         avg.innerHTML = invisIncident[i][1];
         gridBoxTwo.appendChild(avg);
         */
-
         let sum = document.createElement("div");
         sum.setAttribute("class", "simplidone_incident");
         if (i === 0) {
             sum.classList.add('first-index');
+        }
+        if (i === 1) {
+            sum.classList.add('simplidone_total-row');
+        }
+        if (i === 14) {
+            sum.classList.add('simplidone_before-overdue');
         }
         sum.innerHTML = invisIncident[i][2];
         gridBoxThree.appendChild(sum);
@@ -221,13 +261,23 @@ function simplidoneUpdate() {
         let parts = indate.split(".");
         indate = parts[2] + "-" + parts[1] + "-" + parts[0];
     }
-
     if (outdate != "") {
         let parts = outdate.split(".");
         outdate = parts[2] + "-" + parts[1] + "-" + parts[0];
     }
 
-    username = document.getElementById("simplidone_username").value;
+    username = document.getElementById("simplidone_username").value.trim();
+
+    if (username !== '' && !allowedUsers.some(function(u) { return u.username === username; })) {
+        loader.style.opacity = '0';
+        outerBox.style.opacity = '100';
+        let toast = document.createElement("div");
+        toast.setAttribute("id", "simplidone_toast");
+        toast.innerText = "Benutzer nicht berechtigt!";
+        outerBox.appendChild(toast);
+        setTimeout(function(){ outerBox.removeChild(toast); }, 3000);
+        return;
+    }
 
     $j.ajax({
         url: "dashboard/MyWidgets/Simplidone/query.php",
@@ -242,17 +292,13 @@ function simplidoneUpdate() {
                 toast.setAttribute("id", "simplidone_toast");
                 toast.innerText = "User existiert nicht!";
                 outerBox.appendChild(toast);
-                setTimeout(function(){
-                    outerBox.removeChild(toast);
-                }, 3000);
+                setTimeout(function(){ outerBox.removeChild(toast); }, 3000);
             }else if (!data){
                 let toast = document.createElement("div");
                 toast.setAttribute("id", "simplidone_toast");
                 toast.innerText = "Keine Daten vorhanden!";
                 outerBox.appendChild(toast);
-                setTimeout(function(){
-                    outerBox.removeChild(toast);
-                }, 3000);
+                setTimeout(function(){ outerBox.removeChild(toast); }, 3000);
             }else{
                 invisIncident = JSON.parse(data);
                 simplidoneCreateTable();
@@ -268,7 +314,7 @@ function simplidoneUpdate() {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-#simplidone_outerBox {
+#simplidone_outerBox{
     width: 100%;
     font-family: 'Poppins';
 }
@@ -284,6 +330,13 @@ function simplidoneUpdate() {
     z-index: 9999;
     opacity: 0;
     animation: fadeInOut 3s forwards;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(20px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(20px); }
 }
 
 .simplidone_dropDown{
@@ -321,25 +374,25 @@ function simplidoneUpdate() {
     cursor: pointer;
 }
 
-.simplidone_background {
+.simplidone_background{
     background-color: #3B3E4D;
     color: #FFCC0D;
     border: none;
 }
 
-.simplidone_dateRange {
+.simplidone_dateRange{
     display: flex;
     justify-content: space-between;
     gap: 10px;
     text-align: right;
     padding-left: 10px;
-        padding-right: 10px;
+    padding-right: 10px;
     font-size: 16px;
     padding-top: 5px;
     padding-bottom: 5px;
 }
 
-.simplidone_dateWrapper input {
+.simplidone_dateWrapper input{
     width: 100px;
     border: 1px solid #252730;
     border-radius: 5px;
@@ -347,14 +400,14 @@ function simplidoneUpdate() {
     text-align: center;
 }
 
-.simplidone_dateWrapper button {
+.simplidone_dateWrapper button{
     background: none;
     border: none;
     font-size: 18px;
     cursor: pointer;
 }
 
-.simplidone_dateWrapper {
+.simplidone_dateWrapper{
     display: flex;
     width: 135px;
     border: 1px solid #252730;
@@ -363,30 +416,70 @@ function simplidoneUpdate() {
     text-align: center;
 }
 
-.simplidone_gridContainer {
+.simplidone_gridContainer{
     display: grid;
     grid-template-columns: auto auto auto auto;
 }
 
-.simplidone_gridBox {
+.simplidone_gridBox{
     padding: 10px;
     font-size: 15px;
     line-height: 1.75;
     overflow-x: hidden;
 }
 
-.first-index {
+.first-index{
     font-weight: bold;
 }
 
-.simplidone_label {
+.simplidone_total-row {
+    border-bottom: 1px solid #FFCC0D !important;
+    font-weight: bold;
+}
+
+.simplidone_before-overdue {
+border-top: 1px solid #FFCC0D !important;
+}
+
+#simplidone_outerBox .ui-autocomplete {
+    background-color: #242730;
+    border: 1px solid #FFCC0D;
+    border-radius: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 10000;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#simplidone_outerBox .ui-menu-item {
+    padding: 0;
+}
+
+#simplidone_outerBox .ui-menu-item-wrapper {
+    color: #FFCC0D;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+#simplidone_outerBox .ui-menu-item-wrapper.ui-state-active,
+#simplidone_outerBox .ui-menu-item-wrapper:hover {
+    background-color: #3B3E4D;
+    color: #FFCC0D;
+    border: none;
+}
+
+.simplidone_label{
     border-bottom: 1px solid #252730;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.simplidone_incident {
+.simplidone_incident{
     text-align: right;
     border-bottom: 1px solid #252730;
     white-space: nowrap;
@@ -414,7 +507,7 @@ function simplidoneUpdate() {
     100% { transform: rotate(360deg); }
 }
 
-[id^="simplidone_invis"] {
+[id^="simplidone_invis"]{
     display: none;
 }
 </style>
@@ -422,5 +515,6 @@ function simplidoneUpdate() {
 <div id="simplidone_invisIncident">{{incidents}}</div>
 <div id="simplidone_invisLabel">{{labels}}</div>
 <div id="simplidone_invisEinheit">{{einheit}}</div>
+<div id="simplidone_invisUsernames">{{usernames}}</div>
 <div id="simplidone_loader"></div>
 <div id="simplidone_outerBox"></div>

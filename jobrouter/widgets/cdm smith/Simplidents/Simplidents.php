@@ -5,16 +5,16 @@ namespace dashboard\MyWidgets\Simplidents;
 use JobRouter\Api\Dashboard\v1\Widget;
 
 class Simplidents extends Widget
-{
+    {
 
 
     public function getTitle()
-    {
+        {
         return 'Aktuelle Vorgaenge';
-    }
+        }
 
     public function getDimensions()
-    {
+        {
 
         return [
             'minHeight' => 4,
@@ -22,15 +22,15 @@ class Simplidents extends Widget
             'maxHeight' => 4,
             'maxWidth' => 2,
         ];
-    }
+        }
 
     public function isAuthorized()
-    {
+        {
         return $this->getUser()->isInJobFunction('Widgets');
-    }
+        }
 
     public function getData()
-    {
+        {
         return [
             'incidents' => $this->getIncidents(),
             'labels' => json_encode([
@@ -48,12 +48,13 @@ class Simplidents extends Widget
                 "Lieferantenanlage Compliance",
                 "offene Mahnungen"
             ]),
-            'einheit' => $this->getEinheit()
+            'einheit' => $this->getEinheit(),
+            'usernames' => $this->getUsernames()
         ];
-    }
+        }
 
     public function getIncidents()
-    {
+        {
         $JobDB = $this->getJobDB();
         $temp = "
                     SELECT j.STEP, COUNT(j.STEP) AS STEP_COUNT, j.steplabel
@@ -83,7 +84,7 @@ class Simplidents extends Widget
                     break;
                 case "4":
                 case "7":
-                    $incidents[3] = (string)((int)$incidents[3] + (int)$row["STEP_COUNT"]);
+                    $incidents[3] = (string) ((int) $incidents[3] + (int) $row["STEP_COUNT"]);
                     break;
                 case "17":
                     $incidents[4] = $row["STEP_COUNT"];
@@ -95,7 +96,7 @@ class Simplidents extends Widget
                     $incidents[6] = $row["STEP_COUNT"];
                     break;
                 case "802":
-                    $incidents[7] = (string)((int)$incidents[5] + (int)$row["STEP_COUNT"]);
+                    $incidents[7] = (string) ((int) $incidents[5] + (int) $row["STEP_COUNT"]);
                     break;
                 case "30":
                     $incidents[8] = $row["STEP_COUNT"];
@@ -111,15 +112,15 @@ class Simplidents extends Widget
                     break;
                 default:
                     break;
+                }
             }
-        }
-        array_unshift($incidents, (string)array_sum($incidents));
+        array_unshift($incidents, (string) array_sum($incidents));
 
         return json_encode($incidents);
-    }
+        }
 
     public function getEinheit()
-    {
+        {
         $JobDB = $this->getJobDB();
         $query = "SELECT NAME, CODE FROM EINHEIT";
         $result = $JobDB->query($query);
@@ -130,7 +131,60 @@ class Simplidents extends Widget
         while ($row = $JobDB->fetchRow($result)) {
             $einheit['einheit'][] = "{$row['NAME']} | {$row['CODE']}";
             $einheit['einheitsnummer'][] = $row['CODE'];
-        }
+            }
         return json_encode($einheit);
+        }
+
+    public function getUsernames()
+        {
+        $JobDB = $this->getJobDB();
+        $currentUser = $this->getUser()->getUsername();
+
+        $query = "
+            SELECT DISTINCT
+                u.username,
+                u.prename,
+                u.lastname
+            FROM FREIGABEMATRIX fm
+            JOIN JRUSERS u
+                ON u.username IN (
+                    fm.PRUEFER,
+                    fm.BL,
+                    fm.GBL,
+                    fm.GF
+                )
+            WHERE
+                (
+                    fm.GF = '" . $currentUser . "'
+                    AND u.username IN (fm.GF, fm.GBL, fm.BL, fm.PRUEFER)
+                )
+                OR
+                (
+                    fm.GBL = '" . $currentUser . "'
+                    AND u.username IN (fm.GBL, fm.BL, fm.PRUEFER)
+                )
+                OR
+                (
+                    fm.BL = '" . $currentUser . "'
+                    AND u.username IN (fm.BL, fm.PRUEFER)
+                )
+                OR
+                (
+                    fm.PRUEFER = '" . $currentUser . "'
+                    AND u.username = fm.PRUEFER
+                )
+            ORDER BY u.lastname, u.prename
+        ";
+
+        $result = $JobDB->query($query);
+        $usernames = [];
+        while ($row = $JobDB->fetchRow($result)) {
+            $usernames[] = [
+                'username' => $row['username'],
+                'prename' => $row['prename'],
+                'lastname' => $row['lastname']
+            ];
+            }
+        return json_encode($usernames);
+        }
     }
-}
