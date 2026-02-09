@@ -18,8 +18,23 @@ export function DatePicker({ label, value, onChange, placeholder = 'TT.MM.JJJJ' 
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState('');
 
+  const parseISODate = (dateStr: string): Date | null => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+    if (!match) return null;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+
+    const date = new Date(year, month, day);
+    if (isNaN(date.getTime())) return null;
+    if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) return null;
+
+    return date;
+  };
+
   // Convert string date (YYYY-MM-DD) to Date object for calendar
-  const dateValue = value ? new Date(value) : undefined;
+  const dateValue = value ? (parseISODate(value) ?? undefined) : undefined;
 
   // Sync input value with external value
   React.useEffect(() => {
@@ -46,33 +61,40 @@ export function DatePicker({ label, value, onChange, placeholder = 'TT.MM.JJJJ' 
   };
 
   const formatDisplayDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return '';
-    return date.toLocaleDateString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    const date = parseISODate(dateStr);
+    if (!date) return '';
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).padStart(4, '0');
+    return `${day}.${month}.${year}`;
   };
 
   const parseInputDate = (input: string): Date | null => {
-    // Try parsing DD.MM.YYYY format
-    const parts = input.split('.');
-    if (parts.length === 3) {
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const year = parseInt(parts[2], 10);
-      const date = new Date(year, month, day);
-      if (!isNaN(date.getTime()) && date.getDate() === day && date.getMonth() === month) {
-        return date;
-      }
-    }
-    return null;
+    // Only accept complete DD.MM.YYYY input to avoid partial years like "19" becoming 1919.
+    const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(input.trim());
+    if (!match) return null;
+
+    const day = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const year = Number(match[3]);
+    if (year < 1000) return null;
+
+    const date = new Date(year, month, day);
+    if (isNaN(date.getTime())) return null;
+    if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) return null;
+
+    return date;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
+
+    if (!newValue.trim()) {
+      onChange?.('');
+      return;
+    }
 
     // Try to parse the date as user types
     const parsed = parseInputDate(newValue);
@@ -82,6 +104,12 @@ export function DatePicker({ label, value, onChange, placeholder = 'TT.MM.JJJJ' 
   };
 
   const handleInputBlur = () => {
+    if (!inputValue.trim()) {
+      setInputValue('');
+      if (value) onChange?.('');
+      return;
+    }
+
     // On blur, if we can't parse the input, reset to the current value
     const parsed = parseInputDate(inputValue);
     if (!parsed && value) {
