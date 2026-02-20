@@ -1017,7 +1017,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                         $dbType = $this->getDatabaseType();
                         if ($dbType === "MySQL") {
                             $query = "
-                        UPDATE jrincidents j
+                        UPDATE JRINCIDENTS j
                         JOIN $table_head t ON t.step_id = j.process_step_id
                         SET j.resubmission_date = '$formattedTime'
                         WHERE t.step = $stepID AND t.$fileid = '$id';
@@ -1026,7 +1026,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                             $query = "
                         UPDATE j
                         SET j.resubmission_date = '$formattedTime'
-                        FROM jrincidents AS j
+                        FROM JRINCIDENTS AS j
                         JOIN $table_head AS t ON t.step_id = j.process_step_id
                         WHERE t.step = $stepID AND t.$fileid = '$id';
                         ";
