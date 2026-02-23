@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSimplifyTable } from '@/lib/simplify-table-context';
 import { Button } from '@/components/ui/button';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -6,15 +7,24 @@ import { SettingsModal } from './settings-modal';
 import { exportToExcel } from '@/lib/excel-export';
 
 export function TableHeader() {
-  const { state, columns, setZoom } = useSimplifyTable();
+  const { state, columns, setZoom, fetchAllForExport } = useSimplifyTable();
+  const [exporting, setExporting] = useState(false);
 
   const handleZoomIn = () => setZoom(state.zoomLevel + 0.1);
   const handleZoomOut = () => setZoom(state.zoomLevel - 0.1);
   const handleZoomReset = () => setZoom(1.0);
 
-  const handleExport = () => {
-    const visibleCols = columns.filter((c) => c.visible !== false);
-    exportToExcel(visibleCols, state.filteredData);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const allData = await fetchAllForExport();
+      const visibleCols = columns.filter((c) => c.visible !== false);
+      exportToExcel(visibleCols, allData);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -30,10 +40,10 @@ export function TableHeader() {
           size='sm'
           className='gap-1 h-7 text-xs'
           onClick={handleExport}
-          disabled={state.filteredData.length === 0 || state.loading}
+          disabled={state.totalItems === 0 || state.loading || exporting}
         >
           <HugeiconsIcon icon={FileDownloadIcon} size={14} />
-          Excel Export
+          {exporting ? 'Exportiere...' : 'Excel Export'}
         </Button>
 
         {/* Zoom Controls */}

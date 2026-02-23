@@ -29,12 +29,8 @@ export function DataTable() {
   // Get visible columns
   const visibleColumns = useMemo(() => columns.filter((col) => col.visible !== false), [columns]);
 
-  // Paginate data
-  const paginatedData = useMemo(() => {
-    const start = (state.currentPage - 1) * state.itemsPerPage;
-    const end = start + state.itemsPerPage;
-    return state.filteredData.slice(start, end);
-  }, [state.filteredData, state.currentPage, state.itemsPerPage]);
+  // Data is already paginated server-side, use it directly
+  const paginatedData = state.filteredData;
 
   useLayoutEffect(() => {
     const container = bodyContainerRef.current;

@@ -32,6 +32,7 @@ interface SimplifyTableContextType {
     sortColumn?: string | null;
     sortDirection?: 'asc' | 'desc';
   }) => void;
+  fetchAllForExport: () => Promise<import('./types').TableRow[]>;
 }
 
 const SimplifyTableContext = createContext<SimplifyTableContextType | null>(null);
@@ -472,6 +473,48 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
     setState((prev) => ({ ...prev, zoomLevel: clampedLevel }));
   }, []);
 
+  const fetchAllForExport = useCallback(async () => {
+    const snapshot: QuerySnapshot = {
+      currentPage: 1,
+      itemsPerPage: stateRef.current.itemsPerPage,
+      sortColumn: stateRef.current.sortColumn,
+      sortDirection: stateRef.current.sortDirection,
+      filters: stateRef.current.filters,
+    };
+
+    const url = new URL(buildEndpoint('query.php'));
+    const { filters } = snapshot;
+
+    url.searchParams.set('page', '1');
+    url.searchParams.set('perPage', '1');
+    url.searchParams.set('export', '1');
+    url.searchParams.set('sortColumn', snapshot.sortColumn ?? '');
+    url.searchParams.set('sortDirection', snapshot.sortDirection);
+    url.searchParams.set('username', currentUserRef.current);
+
+    if (filters.kreditor) url.searchParams.set('kreditor', filters.kreditor);
+    if (filters.weiterbelasten) url.searchParams.set('weiterbelasten', filters.weiterbelasten);
+    if (filters.rolle) url.searchParams.set('rolle', filters.rolle);
+    if (filters.rechnungstyp) url.searchParams.set('rechnungstyp', filters.rechnungstyp);
+    if (filters.bruttobetragFrom) url.searchParams.set('bruttobetragFrom', filters.bruttobetragFrom);
+    if (filters.bruttobetragTo) url.searchParams.set('bruttobetragTo', filters.bruttobetragTo);
+    if (filters.dokumentId) url.searchParams.set('dokumentId', filters.dokumentId);
+    if (filters.bearbeiter) url.searchParams.set('bearbeiter', filters.bearbeiter);
+    if (filters.rechnungsnummer) url.searchParams.set('rechnungsnummer', filters.rechnungsnummer);
+    if (filters.status) url.searchParams.set('status', filters.status);
+    if (filters.laufzeit) url.searchParams.set('laufzeit', filters.laufzeit);
+    if (filters.coor) url.searchParams.set('coor', filters.coor);
+    if (filters.rechnungsdatumFrom) url.searchParams.set('rechnungsdatumFrom', filters.rechnungsdatumFrom);
+    if (filters.rechnungsdatumTo) url.searchParams.set('rechnungsdatumTo', filters.rechnungsdatumTo);
+    if (filters.incident) url.searchParams.set('incident', filters.incident);
+    if (filters.gesellschaft.length > 0) url.searchParams.set('gesellschaft', JSON.stringify(filters.gesellschaft));
+    if (filters.fonds.length > 0) url.searchParams.set('fonds', JSON.stringify(filters.fonds));
+    if (filters.schritt.length > 0) url.searchParams.set('schritt', JSON.stringify(filters.schritt));
+
+    const response = await fetchJson(url.toString());
+    return Array.isArray(response?.data) ? response.data : [];
+  }, [buildEndpoint, fetchJson]);
+
   const value = useMemo(
     () => ({
       state,
@@ -494,6 +537,7 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
       setSelectedPreset,
       setZoom,
       fetchData,
+      fetchAllForExport,
     }),
     [
       state,
@@ -516,6 +560,7 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
       setSelectedPreset,
       setZoom,
       fetchData,
+      fetchAllForExport,
     ],
   );
 

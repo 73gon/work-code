@@ -41,6 +41,7 @@ class Query extends Widget
         $page = max(1, (int) $this->getParam('page', 1));
         $perPage = max(1, min(100, (int) $this->getParam('perPage', 25)));
         $offset = ($page - 1) * $perPage;
+        $export = $this->getParam('export', '') === '1';
 
         $sortColumn = $this->getParam('sortColumn', '');
         if ($sortColumn === 'historyLink') {
@@ -117,7 +118,12 @@ class Query extends Widget
         $totalRow = $JobDB->fetchRow($countResult);
         $total = $totalRow ? (int) $totalRow['total'] : 0;
 
-        $dataQuery = "SELECT * FROM V_UEBERSICHTEN_WIDGET {$whereSql} {$orderSql} OFFSET {$offset} ROWS FETCH NEXT {$perPage} ROWS ONLY";
+        if ($export) {
+            // Export mode: return all rows without pagination
+            $dataQuery = "SELECT * FROM V_UEBERSICHTEN_WIDGET {$whereSql} {$orderSql}";
+            } else {
+            $dataQuery = "SELECT * FROM V_UEBERSICHTEN_WIDGET {$whereSql} {$orderSql} OFFSET {$offset} ROWS FETCH NEXT {$perPage} ROWS ONLY";
+            }
         $result = $JobDB->query($dataQuery);
 
         $data = [];
