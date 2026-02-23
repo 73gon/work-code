@@ -1,15 +1,21 @@
 import { useSimplifyTable } from '@/lib/simplify-table-context';
 import { Button } from '@/components/ui/button';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Add01Icon, MinusSignIcon, RefreshIcon } from '@hugeicons/core-free-icons';
+import { Add01Icon, MinusSignIcon, RefreshIcon, FileDownloadIcon } from '@hugeicons/core-free-icons';
 import { SettingsModal } from './settings-modal';
+import { exportToExcel } from '@/lib/excel-export';
 
 export function TableHeader() {
-  const { state, setZoom } = useSimplifyTable();
+  const { state, columns, setZoom } = useSimplifyTable();
 
   const handleZoomIn = () => setZoom(state.zoomLevel + 0.1);
   const handleZoomOut = () => setZoom(state.zoomLevel - 0.1);
   const handleZoomReset = () => setZoom(1.0);
+
+  const handleExport = () => {
+    const visibleCols = columns.filter((c) => c.visible !== false);
+    exportToExcel(visibleCols, state.filteredData);
+  };
 
   return (
     <div className='flex items-center justify-between mb-2 shrink-0'>
@@ -18,6 +24,18 @@ export function TableHeader() {
       </div>
 
       <div className='flex items-center gap-1.5'>
+        {/* Excel Export */}
+        <Button
+          variant='outline'
+          size='sm'
+          className='gap-1 h-7 text-xs'
+          onClick={handleExport}
+          disabled={state.filteredData.length === 0 || state.loading}
+        >
+          <HugeiconsIcon icon={FileDownloadIcon} size={14} />
+          Excel Export
+        </Button>
+
         {/* Zoom Controls */}
         <div className='flex items-center gap-0.5 bg-muted rounded-md p-0.5'>
           <Button variant='ghost' size='icon' className='h-6 w-6' onClick={handleZoomOut} disabled={state.zoomLevel <= 0.5}>

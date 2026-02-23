@@ -278,9 +278,22 @@ function AutocompleteFilter({ config }: AutocompleteFilterProps) {
     setFilters({ [config.filterKey]: newValues });
   };
 
+  const handleSelectAll = () => {
+    const allIds = options.map((opt) => opt.id);
+    setFilters({ [config.filterKey]: allIds });
+    setInputValue('');
+  };
+
+  const handleUnselectAll = () => {
+    setFilters({ [config.filterKey]: [] });
+    setInputValue('');
+  };
+
   const getLabel = (id: string) => {
     return options.find((opt) => opt.id === id)?.label || id;
   };
+
+  const allSelected = options.length > 0 && selectedValues.length === options.length;
 
   return (
     <div className='space-y-1.5'>
@@ -318,6 +331,24 @@ function AutocompleteFilter({ config }: AutocompleteFilterProps) {
         <PopoverContent className='w-(--anchor-width) p-0' align='start'>
           <Command>
             <CommandInput placeholder={`${config.label} suchen...`} value={inputValue} onValueChange={setInputValue} />
+            <div className='flex items-center justify-between px-2 py-1.5 border-b'>
+              <button
+                type='button'
+                className='text-xs text-primary hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+                onClick={handleSelectAll}
+                disabled={allSelected}
+              >
+                Alle auswählen
+              </button>
+              <button
+                type='button'
+                className='text-xs text-destructive hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+                onClick={handleUnselectAll}
+                disabled={selectedValues.length === 0}
+              >
+                Alle abwählen
+              </button>
+            </div>
             <CommandList>
               <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
               <CommandGroup>

@@ -70,6 +70,7 @@ class Query extends Widget
             'coor' => $this->getParam('coor', ''),
             'rechnungsdatumFrom' => $this->getParam('rechnungsdatumFrom', ''),
             'rechnungsdatumTo' => $this->getParam('rechnungsdatumTo', ''),
+            'incident' => $this->getParam('incident', ''),
         ];
 
         $gesellschaftList = $this->decodeListParam($this->getParam('gesellschaft', ''));
@@ -77,6 +78,7 @@ class Query extends Widget
         $schrittList = $this->decodeListParam($this->getParam('schritt', ''));
 
         $sortMap = [
+            'incident' => 'incident',
             'entryDate' => 'eingangsdatum',
             'stepLabel' => 'steplabel',
             'startDate' => 'indate',
@@ -195,6 +197,11 @@ class Query extends Widget
         if (!empty($filters['rechnungsnummer'])) {
             $value = addslashes(strtolower($filters['rechnungsnummer']));
             $where[] = "LOWER(rechnungsnummer) LIKE '%{$value}%'";
+            }
+
+        if (!empty($filters['incident'])) {
+            $value = addslashes(strtolower($filters['incident']));
+            $where[] = "LOWER(incident) LIKE '%{$value}%'";
             }
 
         if (!empty($schrittList)) {
@@ -339,6 +346,7 @@ class Query extends Widget
         return [
             'historyLink' => $this->buildTrackingLink($processId, $username),
             'status' => $statusLabel,
+            'incident' => isset($row['incident']) ? $row['incident'] : '',
             'entryDate' => isset($row['eingangsdatum']) ? $row['eingangsdatum'] : '',
             'stepLabel' => isset($row['steplabel']) ? $row['steplabel'] : '',
             'startDate' => isset($row['indate']) ? $row['indate'] : '',

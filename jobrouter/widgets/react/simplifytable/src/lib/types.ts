@@ -43,6 +43,7 @@ export interface Filters {
   rechnungsnummer: string;
   laufzeit: string;
   coor: string;
+  incident: string;
 }
 
 export interface FilterPreset {
@@ -144,4 +145,5 @@ export const DEFAULT_FILTERS: Filters = {
   rechnungsnummer: '',
   laufzeit: 'all',
   coor: 'all',
+  incident: '',
 };

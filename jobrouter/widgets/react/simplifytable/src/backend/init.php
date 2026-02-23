@@ -50,6 +50,7 @@ class Init extends Widget
         return [
             ['id' => 'actions', 'label' => '', 'type' => 'actions', 'align' => 'center'],
             ['id' => 'status', 'label' => 'Status', 'type' => 'status', 'align' => 'center'],
+            ['id' => 'incident', 'label' => 'Vorgangsnummer', 'type' => 'text', 'align' => 'left'],
             ['id' => 'entryDate', 'label' => 'Eingangsdatum', 'type' => 'date', 'align' => 'left'],
             ['id' => 'stepLabel', 'label' => 'Schritt', 'type' => 'text', 'align' => 'left'],
             ['id' => 'startDate', 'label' => 'Startdatum (Schritt)', 'type' => 'date', 'align' => 'left'],

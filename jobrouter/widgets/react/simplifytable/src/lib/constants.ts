@@ -7,6 +7,7 @@ import type { Column, DropdownOptions, FilterConfig, FilterPreset, TableRow } fr
 export const DEFAULT_COLUMNS: Column[] = [
   { id: 'actions', label: '', type: 'actions', align: 'center', visible: true },
   { id: 'status', label: 'Status', type: 'status', align: 'center', visible: true },
+  { id: 'incident', label: 'Vorgangsnummer', type: 'text', align: 'left', visible: true },
   { id: 'entryDate', label: 'Eingangsdatum', type: 'date', align: 'left', visible: true },
   { id: 'stepLabel', label: 'Schritt', type: 'text', align: 'left', visible: true },
   { id: 'startDate', label: 'Startdatum (Schritt)', type: 'date', align: 'left', visible: true },
@@ -80,6 +81,7 @@ export const DEFAULT_DROPDOWN_OPTIONS: DropdownOptions = {
 
 export const buildFilterConfig = (dropdownOptions: DropdownOptions): FilterConfig[] => [
   { id: 'status', label: 'Status', type: 'dropdown', filterKey: 'status', options: dropdownOptions.status, visible: true },
+  { id: 'incident', label: 'Vorgangsnummer', type: 'text', filterKey: 'incident', visible: true },
   { id: 'schritt', label: 'Schritt', type: 'autocomplete', filterKey: 'schritt', options: dropdownOptions.schritt, visible: true },
   { id: 'dokumentId', label: 'DokumentId', type: 'text', filterKey: 'dokumentId', visible: true },
   { id: 'bearbeiter', label: 'Bearbeiter', type: 'text', filterKey: 'bearbeiter', visible: true },

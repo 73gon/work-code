@@ -137,6 +137,8 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
       if (filters.rechnungsdatumFrom) url.searchParams.set('rechnungsdatumFrom', filters.rechnungsdatumFrom);
       if (filters.rechnungsdatumTo) url.searchParams.set('rechnungsdatumTo', filters.rechnungsdatumTo);
 
+      if (filters.incident) url.searchParams.set('incident', filters.incident);
+
       if (filters.gesellschaft.length > 0) {
         url.searchParams.set('gesellschaft', JSON.stringify(filters.gesellschaft));
       }
@@ -213,6 +215,15 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
         const defaultColumnOrder = initColumns.map((c: Column) => c.id);
         const defaultVisibleFilters = buildFilterConfig(initDropdowns).map((f) => f.id);
 
+        // Merge saved preferences with server-defined columns/filters so that
+        // newly added columns/filters automatically appear for users who have
+        // existing saved preferences.
+        const mergeNewItems = (saved: string[], serverDefined: string[]): string[] => {
+          const savedSet = new Set(saved);
+          const newItems = serverDefined.filter((id) => !savedSet.has(id));
+          return [...saved, ...newItems];
+        };
+
         const nextFilters = preferences?.filter ? { ...DEFAULT_FILTERS, ...preferences.filter } : stateRef.current.filters;
 
         const nextSortColumn = preferences?.sort_column ?? stateRef.current.sortColumn;
@@ -228,9 +239,11 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
           currentPage: nextCurrentPage,
           itemsPerPage: nextItemsPerPage,
           zoomLevel: preferences?.zoom_level ?? prev.zoomLevel,
-          columnOrder: preferences?.column_order?.length ? preferences.column_order : defaultColumnOrder,
-          visibleColumns: preferences?.visible_columns?.length ? preferences.visible_columns : defaultColumnOrder,
-          visibleFilters: preferences?.visible_filters?.length ? preferences.visible_filters : defaultVisibleFilters,
+          columnOrder: preferences?.column_order?.length ? mergeNewItems(preferences.column_order, defaultColumnOrder) : defaultColumnOrder,
+          visibleColumns: preferences?.visible_columns?.length ? mergeNewItems(preferences.visible_columns, defaultColumnOrder) : defaultColumnOrder,
+          visibleFilters: preferences?.visible_filters?.length
+            ? mergeNewItems(preferences.visible_filters, defaultVisibleFilters)
+            : defaultVisibleFilters,
           filterPresets: preferences?.filter_presets?.length ? preferences.filter_presets : prev.filterPresets,
         }));
 
