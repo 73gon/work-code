@@ -296,7 +296,7 @@ export function exportToExcel(columns: Column[], data: TableRow[], filename?: st
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename || `SimplifyTable_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  a.download = filename || `SimpTrack_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

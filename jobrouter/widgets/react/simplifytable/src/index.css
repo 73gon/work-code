@@ -177,4 +177,22 @@
   .simplifytable-widget .scrollbar-thumb-\[\#FFCC00\]::-webkit-scrollbar-thumb:hover {
     background: #ffd633;
   }
+
+  .simplifytable-widget .scrollbar-hide {
+    scrollbar-width: thin;
+    scrollbar-color: #ffcc00 transparent;
+  }
+
+  .simplifytable-widget .scrollbar-hide::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .simplifytable-widget .scrollbar-hide::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .simplifytable-widget .scrollbar-hide::-webkit-scrollbar-thumb {
+    background: #ffcc00;
+    border-radius: 4px;
+  }
 }

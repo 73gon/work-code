@@ -157,6 +157,7 @@ class Query extends Widget
 
         if (!empty($username)) {
             $safeUser = addslashes($username);
+            $where[] = "berechtigung LIKE '%{$safeUser}%'";
             $where[] = "CONCAT(',', REPLACE(LOWER(berechtigung), ' ', ''), ',') LIKE CONCAT('%,', LOWER('{$safeUser}'), ',%')";
             }
 

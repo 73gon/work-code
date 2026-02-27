@@ -259,33 +259,56 @@ function AutocompleteFilter({ config }: AutocompleteFilterProps) {
   const [inputValue, setInputValue] = useState('');
 
   const options = config.options as DropdownOption[];
-  const selectedValues = state.filters[config.filterKey as keyof Filters] as string[];
+  const contextValues = state.filters[config.filterKey as keyof Filters] as string[];
+  const [localSelectedValues, setLocalSelectedValues] = useState<string[]>(contextValues);
+
+  // Keep local state in sync when context changes externally (e.g. preset apply / reset)
+  const prevContextRef = useRef(contextValues);
+  if (prevContextRef.current !== contextValues) {
+    prevContextRef.current = contextValues;
+    setLocalSelectedValues(contextValues);
+  }
+
+  const selectedValues = localSelectedValues;
+
+  // Ref to track latest local values for syncing on close
+  const localRef = useRef(localSelectedValues);
+  localRef.current = localSelectedValues;
+
+  // Sync context only when the popover closes
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      setFilters({ [config.filterKey]: localRef.current });
+    }
+  };
 
   const filteredOptions = options.filter((opt) => {
     const matchesSearch = opt.label.toLowerCase().includes(inputValue.toLowerCase());
-    const notSelected = !selectedValues.includes(opt.id);
-    return matchesSearch && notSelected;
+    return matchesSearch;
   });
 
-  const handleSelect = (value: string) => {
-    const newValues = [...selectedValues, value];
-    setFilters({ [config.filterKey]: newValues });
+  const handleToggle = (value: string) => {
+    const isSelected = selectedValues.includes(value);
+    const newValues = isSelected ? selectedValues.filter((v) => v !== value) : [...selectedValues, value];
+    setLocalSelectedValues(newValues);
     setInputValue('');
   };
 
   const handleRemove = (value: string) => {
     const newValues = selectedValues.filter((v) => v !== value);
+    setLocalSelectedValues(newValues);
     setFilters({ [config.filterKey]: newValues });
   };
 
   const handleSelectAll = () => {
     const allIds = options.map((opt) => opt.id);
-    setFilters({ [config.filterKey]: allIds });
+    setLocalSelectedValues(allIds);
     setInputValue('');
   };
 
   const handleUnselectAll = () => {
-    setFilters({ [config.filterKey]: [] });
+    setLocalSelectedValues([]);
     setInputValue('');
   };
 
@@ -298,11 +321,11 @@ function AutocompleteFilter({ config }: AutocompleteFilterProps) {
   return (
     <div className='space-y-1.5'>
       <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>{config.label}</label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger className='h-7 w-full rounded-md border border-input bg-input/20 px-3 py-1 text-xs ring-offset-background cursor-pointer flex flex-wrap gap-1 items-center text-left overflow-hidden'>
-          <div className='flex flex-wrap gap-1 items-center flex-1'>
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger className='h-7 w-full rounded-md border border-input bg-input/20 px-2 py-0 text-xs ring-offset-background cursor-pointer flex gap-1 items-center text-left min-w-0'>
+          <div className='flex gap-1 items-center flex-1 overflow-x-auto scrollbar-hide'>
             {selectedValues.map((val) => (
-              <Badge key={val} variant='secondary' className='gap-1 bg-primary text-primary-foreground h-4.5'>
+              <Badge key={val} variant='secondary' className='gap-1 bg-muted text-muted-foreground h-4.5 shrink-0'>
                 <span className='max-w-25 truncate text-2xs'>{getLabel(val)}</span>
                 <span
                   role='button'
@@ -353,7 +376,8 @@ function AutocompleteFilter({ config }: AutocompleteFilterProps) {
               <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
               <CommandGroup>
                 {filteredOptions.map((opt) => (
-                  <CommandItem key={opt.id} value={opt.label} onSelect={() => handleSelect(opt.id)}>
+                  <CommandItem key={opt.id} value={opt.label} onSelect={() => handleToggle(opt.id)} className='flex items-center gap-2'>
+                    <HugeiconsIcon icon={Tick01Icon} size={14} className={selectedValues.includes(opt.id) ? 'text-primary' : 'invisible'} />
                     {opt.label}
                   </CommandItem>
                 ))}
