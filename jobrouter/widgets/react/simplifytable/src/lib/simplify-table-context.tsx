@@ -1,7 +1,15 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from 'react';
 import type { AppState, Filters, FilterPreset, Column, FilterConfig } from './types';
 import { DEFAULT_FILTERS } from './types';
-import { DEFAULT_COLUMNS, DEFAULT_DROPDOWN_OPTIONS, DEFAULT_FILTER_CONFIG, DEFAULT_FILTER_PRESETS, MOCK_DATA, buildFilterConfig } from './constants';
+import {
+  DEFAULT_COLUMNS,
+  DEFAULT_DROPDOWN_OPTIONS,
+  DEFAULT_FILTER_CONFIG,
+  DEFAULT_FILTER_PRESETS,
+  buildFilterConfig,
+  INTERACTION_STORAGE_KEY,
+  AUTO_LOAD_THRESHOLD_MS,
+} from './constants';
 
 interface SimplifyTableContextType {
   state: AppState;
@@ -33,6 +41,7 @@ interface SimplifyTableContextType {
     sortDirection?: 'asc' | 'desc';
   }) => void;
   fetchAllForExport: () => Promise<import('./types').TableRow[]>;
+  loadData: () => void;
 }
 
 const SimplifyTableContext = createContext<SimplifyTableContextType | null>(null);
@@ -51,15 +60,16 @@ interface SimplifyTableProviderProps {
 
 export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) {
   const [state, setState] = useState<AppState>(() => ({
-    data: MOCK_DATA,
-    filteredData: MOCK_DATA,
+    data: [],
+    filteredData: [],
     filters: { ...DEFAULT_FILTERS },
     currentPage: 1,
     itemsPerPage: 25,
-    totalItems: MOCK_DATA.length,
+    totalItems: 0,
     sortColumn: null,
     sortDirection: 'asc',
     loading: false,
+    isDataLoaded: false,
     columnOrder: DEFAULT_COLUMNS.map((c) => c.id),
     visibleColumns: DEFAULT_COLUMNS.map((c) => c.id),
     visibleFilters: DEFAULT_FILTER_CONFIG.map((f) => f.id),
@@ -155,6 +165,25 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
     [buildEndpoint, fetchJson],
   );
 
+  const touchInteractionTimestamp = useCallback(() => {
+    try {
+      localStorage.setItem(INTERACTION_STORAGE_KEY, String(Date.now()));
+    } catch {
+      // localStorage may not be available (e.g. private browsing quota)
+    }
+  }, []);
+
+  const shouldAutoLoad = useCallback((): boolean => {
+    try {
+      const stored = localStorage.getItem(INTERACTION_STORAGE_KEY);
+      if (!stored) return false;
+      const elapsed = Date.now() - Number(stored);
+      return elapsed < AUTO_LOAD_THRESHOLD_MS;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const fetchData = useCallback(
     async (overrides?: Partial<QuerySnapshot>) => {
       const snapshot: QuerySnapshot = {
@@ -178,12 +207,15 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
           filteredData: data,
           totalItems: total,
           loading: false,
+          isDataLoaded: true,
         }));
+
+        touchInteractionTimestamp();
       } catch (error) {
         setState((prev) => ({ ...prev, loading: false }));
       }
     },
-    [queryServer],
+    [queryServer, touchInteractionTimestamp],
   );
 
   useEffect(() => {
@@ -248,13 +280,19 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
           filterPresets: preferences?.filter_presets?.length ? preferences.filter_presets : prev.filterPresets,
         }));
 
-        await fetchData({
-          filters: nextFilters,
-          sortColumn: nextSortColumn,
-          sortDirection: nextSortDirection,
-          currentPage: nextCurrentPage,
-          itemsPerPage: nextItemsPerPage,
-        });
+        // Only auto-load data if user interacted within the threshold window
+        if (shouldAutoLoad()) {
+          await fetchData({
+            filters: nextFilters,
+            sortColumn: nextSortColumn,
+            sortDirection: nextSortDirection,
+            currentPage: nextCurrentPage,
+            itemsPerPage: nextItemsPerPage,
+          });
+        } else {
+          // No auto-load: just stop the loading spinner, leave data empty
+          setState((prev) => ({ ...prev, loading: false }));
+        }
       } catch (error) {
         setState((prev) => ({ ...prev, loading: false }));
       } finally {
@@ -269,7 +307,7 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
     return () => {
       isCancelled = true;
     };
-  }, [buildEndpoint, fetchJson, fetchData]);
+  }, [buildEndpoint, fetchJson, fetchData, shouldAutoLoad]);
 
   const savePreferences = useCallback(async () => {
     if (!currentUserRef.current) return;
@@ -343,6 +381,10 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
     }));
 
     void fetchData({ filters: { ...DEFAULT_FILTERS }, currentPage: 1 });
+  }, [fetchData]);
+
+  const loadData = useCallback(() => {
+    void fetchData();
   }, [fetchData]);
 
   const setSort = useCallback(
@@ -538,6 +580,7 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
       setZoom,
       fetchData,
       fetchAllForExport,
+      loadData,
     }),
     [
       state,
@@ -561,6 +604,7 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
       setZoom,
       fetchData,
       fetchAllForExport,
+      loadData,
     ],
   );
 

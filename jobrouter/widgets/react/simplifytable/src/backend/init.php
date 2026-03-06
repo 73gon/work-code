@@ -32,7 +32,7 @@ class Init extends Widget
         }
 
     private function handleRequest(): array
-    {
+        {
         $username = isset($_GET['username']) ? trim($_GET['username']) : '';
 
         return [
@@ -40,7 +40,7 @@ class Init extends Widget
             'dropdownOptions' => $this->getDropdownOptions(),
             'userPreferences' => $this->loadUserPreferences($username),
         ];
-    }
+        }
 
     /**
      * Define all table columns with their properties
@@ -73,9 +73,43 @@ class Init extends Widget
         }
 
     /**
-     * Define dropdown options for filters
+     * Define dropdown options for filters.
+     * Uses a file-based cache (10 min TTL) so that 400+ concurrent users
+     * don't each fire the same 3 DB queries for data that rarely changes.
      */
     private function getDropdownOptions(): array
+        {
+        $cacheDir = __DIR__ . '/cache';
+        $cacheFile = $cacheDir . '/dropdown_options.json';
+        $cacheTtl = 600; // 10 minutes in seconds
+
+        // Serve from cache if it exists and is fresh
+        if (file_exists($cacheFile)) {
+            $age = time() - filemtime($cacheFile);
+            if ($age < $cacheTtl) {
+                $cached = json_decode(file_get_contents($cacheFile), true);
+                if (is_array($cached)) {
+                    return $cached;
+                    }
+                }
+            }
+
+        // Cache miss or stale — query the database
+        $options = $this->fetchDropdownOptionsFromDB();
+
+        // Write cache (create directory if needed)
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0755, true);
+            }
+        @file_put_contents($cacheFile, json_encode($options));
+
+        return $options;
+        }
+
+    /**
+     * Actually query the database for dropdown option values.
+     */
+    private function fetchDropdownOptionsFromDB(): array
         {
         $JobDB = $this->getJobDB();
 
@@ -89,29 +123,25 @@ class Init extends Widget
 
         // Fetch distinct companies for Gesellschaft dropdown
         $gesellschaftQuery = "
-            SELECT DISTINCT mandantnr, mandantname
-            FROM V_UEBERSICHTEN_WIDGET
-            WHERE mandantname NOT IN ('', '-')
-            AND mandantnr IS NOT NULL
-            AND fondflag = 0
+            SELECT NUMMER, NAME
+            FROM JD_GESELLSCHAFTEN
+            ORDER BY NUMMER
         ";
         $gesellschaftResult = $JobDB->query($gesellschaftQuery);
         $gesellschaftOptions = [];
         while ($row = $JobDB->fetchRow($gesellschaftResult)) {
-            $gesellschaftOptions[] = ['id' => $row['mandantnr'], 'label' => $row['mandantname']];
+            $gesellschaftOptions[] = ['id' => $row['NUMMER'], 'label' => $row['NAME']];
             }
 
         // Fetch distinct funds for Fonds dropdown
         $fondsQuery = "
-            SELECT DISTINCT fond_abkuerzung
-            FROM V_UEBERSICHTEN_WIDGET
-            WHERE fond_abkuerzung IS NOT NULL
-            AND fond_abkuerzung != ''
+            SELECT ABKUERZUNG
+            FROM JD_FONDS
         ";
         $fondsResult = $JobDB->query($fondsQuery);
         $fondsOptions = [];
         while ($row = $JobDB->fetchRow($fondsResult)) {
-            $fondsOptions[] = ['id' => $row['fond_abkuerzung'], 'label' => $row['fond_abkuerzung']];
+            $fondsOptions[] = ['id' => $row['ABKUERZUNG'], 'label' => $row['ABKUERZUNG']];
             }
 
         return [
@@ -240,10 +270,10 @@ class Init extends Widget
      * Load user preferences from database
      */
     private function loadUserPreferences(string $username): ?array
-    {
+        {
         if ($username === '') {
             return null;
-        }
+            }
 
         $this->initializeUserPreferencesTable();
 

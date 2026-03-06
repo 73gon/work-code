@@ -19,7 +19,7 @@ function SimplifyTableContent() {
       <div className='flex-1 min-h-0 overflow-hidden'>
         <DataTable />
       </div>
-      <Pagination />
+      {state.isDataLoaded && <Pagination />}
     </div>
   );
 }
@@ -39,4 +39,3 @@ export { DataTable } from './data-table';
 export { Pagination } from './pagination';
 export { TableHeader } from './table-header';
 export { SettingsModal } from './settings-modal';
-

@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback, useLayoutEffect, useRef } from 'react';
 import { useSimplifyTable } from '@/lib/simplify-table-context';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -15,11 +16,12 @@ import {
   Invoice03Icon,
   ClipboardIcon,
   TimeQuarterIcon,
+  Database01Icon,
 } from '@hugeicons/core-free-icons';
 import type { TableRow as TableRowType, Column } from '@/lib/types';
 
 export function DataTable() {
-  const { state, columns, setSort, setColumnOrder } = useSimplifyTable();
+  const { state, columns, setSort, setColumnOrder, loadData } = useSimplifyTable();
   const [draggedColumn, setDraggedColumn] = useState<number | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<number | null>(null);
   const [rowHeight, setRowHeight] = useState<number | null>(null);
@@ -108,6 +110,18 @@ export function DataTable() {
     setDraggedColumn(null);
     setDragOverColumn(null);
   }, []);
+
+  if (!state.isDataLoaded && !state.loading) {
+    return (
+      <div className='flex flex-col items-center justify-center h-full text-muted-foreground rounded-xl border gap-4'>
+        <HugeiconsIcon icon={Database01Icon} size={48} className='opacity-50' />
+        <p className='text-lg'>Tabelle wurde noch nicht geladen</p>
+        <Button onClick={loadData} variant='default' size='lg'>
+          Tabelle laden
+        </Button>
+      </div>
+    );
+  }
 
   if (state.loading) {
     return <LoadingSkeleton columns={visibleColumns.length} />;

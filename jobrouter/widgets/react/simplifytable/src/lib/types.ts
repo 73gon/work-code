@@ -119,6 +119,7 @@ export interface AppState {
   sortColumn: string | null;
   sortDirection: 'asc' | 'desc';
   loading: boolean;
+  isDataLoaded: boolean;
   columnOrder: string[];
   visibleColumns: string[];
   visibleFilters: string[];
