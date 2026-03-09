@@ -69,6 +69,7 @@ class Init extends Widget
             ['id' => 'paymentAmount', 'label' => 'Zahlbetrag', 'type' => 'currency', 'align' => 'left'],
             ['id' => 'paymentDate', 'label' => 'Zahldatum', 'type' => 'date', 'align' => 'left'],
             ['id' => 'chargeable', 'label' => 'Weiterbelasten', 'type' => 'text', 'align' => 'center'],
+            ['id' => 'kostenuebernahme', 'label' => 'Kostenübernahme', 'type' => 'text', 'align' => 'center'],
         ];
         }
 
@@ -168,6 +169,10 @@ class Init extends Widget
             ],
             'gesellschaft' => $gesellschaftOptions,
             'fonds' => $fondsOptions,
+            'kostenuebernahme' => [
+                ['id' => 'Ja', 'label' => 'Ja'],
+                ['id' => 'Nein', 'label' => 'Nein'],
+            ],
         ];
         }
 

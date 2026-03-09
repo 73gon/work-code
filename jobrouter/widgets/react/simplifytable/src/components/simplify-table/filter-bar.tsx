@@ -170,7 +170,7 @@ function FilterItem({ config }: FilterItemProps) {
     return (
       <div className='space-y-1.5'>
         <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>{config.label}</label>
-        <Select value={value || 'all'} onValueChange={(val) => setFilters({ [config.filterKey]: val })}>
+        <Select value={value || 'all'} onValueChange={(val) => setFilters({ [config.filterKey]: val || 'all' })}>
           <SelectTrigger className='w-full'>
             <SelectValue>{getLabel(value || 'all')}</SelectValue>
           </SelectTrigger>

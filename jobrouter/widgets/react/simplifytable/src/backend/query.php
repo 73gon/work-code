@@ -15,6 +15,90 @@ class Query extends Widget
         return 'SimplifyTable Query';
         }
 
+    // =============================================
+    // FIELD & FILTER REGISTRY (add new fields here)
+    // =============================================
+
+    /**
+     * Maps frontend column ID => DB column name.
+     * Used by mapRow() for data mapping and as the sort map.
+     *
+     * To add a new column: add one line here + one line in init.php getColumns().
+     */
+    private function getFieldMap(): array
+        {
+        return [
+            'incident' => 'incident',
+            'entryDate' => 'eingangsdatum',
+            'stepLabel' => 'steplabel',
+            'startDate' => 'indate',
+            'jobFunction' => 'jobfunction',
+            'fullName' => 'fullname',
+            'documentId' => 'dokumentid',
+            'companyName' => 'mandantname',
+            'fund' => 'fond_abkuerzung',
+            'creditorName' => 'kredname',
+            'invoiceType' => 'rechnungstyp',
+            'invoiceNumber' => 'rechnungsnummer',
+            'invoiceDate' => 'rechnungsdatum',
+            'grossAmount' => 'bruttobetrag',
+            'dueDate' => 'eskalation',
+            'orderId' => 'coor_orderid',
+            'paymentAmount' => 'zahlbetrag',
+            'paymentDate' => 'zahldatum',
+            'runtime' => 'runtime',
+            'chargeable' => 'berechenbar',
+            'kostenuebernahme' => 'kostenuebernahme',
+        ];
+        }
+
+    /**
+     * Standard filter definitions: filterKey => [dbColumn, filterType].
+     *
+     * Supported types:
+     *   text_like     - LOWER(col) LIKE '%value%'
+     *   equality      - col = 'value'
+     *   number_gte    - col >= value
+     *   number_lte    - col <= value
+     *   date_gte      - col >= 'value'
+     *   date_lte      - col <= 'value'
+     *   boolean_10    - Ja => col = 1, Nein => (col = 0 OR col IS NULL)
+     *
+     * To add a new filter: add one line here.
+     */
+    private function getFilterDefs(): array
+        {
+        return [
+            'kreditor' => ['kredname', 'text_like'],
+            'rolle' => ['jobfunction', 'text_like'],
+            'rechnungstyp' => ['rechnungstyp', 'text_like'],
+            'dokumentId' => ['dokumentid', 'text_like'],
+            'bearbeiter' => ['fullname', 'text_like'],
+            'rechnungsnummer' => ['rechnungsnummer', 'text_like'],
+            'incident' => ['incident', 'text_like'],
+            'weiterbelasten' => ['berechenbar', 'equality'],
+            'bruttobetragFrom' => ['bruttobetrag', 'number_gte'],
+            'bruttobetragTo' => ['bruttobetrag', 'number_lte'],
+            'rechnungsdatumFrom' => ['rechnungsdatum', 'date_gte'],
+            'rechnungsdatumTo' => ['rechnungsdatum', 'date_lte'],
+            'kostenuebernahme' => ['kostenuebernahme', 'boolean_10'],
+        ];
+        }
+
+    /**
+     * Multi-select (IN list) filter definitions: filterKey => [dbColumn, castToInt].
+     *
+     * To add a new multi-select filter: add one line here.
+     */
+    private function getListFilterDefs(): array
+        {
+        return [
+            'gesellschaft' => ['mandantnr', false],
+            'fonds' => ['fond_abkuerzung', false],
+            'schritt' => ['step', true],
+        ];
+        }
+
     public static function execute(): void
         {
         try {
@@ -56,50 +140,25 @@ class Query extends Widget
 
         $username = $this->getParam('username', '');
 
-        $filters = [
-            'kreditor' => $this->getParam('kreditor', ''),
-            'weiterbelasten' => $this->getParam('weiterbelasten', ''),
-            'rolle' => $this->getParam('rolle', ''),
-            'rechnungstyp' => $this->getParam('rechnungstyp', ''),
-            'bruttobetragFrom' => $this->getParam('bruttobetragFrom', ''),
-            'bruttobetragTo' => $this->getParam('bruttobetragTo', ''),
-            'dokumentId' => $this->getParam('dokumentId', ''),
-            'bearbeiter' => $this->getParam('bearbeiter', ''),
-            'rechnungsnummer' => $this->getParam('rechnungsnummer', ''),
-            'status' => $this->getParam('status', ''),
-            'laufzeit' => $this->getParam('laufzeit', ''),
-            'coor' => $this->getParam('coor', ''),
-            'rechnungsdatumFrom' => $this->getParam('rechnungsdatumFrom', ''),
-            'rechnungsdatumTo' => $this->getParam('rechnungsdatumTo', ''),
-            'incident' => $this->getParam('incident', ''),
-        ];
+        // Read all standard filter params from registry
+        $filters = [];
+        foreach (array_keys($this->getFilterDefs()) as $key) {
+            $filters[$key] = $this->getParam($key, '');
+            }
+        // Special filters handled with custom WHERE logic
+        $filters['status'] = $this->getParam('status', '');
+        $filters['laufzeit'] = $this->getParam('laufzeit', '');
+        $filters['coor'] = $this->getParam('coor', '');
 
-        $gesellschaftList = $this->decodeListParam($this->getParam('gesellschaft', ''));
-        $fondsList = $this->decodeListParam($this->getParam('fonds', ''));
-        $schrittList = $this->decodeListParam($this->getParam('schritt', ''));
+        // Multi-select list filters from registry
+        $listFilters = [];
+        foreach (array_keys($this->getListFilterDefs()) as $key) {
+            $listFilters[$key] = $this->decodeListParam($this->getParam($key, ''));
+            }
 
-        $sortMap = [
-            'incident' => 'incident',
-            'entryDate' => 'eingangsdatum',
-            'stepLabel' => 'steplabel',
-            'startDate' => 'indate',
-            'jobFunction' => 'jobfunction',
-            'fullName' => 'fullname',
-            'documentId' => 'dokumentid',
-            'companyName' => 'mandantname',
-            'fund' => 'fond_abkuerzung',
-            'creditorName' => 'kredname',
-            'invoiceType' => 'rechnungstyp',
-            'invoiceNumber' => 'rechnungsnummer',
-            'invoiceDate' => 'rechnungsdatum',
-            'grossAmount' => 'bruttobetrag',
-            'dueDate' => 'eskalation',
-            'orderId' => 'coor_orderid',
-            'paymentAmount' => 'zahlbetrag',
-            'paymentDate' => 'zahldatum',
-            'runtime' => 'runtime',
-            'status' => 'status',
-        ];
+        // Sort map = field map + status (status is computed but sortable by raw DB column)
+        $sortMap = $this->getFieldMap();
+        $sortMap['status'] = 'status';
 
         $orderSql = '';
         if (!empty($sortColumn) && array_key_exists($sortColumn, $sortMap)) {
@@ -108,7 +167,7 @@ class Query extends Widget
             $orderSql = 'ORDER BY (SELECT NULL)';
             }
 
-        $where = $this->buildWhereClauses($filters, $username, $gesellschaftList, $fondsList, $schrittList);
+        $where = $this->buildWhereClauses($filters, $username, $listFilters);
         $whereSql = empty($where) ? '' : 'WHERE ' . implode(' AND ', $where);
 
         $JobDB = $this->getJobDB();
@@ -119,7 +178,6 @@ class Query extends Widget
         $total = $totalRow ? (int) $totalRow['total'] : 0;
 
         if ($export) {
-            // Export mode: return all rows without pagination
             $dataQuery = "SELECT * FROM V_UEBERSICHTEN_WIDGET {$whereSql} {$orderSql}";
             } else {
             $dataQuery = "SELECT * FROM V_UEBERSICHTEN_WIDGET {$whereSql} {$orderSql} OFFSET {$offset} ROWS FETCH NEXT {$perPage} ROWS ONLY";
@@ -151,79 +209,83 @@ class Query extends Widget
         return [$value];
         }
 
-    private function buildWhereClauses(array $filters, string $username, array $gesellschaftList, array $fondsList, array $schrittList = []): array
+    private function buildWhereClauses(array $filters, string $username, array $listFilters): array
         {
         $where = [];
 
+        // Username access filter
         if (!empty($username)) {
             $safeUser = addslashes($username);
             $where[] = "berechtigung LIKE '%{$safeUser}%'";
             $where[] = "CONCAT(',', REPLACE(LOWER(berechtigung), ' ', ''), ',') LIKE CONCAT('%,', LOWER('{$safeUser}'), ',%')";
             }
 
-        if (!empty($filters['kreditor'])) {
-            $value = addslashes(strtolower($filters['kreditor']));
-            $where[] = "LOWER(kredname) LIKE '%{$value}%'";
-            }
+        // Standard filters from registry definitions
+        foreach ($this->getFilterDefs() as $key => $def) {
+            $value = $filters[$key] ?? '';
+            if ($value === '' || $value === 'all')
+                continue;
 
-        if (!empty($filters['weiterbelasten']) && $filters['weiterbelasten'] !== 'all') {
-            $value = addslashes($filters['weiterbelasten']);
-            $where[] = "berechenbar = '{$value}'";
-            }
+            $dbCol = $def[0];
+            $type = $def[1];
 
-        if (!empty($filters['rolle'])) {
-            $value = addslashes(strtolower($filters['rolle']));
-            $where[] = "LOWER(jobfunction) LIKE '%{$value}%'";
-            }
-
-        if (!empty($filters['rechnungstyp'])) {
-            $value = addslashes(strtolower($filters['rechnungstyp']));
-            $where[] = "LOWER(rechnungstyp) LIKE '%{$value}%'";
-            }
-
-        if (!empty($filters['bruttobetragFrom'])) {
-            $value = floatval($filters['bruttobetragFrom']);
-            $where[] = "bruttobetrag >= {$value}";
-            }
-
-        if (!empty($filters['bruttobetragTo'])) {
-            $value = floatval($filters['bruttobetragTo']);
-            $where[] = "bruttobetrag <= {$value}";
-            }
-
-        if (!empty($filters['dokumentId'])) {
-            $value = addslashes(strtolower($filters['dokumentId']));
-            $where[] = "LOWER(dokumentid) LIKE '%{$value}%'";
-            }
-
-        if (!empty($filters['bearbeiter'])) {
-            $value = addslashes(strtolower($filters['bearbeiter']));
-            $where[] = "LOWER(fullname) LIKE '%{$value}%'";
-            }
-
-        if (!empty($filters['rechnungsnummer'])) {
-            $value = addslashes(strtolower($filters['rechnungsnummer']));
-            $where[] = "LOWER(rechnungsnummer) LIKE '%{$value}%'";
-            }
-
-        if (!empty($filters['incident'])) {
-            $value = addslashes(strtolower($filters['incident']));
-            $where[] = "LOWER(incident) LIKE '%{$value}%'";
-            }
-
-        if (!empty($schrittList)) {
-            $schrittList = array_filter($schrittList, function ($item) {
-                return !empty($item) && strtolower($item) !== 'all';
-                });
-
-            if (!empty($schrittList)) {
-                $values = array_map(function ($item) {
-                    return intval($item);
-                    }, $schrittList);
-                $where[] = 'step IN (' . implode(',', $values) . ')';
+            switch ($type) {
+                case 'text_like':
+                    $safe = addslashes(strtolower($value));
+                    $where[] = "LOWER({$dbCol}) LIKE '%{$safe}%'";
+                    break;
+                case 'equality':
+                    $safe = addslashes($value);
+                    $where[] = "{$dbCol} = '{$safe}'";
+                    break;
+                case 'number_gte':
+                    $where[] = "{$dbCol} >= " . floatval($value);
+                    break;
+                case 'number_lte':
+                    $where[] = "{$dbCol} <= " . floatval($value);
+                    break;
+                case 'date_gte':
+                    $safe = addslashes($value);
+                    $where[] = "{$dbCol} >= '{$safe}'";
+                    break;
+                case 'date_lte':
+                    $safe = addslashes($value);
+                    $where[] = "{$dbCol} <= '{$safe}'";
+                    break;
+                case 'boolean_10':
+                    if (strtolower($value) === 'ja') {
+                        $where[] = "{$dbCol} = 1";
+                        } elseif (strtolower($value) === 'nein') {
+                        $where[] = "({$dbCol} = 0 OR {$dbCol} IS NULL)";
+                        }
+                    break;
                 }
             }
 
+        // Multi-select list filters from registry
+        foreach ($this->getListFilterDefs() as $key => $def) {
+            $list = $listFilters[$key] ?? [];
+            $list = array_filter($list, function ($item) {
+                return !empty($item) && strtolower($item) !== 'all';
+                });
+            if (empty($list))
+                continue;
+
+            $dbCol = $def[0];
+            $castToInt = $def[1];
+
+            if ($castToInt) {
+                $values = array_map('intval', $list);
+                $where[] = "{$dbCol} IN (" . implode(',', $values) . ")";
+                } else {
+                $values = array_map(function ($item) {
+                    return "'" . addslashes($item) . "'";
+                    }, $list);
+                $where[] = "{$dbCol} IN (" . implode(',', $values) . ")";
+                }
+            }
+
+        // Special filter: status (complex switch with date comparison)
         if (!empty($filters['status']) && $filters['status'] !== 'all') {
             $statusValue = strtolower($filters['status']);
             $eskalationSql = "TRY_CONVERT(date, eskalation)";
@@ -255,6 +317,7 @@ class Query extends Widget
                 }
             }
 
+        // Special filter: laufzeit (DATEDIFF-based ranges)
         if (!empty($filters['laufzeit']) && $filters['laufzeit'] !== 'all') {
             $value = $filters['laufzeit'];
             $daysSql = "DATEDIFF(day, indate, GETDATE())";
@@ -284,6 +347,7 @@ class Query extends Widget
                 }
             }
 
+        // Special filter: coor (boolean flag mapping)
         if (!empty($filters['coor']) && $filters['coor'] !== 'all') {
             $value = strtolower($filters['coor']);
             if ($value === 'ja') {
@@ -293,30 +357,6 @@ class Query extends Widget
                 }
             }
 
-        if (!empty($filters['rechnungsdatumFrom'])) {
-            $value = addslashes($filters['rechnungsdatumFrom']);
-            $where[] = "rechnungsdatum >= '{$value}'";
-            }
-
-        if (!empty($filters['rechnungsdatumTo'])) {
-            $value = addslashes($filters['rechnungsdatumTo']);
-            $where[] = "rechnungsdatum <= '{$value}'";
-            }
-
-        if (!empty($gesellschaftList)) {
-            $values = array_map(function ($item) {
-                return "'" . addslashes($item) . "'";
-                }, $gesellschaftList);
-            $where[] = 'mandantnr IN (' . implode(',', $values) . ')';
-            }
-
-        if (!empty($fondsList)) {
-            $values = array_map(function ($item) {
-                return "'" . addslashes($item) . "'";
-                }, $fondsList);
-            $where[] = 'fond_abkuerzung IN (' . implode(',', $values) . ')';
-            }
-
         return $where;
         }
 
@@ -324,71 +364,60 @@ class Query extends Widget
         {
         $row = array_change_key_case($row, CASE_LOWER);
 
+        // Standard field mapping from registry
+        $mapped = [];
+        foreach ($this->getFieldMap() as $frontendKey => $dbCol) {
+            $mapped[$frontendKey] = $row[$dbCol] ?? '';
+            }
+
+        // Computed field: status label
         $processId = $row['processid'] ?? '';
-        $statusId = isset($row['status']) ? $row['status'] : '';
+        $statusId = $row['status'] ?? '';
         $statusLabel = '';
 
         if ($statusId === 'completed') {
             $statusLabel = 'Beendet';
             } else if ($statusId === 'rest') {
-            $eskalationDate = isset($row['eskalation']) ? $row['eskalation'] : '';
+            $eskalationDate = $row['eskalation'] ?? '';
             if (!empty($eskalationDate)) {
                 $eskalation = strtotime($eskalationDate);
                 $today = strtotime('today');
                 if ($eskalation <= $today) {
-                    $statusId = 'due';
                     $statusLabel = 'Faellig';
                     } else {
-                    $statusId = 'not_due';
                     $statusLabel = 'Nicht Faellig';
                     }
                 } else {
-                $statusId = 'not_due';
                 $statusLabel = 'Nicht Faellig';
                 }
             } else {
             $statusLabel = $statusId;
             }
 
-        return [
-            'historyLink' => $this->buildTrackingLink($processId, $username),
-            'status' => $statusLabel,
-            'incident' => isset($row['incident']) ? $row['incident'] : '',
-            'entryDate' => isset($row['eingangsdatum']) ? $row['eingangsdatum'] : '',
-            'stepLabel' => isset($row['steplabel']) ? $row['steplabel'] : '',
-            'startDate' => isset($row['indate']) ? $row['indate'] : '',
-            'jobFunction' => isset($row['jobfunction']) ? $row['jobfunction'] : '',
-            'fullName' => isset($row['fullname']) ? $row['fullname'] : '',
-            'documentId' => isset($row['dokumentid']) ? $row['dokumentid'] : '',
-            'companyName' => isset($row['mandantname']) ? $row['mandantname'] : '',
-            'fund' => isset($row['fond_abkuerzung']) ? $row['fond_abkuerzung'] : '',
-            'creditorName' => isset($row['kredname']) ? $row['kredname'] : '',
-            'invoiceType' => isset($row['rechnungstyp']) ? $row['rechnungstyp'] : '',
-            'invoiceNumber' => isset($row['rechnungsnummer']) ? $row['rechnungsnummer'] : '',
-            'invoiceDate' => isset($row['rechnungsdatum']) ? $row['rechnungsdatum'] : '',
-            'grossAmount' => isset($row['bruttobetrag']) ? $row['bruttobetrag'] : '',
-            'dueDate' => isset($row['eskalation']) ? $row['eskalation'] : '',
-            'orderId' => isset($row['coor_orderid']) ? $row['coor_orderid'] : '',
-            'paymentAmount' => isset($row['zahlbetrag']) ? $row['zahlbetrag'] : '',
-            'paymentDate' => isset($row['zahldatum']) ? $row['zahldatum'] : '',
-            'runtime' => isset($row['runtime']) ? $row['runtime'] : '',
-            'invoice' => isset($row['dokumentid']) ? $row['dokumentid'] : '',
-            'protocol' => isset($row['dokumentid']) ? $row['dokumentid'] : '',
-            'chargeable' => isset($row['berechenbar']) ? $row['berechenbar'] : '',
-            'kreditor' => isset($row['kredname']) ? $row['kredname'] : '',
-            'weiterbelasten' => isset($row['berechenbar']) ? $row['berechenbar'] : '',
-            'rolle' => isset($row['jobfunction']) ? $row['jobfunction'] : '',
-            'bruttobetrag' => isset($row['bruttobetrag']) ? $row['bruttobetrag'] : '',
-            'dokumentId' => isset($row['dokumentid']) ? $row['dokumentid'] : '',
-            'bearbeiter' => isset($row['fullname']) ? $row['fullname'] : '',
-            'rechnungsnummer' => isset($row['rechnungsnummer']) ? $row['rechnungsnummer'] : '',
-            'gesellschaft' => isset($row['mandantname']) ? $row['mandantname'] : '',
-            'fonds' => isset($row['fond_abkuerzung']) ? $row['fond_abkuerzung'] : '',
-            'schritt' => isset($row['steplabel']) ? $row['steplabel'] : '',
-            'laufzeit' => isset($row['runtime']) ? $row['runtime'] : '',
-            'coor' => isset($row['coorflag']) ? $row['coorflag'] : (isset($row['coor_orderid']) ? $row['coor_orderid'] : ''),
-            'rechnungsdatum' => isset($row['rechnungsdatum']) ? $row['rechnungsdatum'] : '',
-        ];
+        $mapped['historyLink'] = $this->buildTrackingLink($processId, $username);
+        $mapped['status'] = $statusLabel;
+        $mapped['invoice'] = $row['dokumentid'] ?? '';
+        $mapped['protocol'] = $row['dokumentid'] ?? '';
+
+        // Kostenuebernahme: 1 → Ja, 0/null → Nein
+        $mapped['kostenuebernahme'] = (($row['kostenuebernahme'] ?? 0) == 1) ? 'Ja' : 'Nein';
+
+        // Legacy duplicate keys (German filter keys mapped to same DB values)
+        $mapped['kreditor'] = $row['kredname'] ?? '';
+        $mapped['weiterbelasten'] = $row['berechenbar'] ?? '';
+        $mapped['rolle'] = $row['jobfunction'] ?? '';
+        $mapped['bruttobetrag'] = $row['bruttobetrag'] ?? '';
+        $mapped['dokumentId'] = $row['dokumentid'] ?? '';
+        $mapped['bearbeiter'] = $row['fullname'] ?? '';
+        $mapped['rechnungsnummer'] = $row['rechnungsnummer'] ?? '';
+        $mapped['gesellschaft'] = $row['mandantname'] ?? '';
+        $mapped['fonds'] = $row['fond_abkuerzung'] ?? '';
+        $mapped['schritt'] = $row['steplabel'] ?? '';
+        $mapped['laufzeit'] = $row['runtime'] ?? '';
+        $mapped['coor'] = $row['coorflag'] ?? ($row['coor_orderid'] ?? '');
+        $mapped['rechnungsdatum'] = $row['rechnungsdatum'] ?? '';
+
+        return $mapped;
         }
 
     private function buildTrackingLink(string $processId, string $username): string

@@ -1,15 +1,16 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from 'react';
 import type { AppState, Filters, FilterPreset, Column, FilterConfig } from './types';
-import { DEFAULT_FILTERS } from './types';
 import {
   DEFAULT_COLUMNS,
   DEFAULT_DROPDOWN_OPTIONS,
   DEFAULT_FILTER_CONFIG,
   DEFAULT_FILTER_PRESETS,
+  DEFAULT_FILTERS,
   buildFilterConfig,
   INTERACTION_STORAGE_KEY,
   AUTO_LOAD_THRESHOLD_MS,
 } from './constants';
+import { serializeFiltersToParams } from './field-registry';
 
 interface SimplifyTableContextType {
   state: AppState;
@@ -125,7 +126,6 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
   const queryServer = useCallback(
     async (snapshot: QuerySnapshot) => {
       const url = new URL(buildEndpoint('query.php'));
-      const { filters } = snapshot;
 
       url.searchParams.set('page', String(snapshot.currentPage));
       url.searchParams.set('perPage', String(snapshot.itemsPerPage));
@@ -133,32 +133,7 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
       url.searchParams.set('sortDirection', snapshot.sortDirection);
       url.searchParams.set('username', currentUserRef.current);
 
-      if (filters.kreditor) url.searchParams.set('kreditor', filters.kreditor);
-      if (filters.weiterbelasten) url.searchParams.set('weiterbelasten', filters.weiterbelasten);
-      if (filters.rolle) url.searchParams.set('rolle', filters.rolle);
-      if (filters.rechnungstyp) url.searchParams.set('rechnungstyp', filters.rechnungstyp);
-      if (filters.bruttobetragFrom) url.searchParams.set('bruttobetragFrom', filters.bruttobetragFrom);
-      if (filters.bruttobetragTo) url.searchParams.set('bruttobetragTo', filters.bruttobetragTo);
-      if (filters.dokumentId) url.searchParams.set('dokumentId', filters.dokumentId);
-      if (filters.bearbeiter) url.searchParams.set('bearbeiter', filters.bearbeiter);
-      if (filters.rechnungsnummer) url.searchParams.set('rechnungsnummer', filters.rechnungsnummer);
-      if (filters.status) url.searchParams.set('status', filters.status);
-      if (filters.laufzeit) url.searchParams.set('laufzeit', filters.laufzeit);
-      if (filters.coor) url.searchParams.set('coor', filters.coor);
-      if (filters.rechnungsdatumFrom) url.searchParams.set('rechnungsdatumFrom', filters.rechnungsdatumFrom);
-      if (filters.rechnungsdatumTo) url.searchParams.set('rechnungsdatumTo', filters.rechnungsdatumTo);
-
-      if (filters.incident) url.searchParams.set('incident', filters.incident);
-
-      if (filters.gesellschaft.length > 0) {
-        url.searchParams.set('gesellschaft', JSON.stringify(filters.gesellschaft));
-      }
-      if (filters.fonds.length > 0) {
-        url.searchParams.set('fonds', JSON.stringify(filters.fonds));
-      }
-      if (filters.schritt.length > 0) {
-        url.searchParams.set('schritt', JSON.stringify(filters.schritt));
-      }
+      serializeFiltersToParams(url, snapshot.filters);
 
       return fetchJson(url.toString());
     },
@@ -361,15 +336,12 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
   ]);
 
   const setFilters = useCallback((newFilters: Partial<Filters>) => {
-    setState((prev) => {
-      const updatedFilters = { ...prev.filters, ...newFilters };
-      return {
-        ...prev,
-        filters: updatedFilters,
-        currentPage: 1,
-        selectedPreset: 'individual',
-      };
-    });
+    setState((prev) => ({
+      ...prev,
+      filters: { ...prev.filters, ...newFilters } as Filters,
+      currentPage: 1,
+      selectedPreset: 'individual',
+    }));
   }, []);
 
   const resetFilters = useCallback(() => {
@@ -482,7 +454,7 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
         const preset = prev.filterPresets.find((p) => p.id === presetId);
         if (!preset) return prev;
 
-        const newFilters = { ...DEFAULT_FILTERS, ...preset.filters };
+        const newFilters = { ...DEFAULT_FILTERS, ...preset.filters } as Filters;
         const sortColumn = preset.sort?.column ?? prev.sortColumn;
         const sortDirection = preset.sort?.direction ?? prev.sortDirection;
 
@@ -525,7 +497,6 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
     };
 
     const url = new URL(buildEndpoint('query.php'));
-    const { filters } = snapshot;
 
     url.searchParams.set('page', '1');
     url.searchParams.set('perPage', '1');
@@ -534,24 +505,7 @@ export function SimplifyTableProvider({ children }: SimplifyTableProviderProps) 
     url.searchParams.set('sortDirection', snapshot.sortDirection);
     url.searchParams.set('username', currentUserRef.current);
 
-    if (filters.kreditor) url.searchParams.set('kreditor', filters.kreditor);
-    if (filters.weiterbelasten) url.searchParams.set('weiterbelasten', filters.weiterbelasten);
-    if (filters.rolle) url.searchParams.set('rolle', filters.rolle);
-    if (filters.rechnungstyp) url.searchParams.set('rechnungstyp', filters.rechnungstyp);
-    if (filters.bruttobetragFrom) url.searchParams.set('bruttobetragFrom', filters.bruttobetragFrom);
-    if (filters.bruttobetragTo) url.searchParams.set('bruttobetragTo', filters.bruttobetragTo);
-    if (filters.dokumentId) url.searchParams.set('dokumentId', filters.dokumentId);
-    if (filters.bearbeiter) url.searchParams.set('bearbeiter', filters.bearbeiter);
-    if (filters.rechnungsnummer) url.searchParams.set('rechnungsnummer', filters.rechnungsnummer);
-    if (filters.status) url.searchParams.set('status', filters.status);
-    if (filters.laufzeit) url.searchParams.set('laufzeit', filters.laufzeit);
-    if (filters.coor) url.searchParams.set('coor', filters.coor);
-    if (filters.rechnungsdatumFrom) url.searchParams.set('rechnungsdatumFrom', filters.rechnungsdatumFrom);
-    if (filters.rechnungsdatumTo) url.searchParams.set('rechnungsdatumTo', filters.rechnungsdatumTo);
-    if (filters.incident) url.searchParams.set('incident', filters.incident);
-    if (filters.gesellschaft.length > 0) url.searchParams.set('gesellschaft', JSON.stringify(filters.gesellschaft));
-    if (filters.fonds.length > 0) url.searchParams.set('fonds', JSON.stringify(filters.fonds));
-    if (filters.schritt.length > 0) url.searchParams.set('schritt', JSON.stringify(filters.schritt));
+    serializeFiltersToParams(url, snapshot.filters);
 
     const response = await fetchJson(url.toString());
     return Array.isArray(response?.data) ? response.data : [];

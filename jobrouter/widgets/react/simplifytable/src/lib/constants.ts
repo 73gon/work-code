@@ -1,32 +1,11 @@
-import type { Column, DropdownOptions, FilterConfig, FilterPreset, TableRow } from './types';
+import type { FilterPreset, TableRow, DropdownOptions } from './types';
+import { getDefaultColumns, getDefaultFilters, buildFilterConfigFromRegistry } from './field-registry';
 
 // ============================================
-// COLUMNS CONFIGURATION (from SimplifyTable.php)
+// COLUMNS — derived from field registry
 // ============================================
 
-export const DEFAULT_COLUMNS: Column[] = [
-  { id: 'actions', label: '', type: 'actions', align: 'center', visible: true },
-  { id: 'status', label: 'Status', type: 'status', align: 'center', visible: true },
-  { id: 'incident', label: 'Vorgangsnummer', type: 'text', align: 'left', visible: true },
-  { id: 'entryDate', label: 'Eingangsdatum', type: 'date', align: 'left', visible: true },
-  { id: 'stepLabel', label: 'Schritt', type: 'text', align: 'left', visible: true },
-  { id: 'startDate', label: 'Startdatum (Schritt)', type: 'date', align: 'left', visible: true },
-  { id: 'jobFunction', label: 'Rolle', type: 'text', align: 'left', visible: true },
-  { id: 'fullName', label: 'Bearbeiter', type: 'text', align: 'left', visible: true },
-  { id: 'documentId', label: 'DokumentId', type: 'text', align: 'left', visible: true },
-  { id: 'companyName', label: 'Gesellschaft', type: 'text', align: 'left', visible: true },
-  { id: 'fund', label: 'Fonds', type: 'text', align: 'left', visible: true },
-  { id: 'creditorName', label: 'Kreditor', type: 'text', align: 'left', visible: true },
-  { id: 'invoiceType', label: 'Rechnungstyp', type: 'text', align: 'left', visible: true },
-  { id: 'invoiceNumber', label: 'Rechnungsnummer', type: 'text', align: 'left', visible: true },
-  { id: 'invoiceDate', label: 'Rechnungsdatum', type: 'date', align: 'left', visible: true },
-  { id: 'grossAmount', label: 'Bruttobetrag', type: 'currency', align: 'left', visible: true },
-  { id: 'dueDate', label: 'Fälligkeit', type: 'date', align: 'left', visible: true },
-  { id: 'orderId', label: 'Auftragsnummer', type: 'text', align: 'left', visible: true },
-  { id: 'paymentAmount', label: 'Zahlbetrag', type: 'currency', align: 'left', visible: true },
-  { id: 'paymentDate', label: 'Zahldatum', type: 'date', align: 'left', visible: true },
-  { id: 'chargeable', label: 'Weiterbelasten', type: 'text', align: 'center', visible: true },
-];
+export const DEFAULT_COLUMNS = getDefaultColumns();
 
 // ============================================
 // DROPDOWN OPTIONS (from SimplifyTable.php - with mock data)
@@ -58,6 +37,10 @@ export const DEFAULT_DROPDOWN_OPTIONS: DropdownOptions = {
     { id: 'Nein', label: 'Nein' },
   ],
   weiterbelasten: [
+    { id: 'Ja', label: 'Ja' },
+    { id: 'Nein', label: 'Nein' },
+  ],
+  kostenuebernahme: [
     { id: 'Ja', label: 'Ja' },
     { id: 'Nein', label: 'Nein' },
   ],
@@ -116,57 +99,18 @@ export const DEFAULT_DROPDOWN_OPTIONS: DropdownOptions = {
 };
 
 // ============================================
-// FILTER CONFIGURATION
+// FILTER CONFIGURATION — derived from field registry
 // ============================================
 
-export const buildFilterConfig = (dropdownOptions: DropdownOptions): FilterConfig[] => [
-  { id: 'status', label: 'Status', type: 'dropdown', filterKey: 'status', options: dropdownOptions.status, visible: true },
-  { id: 'incident', label: 'Vorgangsnummer', type: 'text', filterKey: 'incident', visible: true },
-  { id: 'schritt', label: 'Schritt', type: 'autocomplete', filterKey: 'schritt', options: dropdownOptions.schritt, visible: true },
-  { id: 'dokumentId', label: 'DokumentId', type: 'text', filterKey: 'dokumentId', visible: true },
-  { id: 'bearbeiter', label: 'Bearbeiter', type: 'text', filterKey: 'bearbeiter', visible: true },
-  { id: 'rolle', label: 'Rolle', type: 'text', filterKey: 'rolle', visible: true },
-  {
-    id: 'gesellschaft',
-    label: 'Gesellschaft',
-    type: 'autocomplete',
-    filterKey: 'gesellschaft',
-    options: dropdownOptions.gesellschaft,
-    visible: true,
-  },
-  { id: 'fonds', label: 'Fonds', type: 'autocomplete', filterKey: 'fonds', options: dropdownOptions.fonds, visible: true },
-  { id: 'kreditor', label: 'Kreditor', type: 'text', filterKey: 'kreditor', visible: true },
-  { id: 'rechnungsnummer', label: 'Rechnungsnummer', type: 'text', filterKey: 'rechnungsnummer', visible: true },
-  { id: 'rechnungstyp', label: 'Rechnungstyp', type: 'text', filterKey: 'rechnungstyp', visible: true },
-  {
-    id: 'rechnungsdatum',
-    label: 'Rechnungsdatum',
-    type: 'daterange',
-    filterKey: 'rechnungsdatum',
-    options: { fromId: 'rechnungsdatumFrom', toId: 'rechnungsdatumTo' },
-    visible: true,
-  },
-  {
-    id: 'bruttobetrag',
-    label: 'Bruttobetrag',
-    type: 'numberrange',
-    filterKey: 'bruttobetrag',
-    options: { fromId: 'bruttobetragFrom', toId: 'bruttobetragTo' },
-    visible: true,
-  },
-  {
-    id: 'weiterbelasten',
-    label: 'Weiterbelasten',
-    type: 'dropdown',
-    filterKey: 'weiterbelasten',
-    options: dropdownOptions.weiterbelasten,
-    visible: true,
-  },
-  { id: 'laufzeit', label: 'Laufzeit', type: 'dropdown', filterKey: 'laufzeit', options: dropdownOptions.laufzeit, visible: true },
-  { id: 'coor', label: 'Coor', type: 'dropdown', filterKey: 'coor', options: dropdownOptions.coor, visible: true },
-];
+export const buildFilterConfig = buildFilterConfigFromRegistry;
 
 export const DEFAULT_FILTER_CONFIG = buildFilterConfig(DEFAULT_DROPDOWN_OPTIONS);
+
+// ============================================
+// DEFAULT FILTER VALUES — derived from field registry
+// ============================================
+
+export const DEFAULT_FILTERS = getDefaultFilters();
 
 // ============================================
 // DEFAULT FILTER PRESETS

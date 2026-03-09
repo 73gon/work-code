@@ -15,36 +15,11 @@ export interface DropdownOption {
   label: string;
 }
 
-export interface DropdownOptions {
-  status: DropdownOption[];
-  schritt: DropdownOption[];
-  laufzeit: DropdownOption[];
-  coor: DropdownOption[];
-  weiterbelasten: DropdownOption[];
-  gesellschaft: DropdownOption[];
-  fonds: DropdownOption[];
-}
+/** Extensible map of dropdown option lists, keyed by filter/options name */
+export type DropdownOptions = Record<string, DropdownOption[]>;
 
-export interface Filters {
-  schritt: string[];
-  kreditor: string;
-  rechnungsdatumFrom: string;
-  rechnungsdatumTo: string;
-  status: string;
-  weiterbelasten: string;
-  gesellschaft: string[];
-  rolle: string;
-  rechnungstyp: string;
-  bruttobetragFrom: string;
-  bruttobetragTo: string;
-  fonds: string[];
-  dokumentId: string;
-  bearbeiter: string;
-  rechnungsnummer: string;
-  laufzeit: string;
-  coor: string;
-  incident: string;
-}
+/** Extensible filter state — keys and defaults are defined in field-registry.ts */
+export type Filters = Record<string, string | string[]>;
 
 export interface FilterPreset {
   id: string;
@@ -127,24 +102,3 @@ export interface AppState {
   selectedPreset: string | null;
   zoomLevel: number;
 }
-
-export const DEFAULT_FILTERS: Filters = {
-  schritt: [],
-  kreditor: '',
-  rechnungsdatumFrom: '',
-  rechnungsdatumTo: '',
-  status: 'all',
-  weiterbelasten: 'all',
-  gesellschaft: [],
-  rolle: '',
-  rechnungstyp: '',
-  bruttobetragFrom: '',
-  bruttobetragTo: '',
-  fonds: [],
-  dokumentId: '',
-  bearbeiter: '',
-  rechnungsnummer: '',
-  laufzeit: 'all',
-  coor: 'all',
-  incident: '',
-};
