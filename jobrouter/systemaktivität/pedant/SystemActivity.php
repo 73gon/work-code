@@ -28,12 +28,12 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
      *
      * @param string $url The URL to request.
      * @param string $method HTTP method (GET, POST, etc.).
-     * @param array|null $postFields POST fields for the request.
+     * @param array|string|null $postFields POST fields for the request.
      * @param array $headers HTTP headers.
      * @return array{response: string, httpCode: int} The response and HTTP code.
      * @throws JobRouterException If the request fails.
      */
-    private function makeApiRequest(string $url, string $method = 'GET', ?array $postFields = null, array $headers = []): array
+    private function makeApiRequest(string $url, string $method = 'GET', array|string|null $postFields = null, array $headers = []): array
         {
         $curl = curl_init();
         if ($curl === false) {
@@ -270,6 +270,184 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
             }
         }
 
+
+    protected function documentClassifier(): void
+        {
+        try {
+            $this->maxFileSize = $this->resolveInputParameter('maxFileSize') ?: self::DEFAULT_MAX_FILE_SIZE_MB;
+            $this->setResubmission($this->resolveInputParameter('dc_interval'), 'm');
+
+            if (!$this->getSystemActivityVar('DC_UPLOADCOUNTER')) {
+                $this->setSystemActivityVar('DC_UPLOADCOUNTER', 0);
+                }
+
+            if ($this->getSystemActivityVar('DC_DOCUMENTID')) {
+                $this->checkDocumentClassifier();
+                }
+
+            if (!$this->getSystemActivityVar('DC_DOCUMENTID')) {
+                $this->uploadDocumentClassifier();
+                }
+            } catch (JobRouterException $e) {
+            $this->logError('Document classifier processing failed', $e);
+            throw $e;
+            } catch (Exception $e) {
+            $this->logError('Unexpected error in documentClassifier', $e);
+            throw new JobRouterException('Document classifier error: ' . $e->getMessage());
+            }
+        }
+
+    protected function uploadDocumentClassifier(): void
+        {
+        try {
+            $file = $this->getUploadPath() . $this->resolveInputParameter('inputFile');
+
+            if (!file_exists($file)) {
+                throw new JobRouterException('Upload file does not exist: ' . $file);
+                }
+
+            $fileSizeB = filesize($file);
+            if ($fileSizeB === false) {
+                throw new JobRouterException('Failed to get file size for: ' . $file);
+                }
+
+            $fileSizeMB = $fileSizeB / (1024 * 1024);
+            if ($fileSizeMB > $this->maxFileSize) {
+                throw new JobRouterException("File size exceeds the maximum limit of $this->maxFileSize MB. Actual size: $fileSizeMB MB.");
+                }
+
+            $baseUrl = $this->getBaseUrl();
+            $url = $baseUrl . '/v1/external/documents/document-classifiers/upload';
+
+            $action = $this->resolveInputParameter('dc_action') ?: 'normal';
+            if (!in_array($action, self::VALID_FLAGS)) {
+                throw new JobRouterException('Invalid input parameter value for DC_ACTION: ' . $action);
+                }
+
+            $responseData = $this->makeApiRequest(
+                $url,
+                'POST',
+                [
+                    'file' => new CURLFILE($file),
+                    'action' => $action,
+                ]
+            );
+
+            $response = $responseData['response'];
+            $httpCode = $responseData['httpCode'];
+
+            $maxCounter = $this->resolveInputParameter('dc_maxCounter');
+            $counter = $this->getSystemActivityVar('DC_UPLOADCOUNTER');
+
+            if ($counter >= $maxCounter && !in_array($httpCode, array_merge(self::SUCCESS_HTTP_CODES, self::RETRY_HTTP_CODES))) {
+                $this->setSystemActivityVar('DC_UPLOADCOUNTER', 0);
+                $this->logError('Document classifier upload failed after max retries', null, ['counter' => $counter, 'httpCode' => $httpCode]);
+                throw new JobRouterException('Error occurred during document classifier upload after maximum retries (' . $counter . '). HTTP Code: ' . $httpCode);
+                } else {
+                $this->setSystemActivityVar('DC_UPLOADCOUNTER', ++$counter);
+                }
+
+            if (!in_array($httpCode, self::SUCCESS_HTTP_CODES)) {
+                return;
+                }
+
+            $data = json_decode($response, true);
+
+            if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+                $this->logError('Failed to parse document classifier upload response JSON', null, ['json_error' => json_last_error_msg()]);
+                throw new JobRouterException('Failed to parse API response: ' . json_last_error_msg());
+                }
+
+            $documentId = $data['documents'][0]['documentId'] ?? '';
+
+            if (empty($documentId)) {
+                throw new JobRouterException('Document classifier upload response missing documentId');
+                }
+
+            $this->storeOutputParameter('dc_documentId', $documentId);
+            $this->setSystemActivityVar('DC_DOCUMENTID', $documentId);
+            $this->setSystemActivityVar('DC_FETCHCOUNTER', 0);
+            } catch (JobRouterException $e) {
+            throw $e;
+            } catch (Exception $e) {
+            $this->logError('Unexpected error in uploadDocumentClassifier', $e);
+            throw new JobRouterException('Document classifier upload error: ' . $e->getMessage());
+            }
+        }
+
+    protected function checkDocumentClassifier(): void
+        {
+        try {
+            $baseUrl = $this->getBaseUrl();
+            $documentId = $this->getSystemActivityVar('DC_DOCUMENTID');
+            $url = $baseUrl . '/v1/external/documents/document-classifiers?documentId=' . urlencode($documentId);
+
+            $maxCounter = $this->resolveInputParameter('dc_maxCounter');
+
+            $responseData = $this->makeApiRequest($url, 'GET');
+            $response = $responseData['response'];
+            $httpCode = $responseData['httpCode'];
+
+            $counter = $this->getSystemActivityVar('DC_FETCHCOUNTER');
+
+            if ($counter >= $maxCounter && !in_array($httpCode, array_merge(self::SUCCESS_HTTP_CODES, self::RETRY_HTTP_CODES))) {
+                $this->setSystemActivityVar('DC_FETCHCOUNTER', 0);
+                $this->logError('Document classifier check failed after max retries', null, ['counter' => $counter, 'httpCode' => $httpCode]);
+                throw new JobRouterException('Error occurred during document classifier check after maximum retries (' . $counter . '). HTTP Code: ' . $httpCode);
+                } else {
+                if (!in_array($httpCode, self::SUCCESS_HTTP_CODES)) {
+                    $this->setSystemActivityVar('DC_FETCHCOUNTER', ++$counter);
+                    return;
+                    }
+                }
+
+            $data = json_decode($response, true);
+
+            if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+                $this->logError('Failed to parse document classifier check response JSON', null, ['json_error' => json_last_error_msg()]);
+                throw new JobRouterException('Failed to parse API response: ' . json_last_error_msg());
+                }
+
+            if (!isset($data['data'][0])) {
+                $this->logError('Invalid document classifier check response structure', null, ['response' => substr($response, 0, 500)]);
+                throw new JobRouterException('Invalid API response: missing data');
+                }
+
+            $dataItem = $data['data'][0];
+
+            if (in_array($dataItem['status'] ?? '', self::FALSE_STATES)) {
+                return;
+                }
+
+            $this->storeOutputParameter('dc_documentId', $dataItem['documentId'] ?? '');
+            $this->storeOutputParameter('dc_tempJSON', json_encode($data));
+
+            $attributes = $this->resolveOutputParameterListAttributes('classificationDetails');
+            $values = [
+                'documentClassifierNumber' => $dataItem['documentClassifierNumber'] ?? '',
+                'documentType' => $dataItem['documentType'] ?? '',
+                'vendorCompanyName' => $dataItem['vendorCompanyName'] ?? '',
+                'recipientCompanyName' => $dataItem['recipientCompanyName'] ?? '',
+                'issueDate' => $dataItem['issueDate'] ?? ''
+            ];
+
+            foreach ($attributes as $attribute) {
+                try {
+                    $this->setTableValue($attribute['value'], $values[$attribute['id']] ?? '');
+                    } catch (Exception $e) {
+                    $this->logError('Failed to set classification detail table value', $e, ['attribute' => $attribute['id']]);
+                    }
+                }
+
+            $this->setResubmission(1, 's');
+            $this->markActivityAsCompleted();
+            } catch (JobRouterException $e) {
+            throw $e;
+            } catch (Exception $e) {
+            $this->logError('Unexpected error in checkDocumentClassifier', $e);
+            throw new JobRouterException('Document classifier check error: ' . $e->getMessage());
+            }
+        }
 
     protected function uploadFile(): void
         {
@@ -1768,8 +1946,20 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => DIREKT, 'value' => 'direkt']
             ];
             }
+
+        if ($elementID == 'classificationDetails') {
+            return [
+                ['name' => '-', 'value' => ''],
+                ['name' => DC_CLASSIFIERNUMBER, 'value' => 'documentClassifierNumber'],
+                ['name' => DC_DOCUMENTTYPE, 'value' => 'documentType'],
+                ['name' => DC_VENDORCOMPANYNAME, 'value' => 'vendorCompanyName'],
+                ['name' => DC_RECIPIENTCOMPANYNAME, 'value' => 'recipientCompanyName'],
+                ['name' => DC_ISSUEDATE, 'value' => 'issueDate']
+            ];
+            }
+
         return null;
         }
     }
-//v1.12.1
+//v1.13
 
