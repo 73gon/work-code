@@ -348,6 +348,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 }
 
             if (!in_array($httpCode, self::SUCCESS_HTTP_CODES)) {
+                $this->logError('Document classifier upload returned non-success', null, ['httpCode' => $httpCode, 'response' => substr($response, 0, 500)]);
                 return;
                 }
 
@@ -1961,5 +1962,5 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
         }
     }
-//v1.13.2
+//v2.1
 
