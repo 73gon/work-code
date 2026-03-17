@@ -141,7 +141,7 @@ define('DC_INTERVAL', 'Ausführungsintervall (Minuten)');
 define('DC_DOCUMENTID', 'Dokument-ID');
 define('DC_TEMPJSON', 'Temporäre JSON');
 define('CLASSIFICATIONDETAILS', 'Klassifikationsdetails');
-define('DC_CLASSIFIERNUMBER', 'Klassifikationsnummer');
+define('DC_CLASSIFIERNUMBER', 'Dokumentennummer');
 define('DC_DOCUMENTTYPE', 'Dokumententyp');
 define('DC_VENDORCOMPANYNAME', 'Lieferanten-Firmenname');
 define('DC_RECIPIENTCOMPANYNAME', 'Empfänger-Firmenname');
