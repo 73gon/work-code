@@ -428,7 +428,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 'documentType' => $dataItem['documentType'] ?? '',
                 'vendorCompanyName' => $dataItem['vendorCompanyName'] ?? '',
                 'recipientCompanyName' => $dataItem['recipientCompanyName'] ?? '',
-                'issueDate' => $dataItem['issueDate'] ?? ''
+                'issueDate' => !empty($dataItem['issueDate']) ? date('d.m.Y', strtotime($dataItem['issueDate'])) : ''
             ];
 
             foreach ($attributes as $attribute) {
@@ -1961,5 +1961,5 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         return null;
         }
     }
-//v1.13
+//v1.13.1
 
