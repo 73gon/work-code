@@ -232,7 +232,7 @@ trait InvoiceTrait
         $this->logError('File extraction failed after max retries', null, ['counter' => $counter, 'httpcode' => $httpcode]);
         throw new JobRouterException('Error occurred during file extraction after maximum retries (' . $counter . '). HTTP Error Code: ' . $httpcode);
         } else {
-        if ($httpcode == 404 && (300 / $resubTime) > $counter404) {
+        if ($httpcode == 404 && $resubTime > 0 && (300 / $resubTime) > $counter404) {
           $this->setSystemActivityVar('COUNTER404', ++$counter404);
           $this->logWarning('File not found (404), will retry', ['counter404' => $counter404]);
           return;

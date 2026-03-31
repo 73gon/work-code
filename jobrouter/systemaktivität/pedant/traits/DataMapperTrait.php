@@ -118,7 +118,7 @@ trait DataMapperTrait
       $attributes3 = $this->resolveOutputParameterListAttributes('invoiceDetails');
 
       $values3 = ($type == "e_invoice") ? [
-        'taxRate1' => count($vatBreakdown) > 1 ? $vatBreakdown[0]["vatCategoryTaxableAmount"] . ";" . $vatBreakdown[0]["vatCategoryTaxAmount"] . ";" . $vatBreakdown[0]["vatCategoryRate"] : '',
+        'taxRate1' => count($vatBreakdown) > 0 ? $vatBreakdown[0]["vatCategoryTaxableAmount"] . ";" . $vatBreakdown[0]["vatCategoryTaxAmount"] . ";" . $vatBreakdown[0]["vatCategoryRate"] : '',
         'taxRate2' => count($vatBreakdown) > 1 ? $vatBreakdown[1]["vatCategoryTaxableAmount"] . ";" . $vatBreakdown[1]["vatCategoryTaxAmount"] . ";" . $vatBreakdown[1]["vatCategoryRate"] : '',
         'taxRate3' => count($vatBreakdown) > 2 ? $vatBreakdown[2]["vatCategoryTaxableAmount"] . ";" . $vatBreakdown[2]["vatCategoryTaxAmount"] . ";" . $vatBreakdown[2]["vatCategoryRate"] : '',
         'taxRate4' => count($vatBreakdown) > 3 ? $vatBreakdown[3]["vatCategoryTaxableAmount"] . ";" . $vatBreakdown[3]["vatCategoryTaxAmount"] . ";" . $vatBreakdown[3]["vatCategoryRate"] : '',
