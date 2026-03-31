@@ -7,7 +7,7 @@
  */
 trait FetchTrait
   {
-  private const VALID_INVOICE_STATUSES = ['reviewed', 'exported', 'rejected', 'archived'];
+  private static array $VALID_INVOICE_STATUSES = ['reviewed', 'exported', 'rejected', 'archived'];
 
   /**
    * Entry point for batch invoice fetching.
@@ -91,7 +91,7 @@ trait FetchTrait
         $parts = array_values(array_filter($parts, static fn($status) => $status !== ''));
 
         foreach ($parts as $status) {
-          if (!in_array($status, self::VALID_INVOICE_STATUSES, true)) {
+          if (!in_array($status, self::$VALID_INVOICE_STATUSES, true)) {
             $this->logError('Invalid invoice status', null, ['status' => $status]);
             throw new JobRouterException('Invalid invoice status: ' . $status);
             }

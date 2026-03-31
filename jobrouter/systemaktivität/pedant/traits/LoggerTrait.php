@@ -13,19 +13,14 @@ trait LoggerTrait
   private ?string $cachedIncident = null;
   private ?string $logDirectory = null;
 
-  private const LOG_LEVEL_DEBUG = 0;
-  private const LOG_LEVEL_INFO = 1;
-  private const LOG_LEVEL_WARNING = 2;
-  private const LOG_LEVEL_ERROR = 3;
-
-  private const LOG_LEVEL_MAP = [
-    'debug' => self::LOG_LEVEL_DEBUG,
-    'info' => self::LOG_LEVEL_INFO,
-    'warning' => self::LOG_LEVEL_WARNING,
-    'error' => self::LOG_LEVEL_ERROR,
+  private static array $LOG_LEVEL_MAP = [
+    'debug' => 0,
+    'info' => 1,
+    'warning' => 2,
+    'error' => 3,
   ];
 
-  private const LOG_RETENTION_DAYS = 7;
+  private static int $LOG_RETENTION_DAYS = 7;
 
   /**
    * Loads and caches the configuration from config.php.
@@ -50,7 +45,7 @@ trait LoggerTrait
     {
     $config = $this->getLogConfig();
     $level = strtolower($config['log_level'] ?? 'info');
-    return self::LOG_LEVEL_MAP[$level] ?? self::LOG_LEVEL_INFO;
+    return self::$LOG_LEVEL_MAP[$level] ?? 1;
     }
 
   /**
@@ -97,7 +92,7 @@ trait LoggerTrait
    */
   private function writeLog(string $level, string $message, ?array $context = null, ?\Exception $exception = null): void
     {
-    $levelInt = self::LOG_LEVEL_MAP[strtolower($level)] ?? self::LOG_LEVEL_INFO;
+    $levelInt = self::$LOG_LEVEL_MAP[strtolower($level)] ?? 1;
     if ($levelInt < $this->getConfiguredLogLevel()) {
       return;
       }
@@ -170,7 +165,7 @@ trait LoggerTrait
       return;
       }
 
-    $cutoff = time() - (self::LOG_RETENTION_DAYS * 86400);
+    $cutoff = time() - (self::$LOG_RETENTION_DAYS * 86400);
     foreach ($files as $file) {
       if (filemtime($file) < $cutoff) {
         unlink($file);
