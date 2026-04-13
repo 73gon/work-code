@@ -1,36 +1,80 @@
 <?php
-class Test extends AbstractSystemActivityAPI {
+//v2.2.0
+
+require_once __DIR__ . '/traits/LoggerTrait.php';
+require_once __DIR__ . '/traits/HelperTrait.php';
+require_once __DIR__ . '/traits/ApiTrait.php';
+require_once __DIR__ . '/traits/ImportTrait.php';
+require_once __DIR__ . '/traits/InvoiceTrait.php';
+require_once __DIR__ . '/traits/FetchTrait.php';
+require_once __DIR__ . '/traits/DataMapperTrait.php';
+require_once __DIR__ . '/traits/DocumentClassifierTrait.php';
+
+class pedantSystemActivity extends AbstractSystemActivityAPI
+    {
+    // Shared constants (used across multiple traits)
+    private const SUCCESS_HTTP_CODES = [200, 201];
+    private const MAX_ATTACHMENTS = 3;
+    private const VALID_FLAGS = ['normal', 'check_extraction', 'skip_review', 'force_skip'];
+    private const DEFAULT_MAX_FILE_SIZE_MB = 20;
+    private const RETRY_HTTP_CODES = [404, 500, 502, 503, 0];
+    private const FALSE_STATES = ['processing', 'failed', 'uploaded', ''];
+
+    // Shared property (used by InvoiceTrait and DocumentClassifierTrait)
+    private int $maxFileSizeMB = 20;
+
+    use LoggerTrait;
+    use HelperTrait;
+    use ApiTrait;
+    use ImportTrait;
+    use InvoiceTrait;
+    use FetchTrait;
+    use DataMapperTrait;
+    use DocumentClassifierTrait;
+
+    /**
+     * Logs a debug message when DEBUG_MODE is enabled.
+     *
+     * @param string $message The debug message to log.
+     * @param array $context Optional additional context data.
+     */
+    private function logDebug(string $message, array $context = []): void
+        {
+        if (!self::DEBUG_MODE) {
+            return;
+            }
+        $logMessage = '[Pedant][DEBUG] ' . $message;
+        if (!empty($context)) {
+            $logMessage .= ' | Context: ' . json_encode($context);
+            }
+        error_log($logMessage);
+        }
 
     public function getActivityName()
-    {
-        return 'Test';
-    }
-
-    public function getActivityType()
-    {
-        return SystemActivity::ACTIVITY_TYPE_NON_PHP;
-    }
-
+        {
+        return 'Pedant';
+        }
 
     public function getActivityDescription()
-    {
-        return "This is a Test";
-    }
+        {
+        return READ_DESC;
+        }
 
-          public function getDialogXml()
-    {
-        return file_get_contents(__DIR__ . "\dialog.xml");
-    }
+    public function getDialogXml()
+        {
+        return file_get_contents(__DIR__ . '/dialog.xml');
+        }
 
     /**
      * Returns the UDL (User Defined List) for the given element ID.
      *
      * @param string $udl The UDL identifier.
      * @param string $elementID The element ID for which to get the UDL.
-     * @return array The UDL as an array of name-value pairs.
+     * @return array|null The UDL as an array of name-value pairs.
      */
     public function getUDL($udl, $elementID)
-    {
+        {
+        $this->logDebug('getUDL() called', ['udl' => $udl, 'elementID' => $elementID]);
         if ($elementID == 'importVendor') {
             return [
                 ['name' => '-', 'value' => ''],
@@ -51,7 +95,7 @@ class Test extends AbstractSystemActivityAPI {
                 ['name' => SORTCODE, 'value' => '15'],
                 ['name' => ACCOUNTNUMBER, 'value' => '16'],
             ];
-        }
+            }
 
         if ($elementID == 'importRecipient') {
             return [
@@ -64,8 +108,9 @@ class Test extends AbstractSystemActivityAPI {
                 ['name' => STREET, 'value' => '6'],
                 ['name' => RECIPIENTNAME, 'value' => '7'],
                 ['name' => VAT, 'value' => '8'],
+                ['name' => SYNONYMS, 'value' => '9']
             ];
-        }
+            }
 
         if ($elementID == 'importCostCenter') {
             return [
@@ -74,7 +119,7 @@ class Test extends AbstractSystemActivityAPI {
                 ['name' => PROFILNAME, 'value' => '2'],
                 ['name' => RECIPIENTNAME, 'value' => '3'],
             ];
-        }
+            }
 
         if ($elementID == 'recipientDetails') {
             return [
@@ -88,7 +133,7 @@ class Test extends AbstractSystemActivityAPI {
                 ['name' => RECIPIENTVATNUMBER, 'value' => 'recipientVatNumber'],
                 ['name' => INTERNALNUMBER, 'value' => 'recipientInternalNumber']
             ];
-        }
+            }
 
         if ($elementID == 'vendorDetails') {
             return [
@@ -107,7 +152,7 @@ class Test extends AbstractSystemActivityAPI {
                 ['name' => COMPANYREGISTRATIONNUMBER, 'value' => 'vendorCompanyRegistrationNumber'],
                 ['name' => EMAIL, 'value' => 'vendorEmail']
             ];
-        }
+            }
 
         if ($elementID == 'invoiceDetails') {
             return [
@@ -140,7 +185,7 @@ class Test extends AbstractSystemActivityAPI {
                 ['name' => HASPROCESSINGISSUES, 'value' => 'hasProcessingIssues'],
                 ['name' => DELIVERYDATE, 'value' => 'deliveryDate'],
             ];
-        }
+            }
 
         if ($elementID == 'positionDetails') {
             return [
@@ -155,7 +200,7 @@ class Test extends AbstractSystemActivityAPI {
                 ['name' => ITEMDESCRIPTION, 'value' => 'itemDescription'],
                 ['name' => VATRATEPERINVOICELINE, 'value' => 'vatRatePerLine']
             ];
-        }
+            }
 
         if ($elementID == 'auditTrailDetails') {
             return [
@@ -165,7 +210,7 @@ class Test extends AbstractSystemActivityAPI {
                 ['name' => SUBTYPE, 'value' => 'auditTrailSubType'],
                 ['name' => COMMENT, 'value' => 'auditTrailComment']
             ];
-        }
+            }
 
         if ($elementID == 'rejectionDetails') {
             return [
@@ -175,23 +220,37 @@ class Test extends AbstractSystemActivityAPI {
                 ['name' => TYPE, 'value' => 'rejectionType'],
                 ['name' => VIOLATIONS, 'value' => 'violations']
             ];
-        }
+            }
 
         if ($elementID == 'attachments') {
             return [
                 ['name' => '-', 'value' => ''],
                 ['name' => E_INVOICEPDF, 'value' => 'e_invoicePDF'],
                 ['name' => E_INVOICEREPORT, 'value' => 'e_invoiceReport'],
-                ['name' => E_INVOICEATTACHMENT1, 'value' => 'e_invoiceAttachments']
+                ['name' => E_INVOICEATTACHMENT1, 'value' => 'e_invoiceAttachments'],
+                ['name' => AUDITTRAILCSV, 'value' => 'auditTrailCSV']
             ];
-        }
+            }
 
         if ($elementID == 'workflowDetails') {
             return [
                 ['name' => '-', 'value' => ''],
                 ['name' => DIREKT, 'value' => 'direkt']
             ];
-        }
+            }
+
+        if ($elementID == 'classificationDetails') {
+            return [
+                ['name' => '-', 'value' => ''],
+                ['name' => DC_CLASSIFIERNUMBER, 'value' => 'documentClassifierNumber'],
+                ['name' => DC_DOCUMENTTYPE, 'value' => 'documentType'],
+                ['name' => DC_VENDORCOMPANYNAME, 'value' => 'vendorCompanyName'],
+                ['name' => DC_RECIPIENTCOMPANYNAME, 'value' => 'recipientCompanyName'],
+                ['name' => DC_ISSUEDATE, 'value' => 'issueDate']
+            ];
+            }
+
         return null;
+        }
     }
-}
+

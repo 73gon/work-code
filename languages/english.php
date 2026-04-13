@@ -128,4 +128,21 @@ define('IMPORTCOSTCENTERCSV_DESC', 'This systemactivity can be used to add a dat
 define('IMPORTCOSTCENTER', 'Cost Center Configuration');
 define('COSTCENTERTABLE', 'Cost Center Table');
 define('COUNTERSUMMARY', 'Counter Summary');
-
+define('AUDITTRAIL', 'Audit Trail');
+define('AUDITTRAILCSV', 'Audit Trail CSV');
+define('INVOICE_STATUS', 'Invoice Status (comma separated)');
+define('SYNONYMS', 'Synonyms');
+define('DOCUMENTCLASSIFIER', 'Document Classifier');
+define('DOCUMENTCLASSIFIER_DESC', 'This system activity can be used to upload a document for classification via the Pedant Document Classifier API.');
+define('DC_ACTION', 'Flag');
+define('DC_ACTION_DESC', "Upload action. Allowed values: 'normal', 'skip_review', 'force_skip', 'check_extraction'. Default: 'normal'.");
+define('DC_MAXRETRIES', 'Max Retries');
+define('DC_INTERVAL', 'Execution Interval (minutes)');
+define('DC_DOCUMENTID', 'Document ID');
+define('DC_TEMPJSON', 'Temporary JSON');
+define('CLASSIFICATIONDETAILS', 'Classification Details');
+define('DC_CLASSIFIERNUMBER', 'Document Number');
+define('DC_DOCUMENTTYPE', 'Document Type');
+define('DC_VENDORCOMPANYNAME', 'Vendor Company Name');
+define('DC_RECIPIENTCOMPANYNAME', 'Recipient Company Name');
+define('DC_ISSUEDATE', 'Issue Date');

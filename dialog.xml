@@ -11,11 +11,14 @@
                     <field id='maxCounter' name='MAXRETRIES' worktable='no' subtable='no' fixed='yes' datatype='int' required='yes'/>
 					<field id='flag' name='FLAG' desc='FLAG_DESC' worktable='no' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='flagXML' name='FLAGXML' worktable='no' subtable='no' fixed='yes' datatype='varchar'/>
+                    <field id='new' name='NEWVERSION' worktable='no' subtable='no' fixed='yes' datatype='int' required='yes' texttype='checkbox'/>
                     <field id='zugferd' name='ZUGFERD' worktable='no' subtable='no' fixed='yes' datatype='int' required='yes' texttype='checkbox'/>
-                    <field id="interval" name="INTERVAL" description="INTERVAL_DESC" worktable="yes" subtable="no" fixed="yes" datatype="int" required="yes"/>
+                    <field id="intervalOld" name="INTERVAL" description="INTERVAL_DESC" worktable="yes" subtable="no" fixed="yes" datatype="int" required="yes"/>
                     <field id='note' name='NOTE' worktable='yes' subtable='yes' fixed='yes' datatype='varchar'/>
 					<field id='incident' name='INCIDENT' worktable='no' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='maxFileSize' name='MAXFILESIZE' worktable='yes' subtable='no' fixed='yes' datatype='int' required='no'/>
+                    <field id="vendorTable" name="VENDORTABLE" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no"/>
+                    <list id="importVendor" name="IMPORTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
                 </inputParameters>
                 <outputParameters>
 					<field id='fileID' name='FILEID' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
@@ -65,7 +68,9 @@
             <function id='fetchData' name='FETCH' description='FETCH_DESC'>
                 <inputParameters>
                     <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='invoice_status' name='INVOICE_STATUS' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
+                    <field id='fileid' name='FILEID' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id="table_head" name="TABLEHEAD" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes"/>
                     <field id="stepID" name="STEPID" worktable="yes" subtable="no" fixed="yes" datatype="int" required="yes"/>
                     <field id="interval" name="INTERVAL" description="INTERVAL_DESC" worktable="yes" subtable="no" fixed="yes" datatype="int" required="yes"/>
@@ -73,6 +78,22 @@
                     <field id="weekend" name="WEEKEND" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="yes" texttype="checkbox"/>
                 </inputParameters>
                 <outputParameters>
+                </outputParameters>
+            </function>
+            <function id='documentClassifier' name='DOCUMENTCLASSIFIER' description='DOCUMENTCLASSIFIER_DESC'>
+                <inputParameters>
+                    <field id='api_key' name='API_KEY' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
+                    <field id='demo' name='DEMO' worktable='no' subtable='no' fixed='yes' datatype='int' required='no' texttype='checkbox'/>
+                    <field id='inputFile' name='INPUTFILE' worktable='yes' subtable='yes' fixed='no' datatype='file' required='yes'/>
+                    <field id='dc_action' name='DC_ACTION' worktable='no' subtable='no' fixed='yes' datatype='varchar' required='no'/>
+                    <field id='dc_maxCounter' name='DC_MAXRETRIES' worktable='no' subtable='no' fixed='yes' datatype='int' required='yes'/>
+                    <field id='dc_interval' name='DC_INTERVAL' worktable='yes' subtable='no' fixed='yes' datatype='int' required='yes'/>
+                    <field id='maxFileSize' name='MAXFILESIZE' worktable='yes' subtable='no' fixed='yes' datatype='int' required='no'/>
+                </inputParameters>
+                <outputParameters>
+                    <field id='dc_documentId' name='DC_DOCUMENTID' worktable='yes' subtable='yes' fixed='no' datatype='varchar' required='no'/>
+                    <field id='dc_tempJSON' name='DC_TEMPJSON' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no'/>
+                    <list id='classificationDetails' name='CLASSIFICATIONDETAILS' worktable='yes' subtable='yes' fixed='no' datatype='varchar' required='no' udl='yes'/>
                 </outputParameters>
             </function>
         </functions>
