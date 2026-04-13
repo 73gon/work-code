@@ -1,5 +1,5 @@
 <?php
-//v2.2.0
+//v2.2.1
 
 require_once __DIR__ . '/traits/LoggerTrait.php';
 require_once __DIR__ . '/traits/HelperTrait.php';
@@ -31,24 +31,6 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
     use FetchTrait;
     use DataMapperTrait;
     use DocumentClassifierTrait;
-
-    /**
-     * Logs a debug message when DEBUG_MODE is enabled.
-     *
-     * @param string $message The debug message to log.
-     * @param array $context Optional additional context data.
-     */
-    private function logDebug(string $message, array $context = []): void
-        {
-        if (!self::DEBUG_MODE) {
-            return;
-            }
-        $logMessage = '[Pedant][DEBUG] ' . $message;
-        if (!empty($context)) {
-            $logMessage .= ' | Context: ' . json_encode($context);
-            }
-        error_log($logMessage);
-        }
 
     public function getActivityName()
         {
