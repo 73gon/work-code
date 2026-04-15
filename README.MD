@@ -290,7 +290,7 @@ Die Hauptaufgabe dieser Datei ist die Bereitstellung von globalen Steuerungspara
 - Umgebungsspezifische Anpassungen: Ermöglicht es, Einstellungen (wie z.B. Speicherpfade oder Debug-Optionen) schnell zwischen Test- und Livesystem zu unterscheiden, indem nur diese eine Datei ausgetauscht wird.
 
 
-## Technisches Zusammenspiel
+## Technisches Zusammenspiel & Details
 Die Architektur der Systemaktivität basiert auf dem Prinzip der Separation of Concerns (Trennung von Zuständigkeiten). Anstatt die gesamte Logik in einer einzigen, unübersichtlichen Datei zu bündeln, ist der Code in modulare Traits unterteilt. Diese lassen sich in zwei Kategorien gliedern:
 
 ### Die funktionalen Bausteine (Traits)
@@ -304,13 +304,13 @@ Diese Traits enthalten die fachliche Hauptlogik für die in der dialog.xml defin
 
 - ImportTrait.php (import...CSV): Regelt den Stammdatenabgleich. Er extrahiert Daten (Kreditoren, Kostenstellen etc.) aus JobRouter-Tabellen, generiert CSV-Dateien und übermittelt diese an die Pedant-API.
 
-- DataMapperTrait.php: Fungiert als technisches "Übersetzungsbüro". Dieser Trait zerlegt die komplexen JSON-Antworten der API und verteilt die Werte (Positionen, Steuerbeträge, Audit-Trail) strukturiert in die JobRouter-Variablen und Untertabellen.
-
 ### Infrastruktur & Hilfsmittel
 
 Diese Bausteine bilden das technische Fundament und werden von den funktionalen Traits im Hintergrund genutzt.
 
 - ApiTrait.php: Die unterste Kommunikationsebene. Hier erfolgt die technische Abwicklung der HTTP-Requests (cURL). Der Trait verwaltet Endpunkt-URLs, API-Header, die Authentifizierung via API-Key und die Basis-Fehlerbehandlung bei Übertragungsfehlern.
+
+- DataMapperTrait.php: Fungiert als technisches "Übersetzungsbüro". Dieser Trait zerlegt die komplexen JSON-Antworten der API und verteilt die Werte (Positionen, Steuerbeträge, Audit-Trail) strukturiert in die JobRouter-Variablen und Untertabellen.
 
 - LoggerTrait.php: Das zentrale Diagnose-Werkzeug. Er schreibt detaillierte Protokolle in vier Stufen (DEBUG, INFO, WARNING, ERROR). Dies ist die primäre Anlaufstelle für das Debugging im Live-Betrieb.
 
@@ -325,3 +325,143 @@ Die folgende Tabelle zeigt, welche funktionalen Bausteine auf welche Infrastrukt
 | FetchTrait (Batch-Abruf)    |  Ja |  Ja |  Ja |  Nein |
 | ImportTrait (Stammdaten) |  Ja |  Ja |  Ja |  Nein |
 | DocumentClassifierTrait |  Ja |  Nein |  Ja | Teilweise |
+
+
+### Definition der Dialogfelder
+
+#### Funktion Pedant
+
+**Inputfelder:**
+
+    > INPUTFILE - Nimmt das zu verarbeitende Dokument aus dem JobRouter-Prozess entgegen, das an die Pedant-API übermittelt werden soll.
+
+    > API_KEY - Der Authentifizierungsschlüssel für die Pedant-API, welcher die Prozessinstanz dem entsprechenden Benutzerkonto zuordnet.
+
+    > DEMO - Ein Checkbox-Feld, das bestimmt, ob die Anfrage an die Demo-Umgebung (api.demo.pedant.ai) oder an das Produktivsystem gesendet wird.
+
+    > INTNUMBER - Eine interne Referenznummer, die an Pedant mitgegeben wird, um die Zuordnung des Mandanten in der Pedant-Plattform zu erleichtern.
+
+    > MAXRETRIES - Legt fest, wie oft die Systemaktivität versuchen soll, den Status des Dokuments abzufragen, bevor der Schritt mit einem Fehler abbricht.
+
+    > FLAG - Steuert den Verarbeitungsmodus der KI. Mögliche Werte sind:
+
+        - normal: Standardverarbeitung.
+
+        - check_extraction: Nur fehlerfreie Dateien werden abgeholt; erfordert ggf. eine manuelle Verifizierung durch den Nutzer.
+
+        - skip_review: Die KI-Ergebnisse werden ohne menschliche Prüfung direkt zurückgegeben.
+
+        - force_skip: Erzwingt das Überspringen bestimmter Validierungsschritte.
+
+    > FLAGXML - Ein technisches Feld zur Übergabe zusätzlicher Steuerungsoptionen im XML-Format für die API-Kommunikation.  _//Bitte Beispielhaften Input nachtragen wie bei Flag//_
+
+    > NEWVERSION - Eine Checkbox, die aktiviert wird, wenn die Wiedervorlagen-Logik automatisch auf 2 Jahre statt dem einem individuellen Wert gesetzt werden soll.
+
+    > ZUGFERD - Aktiviert die gezielte Auswertung von ZUGFeRD-Metadaten, falls das Quelldokument strukturierte XML-Daten enthält.
+
+    > INTERVALOLD - Die Wartezeit in Minuten für die Wiedervorlage, falls das Dokument noch nicht fertig verarbeitet wurde (nur aktiv, wenn NEWVERSION nicht gesetzt ist).
+
+    > MAXFILESIZE - Bestimmt die maximal zulässige Dateigröße des INPUTFILE in Megabyte, um Timeouts beim Upload zu verhindern.
+
+(◑‿◐) (◑‿◐) (◑‿◐) (◑‿◐)
+
+**Outputfelder:**
+
+    > FILEID - Speichert eine von Pedant zurückgegebene, eindeutige Dokumenten-ID, die für alle nachfolgenden Statusabfragen zwingend benötigt wird.
+
+    > INVOICEID - Die von der Pedant-Plattform vergebene interne Rechnungs-ID nach der erfolgreichen Anlage des Datensatzes.
+
+    > TEMPJSON - Speichert die vollständige, rohe JSON-Antwort der API zwischen, um sie für das Mapping oder Debugging verfügbar zu halten.
+
+    > COUNTERSUMMARY - Enthält eine Zusammenfassung über die Anzahl der durchgeführten Verarbeitungsversuche oder Statusprüfungen.
+
+    > RECIPIENTDETAILS - Ein individuell erstelltes Listenfeld (UDL), das die extrahierten Empfängerdaten (Name, Adresse, Bankverbindung des Rechnungsempfängers, etc.) aufnimmt.
+
+    > VENDORDETAILS - Ein individuell erstelltes Listenfeld (UDL), das die extrahierten Kreditorendaten (Name, USt-ID, Anschrift des Absenders) speichert.
+
+    > INVOICEDETAILS - Ein individuell erstelltes Listenfeld (UDL) für die Kopfdaten der Rechnung, wie Rechnungsnummer, Datum, Währung, Netto-, Steuer- und Bruttobeträge.
+
+    > POSITIONDETAILS - Ein individuell erstelltes Listenfeld (UDL), welches die einzelnen Rechnungspositionen (Menge, Artikelbeschreibung, Einzelpreis, Gesamtpreis) in einer Untertabelle abbildet.
+
+    > AUDITTRAILDETAILS - Ein individuell erstelltes Listenfeld (UDL), das die Historie der Bearbeitung auf der Pedant-Plattform (wer hat wann was geändert) protokolliert.
+
+    > REJECTIONDETAILS - Ein individuell erstelltes Listenfeld (UDL), das im Falle einer Ablehnung den Grund (rejectReason), den Fehlercode und den Typ der Ablehnung speichert.
+
+    > ATTACHMENTS - Ein individuell erstelltes Listenfeld (UDL) //::Ich muss Infos einholen::\\
+
+    > WORKFLOWDETAILS - Gibt Informationen über den Workflow-Status zurück, beispielsweise ob das Dokument "direkt" (ohne manuellen Review) verarbeitet werden konnte.
+
+( ؕؔʘ̥̥̥̥ ه ؔؕʘ̥̥̥̥ )? ( ؕؔʘ̥̥̥̥ ه ؔؕʘ̥̥̥̥ )? ( ؕؔʘ̥̥̥̥ ه ؔؕʘ̥̥̥̥ )? ( ؕؔʘ̥̥̥̥ ه ؔؕʘ̥̥̥̥ )?
+
+#### Funktion FetchData
+
+**Inputfelder**
+
+    > API_KEY - Der Authentifizierungsschlüssel für die Pedant-API, welcher die Prozessinstanz dem entsprechenden Benutzerkonto zuordnet.
+
+    > INVOICE_STATUS - Bestimmt, welcher Bearbeitungsstatus bei Pedant abgefragt werden soll (z. B. reviewed, exported oder rejected), um nur relevante Dokumente für den Batch-Abruf zu berücksichtigen.
+
+    > DEMO - Ein Checkbox-Feld, das bestimmt, ob die Anfrage an die Demo-Umgebung (api.demo.pedant.ai) oder an das Produktivsystem gesendet wird.
+
+    > FILEID - Der Name der Spalte in der JobRouter-Prozesstabelle (TABLEHEAD), in welcher die Pedant-Datei-ID gespeichert ist. Dies wird benötigt, um die API-Antwort dem richtigen Datensatz zuzuordnen.
+
+    > TABLEHEAD - Der Name der JobRouter-Datenbanktabelle (Prozesstabelle), in der die zu aktualisierenden Instanzen liegen.
+
+    > STEPID - Die technische ID des Workflow-Schritts, auf dem die Dokumente aktuell in der Wiedervorlage warten und der durch den Batch-Abruf "geweckt" werden soll.
+
+    > INTERVAL - Zeitspanne in Minuten, nach der die Systemaktivität fetchData erneut ausgeführt wird (Steuerung der Polling-Frequenz).
+
+    > WORKTIME - Definiert das Zeitfenster (z. B. 08,18), in dem die Funktion aktiv nach Updates suchen soll. Außerhalb dieser Zeiten wird die Wiedervorlage automatisch auf den nächsten Arbeitstag verschoben.
+
+    WEEKEND - Eine Checkbox, die bestimmt, ob die Verarbeitung auch an Wochenenden (Samstag/Sonntag) stattfinden soll oder ob die Resubmission direkt auf den Montag gesetzt wird.
+
+_Für diese Funktion sind keine Outputparameter definiert, da sie direkt schreibend auf die JobRouter-Datenbank (JRINCIDENTS) zugreift, um die Wiedervorlage-Daten wartender Schritte zu aktualisieren._
+
+#### Funktion documentClassifier
+
+**Inputfelder**
+
+    > API_KEY - Der Authentifizierungsschlüssel für die Pedant-API, welcher die Prozessinstanz dem entsprechenden Benutzerkonto zuordnet.
+
+    > DEMO - Ein Checkbox-Feld, das bestimmt, ob die Anfrage an die Demo-Umgebung (api.demo.pedant.ai) oder an das Produktivsystem gesendet wird.
+
+    > INPUTFILE - Nimmt das zu verarbeitende Dokument aus dem JobRouter-Prozess entgegen, das an die Pedant-API übermittelt werden soll.
+
+    > DC_ACTION - //::Ich muss Infos einholen::\\
+
+    > DC_MAXRETRIES - Bestimmt die maximale Anzahl an Abfrageversuchen, die die Systemaktivität unternimmt, um ein Klassifizierungsergebnis abzurufen, bevor ein Error ausgegeben wird.
+
+    > DC_INTERVAL - Die Wartezeit in Minuten für die Wiedervorlage des JobRouter-Schritts, falls die KI-Analyse zum Zeitpunkt der ersten Abfrage noch nicht abgeschlossen ist.
+
+    > MAXFILESIZE - Legt die maximal erlaubte Dateigröße (in MB) für das hochzuladende Dokument fest, um die Stabilität der Übertragung zu gewährleisten.
+
+ಠ_ರೃ ಠ_ರೃ ಠ_ರೃ ಠ_ರೃ
+
+**Outputfelder**
+
+    > DC_DOCUMENTID - Speichert die von der Classifier-API vergebene, eindeutige Identifikationsnummer des Dokuments für den weiteren Prozessverlauf.
+
+    > DC_TEMPJSON - Nimmt die vollständige Rohantwort der KI im JSON-Format auf, um alle Details der Klassifizierung für nachgelagerte Logik oder Debugging-Zwecke vorzuhalten.
+
+    > CLASSIFICATIONDETAILS - Ein individuell erstelltes Listenfeld (UDL), das die wesentlichen Ergebnisse der Analyse strukturiert zurückgibt. Dazu gehören in der Regel der erkannte Dokumenttyp (z. B. "Rechnung"), Firmennamen von Absender/Empfänger sowie das erkannte Belegdatum.
+
+
+#### Funktion importVendorCSV / importRecipientCSV / importCostCenterCSV
+
+**Inputfelder**
+
+    > API_KEY - Der Authentifizierungsschlüssel für die Pedant-API, welcher die Prozessinstanz dem entsprechenden Benutzerkonto zuordnet.
+
+    > DEMO - Ein Checkbox-Feld, das bestimmt, ob die Anfrage an die Demo-Umgebung (api.demo.pedant.ai) oder an das Produktivsystem gesendet wird.
+
+    > VENDORTABLE / RECIPIENTTABLE / COSTCENTERTABLE - Der Name der JobRouter-Datenbanktabelle (oder View), welche die Stammdaten für den Export enthält (z. B. eine zentrale SQL-Tabelle für Kreditoren).
+
+    > IMPORTVENDOR / IMPORTRECIPIENT / IMPORTCOSTCENTER - Ein Listenfeld (UDL), das für das Feldmapping genutzt wird. Hier wird definiert, welche Spalte der JobRouter-Datenbank (Datenbank-Feld) welcher Information in der Pedant-API (API-Feld) entspricht. Dies ermöglicht eine flexible Zuordnung, ohne den SQL-Code anpassen zu müssen.
+
+_Für diese Funktionen sind keine Outputparameter definiert, da es sich um reine Export-Funktionen handelt_
+
+### Detailansicht der Funktionen
+
+#### InvoiceTrait
+
+//..To fill put..//
