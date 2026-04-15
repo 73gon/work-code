@@ -3,13 +3,62 @@ Dies ist die Dokumentation der Systemaktivität: "Pedant"
 - _Version 2.2.1_
 - _Datum: 15. April 2026_
 
-## Wie funktioniert die Systemaktivität (allgemein)
+Inhaltsverzeichnis
+
+- [Allgemein](#allgemein)
+- [Wie funktioniert die Systemaktivität (allgemein)](#wie-funktioniert-die-systemaktivität-allgemein)
+  - [Grundprinzip](#grundprinzip)
+  - [Architektur: Trait-basiertes Design](#architektur-trait-basiertes-design)
+  - [Der asynchrone Verarbeitungszyklus](#der-asynchrone-verarbeitungszyklus)
+- [Übersicht der Datein](#übersicht-der-datein)
+  - [Vorstellung von Datei: SystemActivity.php](#vorstellung-von-datei-systemactivityphp)
+    - [Welche Aufgabe erfüllt SystemActivity.php?](#welche-aufgabe-erfüllt-systemactivityphp)
+  - [Vorstellung von Datei: dialog.xml](#vorstellung-von-datei-dialogxml)
+    - [Welche Aufgabe erfüllt dialog.xml?](#welche-aufgabe-erfüllt-dialogxml)
+    - [Funktionsregistrierung](#funktionsregistrierung)
+  - [Funktion: pedant](#funktion-pedant)
+  - [Welche Aufgabe erfüllt Pedant?](#welche-aufgabe-erfüllt-pedant)
+    - [Aufgaben der Systemaktivität (PHP-Code)](#aufgaben-der-systemaktivität-php-code)
+    - [Aufgaben der KI (Pedant.ai)](#aufgaben-der-ki-pedantai)
+  - [Vorstellung von Funktion: fetchData](#vorstellung-von-funktion-fetchdata)
+    - [Welche Aufgabe erfüllt fetchData?](#welche-aufgabe-erfüllt-fetchdata)
+    - [Aufgaben der Systemaktivität (PHP-Code)](#aufgaben-der-systemaktivität-php-code-1)
+  - [Vorstellung von Funktion: documentClassifier](#vorstellung-von-funktion-documentclassifier)
+    - [Welche Aufgabe erfüllt documentClassifier?](#welche-aufgabe-erfüllt-documentclassifier)
+    - [Aufgaben der Systemaktivität (PHP-Code)](#aufgaben-der-systemaktivität-php-code-2)
+    - [Aufgaben der KI (Pedant.ai)](#aufgaben-der-ki-pedantai-1)
+  - [Vorstellung der Import-Funktionen: importVendorCSV / importRecipientCSV / importCostCenterCSV](#vorstellung-der-import-funktionen-importvendorcsv--importrecipientcsv--importcostcentercsv)
+    - [Welche Aufgabe erfüllen die Import-Funktionen?](#welche-aufgabe-erfüllen-die-import-funktionen)
+    - [Aufgaben der Systemaktivität (PHP-Code)](#aufgaben-der-systemaktivität-php-code-3)
+    - [Aufgaben der KI / Plattform (Pedant.ai)](#aufgaben-der-ki--plattform-pedantai)
+    - [Unterschiede zwischen den Funktionen](#unterschiede-zwischen-den-funktionen)
+  - [Vorstellung der Dateien: german.php / english.php](#vorstellung-der-dateien-germanphp--englishphp)
+    - [Welche Aufgabe erfüllen german.php / english.php?](#welche-aufgabe-erfüllen-germanphp--englishphp)
+    - [Aufgaben der Sprachdateien (Lokalisierung)](#aufgaben-der-sprachdateien-lokalisierung)
+    - [Funktionsweise im System](#funktionsweise-im-system)
+  - [Vorstellung von Datei: config.php](#vorstellung-von-datei-configphp)
+    - [Welche Aufgabe erfüllt config.php?](#welche-aufgabe-erfüllt-configphp)
+    - [Aufgaben der Datei config.php (Systemkonfiguration)](#aufgaben-der-datei-configphp-systemkonfiguration)
+- [Technisches Zusammenspiel \& Details](#technisches-zusammenspiel--details)
+  - [Die funktionalen Bausteine (Traits)](#die-funktionalen-bausteine-traits)
+  - [Infrastruktur \& Hilfsmittel](#infrastruktur--hilfsmittel)
+    - [Abhängigkeitsmatrix](#abhängigkeitsmatrix)
+  - [Definition der Dialogfelder](#definition-der-dialogfelder)
+    - [Funktion Pedant](#funktion-pedant-1)
+    - [Funktion FetchData](#funktion-fetchdata)
+    - [Funktion documentClassifier](#funktion-documentclassifier)
+    - [Funktion importVendorCSV / importRecipientCSV / importCostCenterCSV](#funktion-importvendorcsv--importrecipientcsv--importcostcentercsv)
+  - [Detailansicht der Funktionen](#detailansicht-der-funktionen)
+    - [InvoiceTrait](#invoicetrait)
+
+
+# Wie funktioniert die Systemaktivität (allgemein)
 Die Systemaktivität fungiert als zentrale Schnittstelle zwischen JobRouter und den Diensten von Pedant.ai. Sie ermöglicht die automatisierte Verarbeitung von Dokumenten (insbesondere Rechnungen) sowie den Stammdatenaustausch direkt aus einem laufenden Workflow heraus.
 
-### Grundprinzip
+## Grundprinzip
 Die Aktivität ist als modulare PHP-Klasse implementiert, die auf der AbstractSystemActivityAPI von JobRouter basiert. Sie übernimmt die Aufgabe, Daten aus dem JobRouter-Prozess zu lesen, diese an die Pedant-API zu übermitteln und die von der KI extrahierten Ergebnisse strukturiert in den Prozess zurückzuschreiben.
 
-### Architektur: Trait-basiertes Design
+## Architektur: Trait-basiertes Design
 Um den Code wartbar und übersichtlich zu halten, wurde eine Trait-Architektur gewählt. Jede Kernaufgabe ist in einer eigenen Datei (Trait) gekapselt:
 
 - ApiTrait: Regelt die technische Kommunikation (HTTPS/cURL) mit den Pedant-Endpunkten.
@@ -20,7 +69,7 @@ Um den Code wartbar und übersichtlich zu halten, wurde eine Trait-Architektur g
 
 - Spezialisierte Traits: (z.B. InvoiceTrait, DocumentClassifierTrait) enthalten die spezifische Business-Logik für die jeweiligen Funktionen.
 
-### Der asynchrone Verarbeitungszyklus
+## Der asynchrone Verarbeitungszyklus
 Da die Analyse von Dokumenten durch eine KI Zeit in Anspruch nimmt, arbeiten viele Funktionen dieser Systemaktivität nach einem "Check-and-Wait"-Prinzip:
 
 - Upload-Phase: Das Dokument wird an Pedant gesendet. Die Aktivität speichert eine eindeutige ID und setzt den Schritt auf Wiedervorlage.
@@ -29,7 +78,7 @@ Da die Analyse von Dokumenten durch eine KI Zeit in Anspruch nimmt, arbeiten vie
 
 - Abhol-Phase: Nach Ablauf der Zeit prüft die Aktivität automatisch, ob die Analyse fertiggestellt wurde. Wenn ja, werden die Daten importiert; wenn nein, erfolgt eine erneute Wartezeit.
 
-## Übersicht der Datein
+# Übersicht der Datein
 Im Ordner Pedant lassen sich verschiedene Datein finden.
 - _Datei:_ SystemActivity.php
 - _Datei:_ dialog.xml
@@ -50,10 +99,10 @@ Im Ordner Pedant lassen sich verschiedene Datein finden.
 - **Ordner:** images
     - _Datei:_ toolbox_icon.svg
 
-### Vorstellung von Datei: SystemActivity.php
+## Vorstellung von Datei: SystemActivity.php
 Die Datei SystemActivity.php bildet das technische Grundgerüst und den Haupteinstiegspunkt für die gesamte JobRouter-Erweiterung. Sie fungiert als "Orchestrator", der alle spezialisierten Funktionen bündelt und die Kommunikation mit dem JobRouter-Framework sicherstellt.
 
-#### Welche Aufgabe erfüllt SystemActivity.php?
+### Welche Aufgabe erfüllt SystemActivity.php?
 Ihre Hauptaufgabe ist die Strukturierung und Bereitstellung der Programmlogik gegenüber JobRouter. Während die fachliche Logik in den einzelnen Traits (z. B. InvoiceTrait) gekapselt ist, definiert SystemActivity.php die Klasse pedantSystemActivity, die von der JobRouter-Basisklasse erbt. Sie ist verantwortlich für das Initialisieren der Umgebung und das Routen der Anfragen an die korrekten Programmteile.
 
 Hierbei findet eine strikte Aufgabenteilung statt:
@@ -66,10 +115,10 @@ Hierbei findet eine strikte Aufgabenteilung statt:
 
 - Einstiegspunkt-Routing: Leitet die Aufrufe aus dem JobRouter-Workflow (wie pedant, fetchData oder documentClassifier) an die entsprechenden Methoden innerhalb der Traits weiter.
 
-### Vorstellung von Datei: dialog.xml
+## Vorstellung von Datei: dialog.xml
 Die Datei dialog.xml ist das Konfigurations-Manifest der Systemaktivität. Sie dient als Bindeglied zwischen dem JobRouter-Framework und dem PHP-Code, indem sie die grafische Benutzeroberfläche (GUI) im JobRouter Designer definiert.
 
-#### Welche Aufgabe erfüllt dialog.xml?
+### Welche Aufgabe erfüllt dialog.xml?
 Die Hauptaufgabe dieser Datei ist die Definition der Schnittstellen. Sie legt fest, welche Parameter ein Administrator im Workflow-Designer sehen kann, welche Daten in die Systemaktivität hineinfließen (**Input**) und welche Werte nach der Verarbeitung an den Workflow zurückgegeben werden (**Output**). Ohne diese Datei wäre die Systemaktivität innerhalb der JobRouter-Oberfläche nicht konfigurierbar oder sichtbar.
 
 Aufgaben der Datei dialog.xml (Struktur/Konfiguration)
@@ -86,7 +135,7 @@ Aufgaben der Datei dialog.xml (Struktur/Konfiguration)
 - Tabellen-Mapping: Konfiguration von Listen-Parametern (UDL), um die Rückgabe von Rechnungspositionen oder Klassifizierungsdetails in JobRouter-Untertabellen zu ermöglichen.
 
 
-#### Funktionsregistrierung
+### Funktionsregistrierung
 In unserem Fall lassen sich in der dialog.xml 5 Funktionen wiederfinden:
 - pedant
 - fetchData
@@ -95,15 +144,15 @@ In unserem Fall lassen sich in der dialog.xml 5 Funktionen wiederfinden:
 - importRecipientCSV
 - importCostCenterCSV
 
-### Funktion: pedant
+## Funktion: pedant
 Die Funktion pedant ist das Herzstück der Systemaktivität für die Rechnungsverarbeitung. Sie steuert den gesamten Lebenszyklus eines Dokuments von der Übermittlung aus JobRouter bis hin zur Rückgabe der extrahierten Daten.
 
-### Welche Aufgabe erfüllt Pedant?
+## Welche Aufgabe erfüllt Pedant?
 Die primäre Aufgabe dieser Funktion ist die automatisierte Extraktion von Rechnungsinformationen. Sie sorgt dafür, dass physische Dokumente (PDFs) in strukturierte Daten umgewandelt werden, die JobRouter direkt in Prozess- oder Untertabellen weiterverarbeiten kann.
 
 Hierbei findet eine strikte Aufgabenteilung zwischen der lokalen Systemaktivität (PHP) und der externen KI (Pedant.ai) statt:
 
-#### Aufgaben der Systemaktivität (PHP-Code)
+### Aufgaben der Systemaktivität (PHP-Code)
 
 - Vorbereitung: Auslesen der API-Keys und Validierung der Eingabedatei (z.B. Dateigröße prüfen).
 
@@ -117,7 +166,7 @@ Hierbei findet eine strikte Aufgabenteilung zwischen der lokalen Systemaktivitä
 
 - Cleanup: Löschen von temporären Dateien und Aufräumen der Logs nach Abschluss.
 
-#### Aufgaben der KI (Pedant.ai)
+### Aufgaben der KI (Pedant.ai)
 
 - OCR-Verarbeitung: Optische Zeichenerkennung, um Text aus Bilddaten oder PDFs lesbar zu machen.
 
@@ -129,15 +178,15 @@ Hierbei findet eine strikte Aufgabenteilung zwischen der lokalen Systemaktivitä
 
 - Validierung: Prüfung der mathematischen Korrektheit (z.B. Summe der Positionen vs. Gesamtbetrag) und Erkennung von Unstimmigkeiten.
 
-### Vorstellung von Funktion: fetchData
+## Vorstellung von Funktion: fetchData
 Die Funktion fetchData dient als zentraler Abhol-Dienst (Poller) für bereits verarbeitete Dokumente. Im Gegensatz zur pedant-Funktion, die ein einzelnes Dokument durch den Prozess begleitet, arbeitet fetchData im Batch-Modus. Sie prüft in regelmäßigen Abständen, welche Dokumente auf der Plattform fertig zur Abholung bereitstehen, und "weckt" die entsprechenden JobRouter-Instanzen auf.
 
-#### Welche Aufgabe erfüllt fetchData?
+### Welche Aufgabe erfüllt fetchData?
 Die Hauptaufgabe ist die Synchronisation zwischen dem Fertigstellungsstatus bei Pedant und den wartenden Workflow-Schritten in JobRouter. Sie stellt sicher, dass Prozesse nicht unnötig lange im Status "Wiedervorlage" verbleiben, wenn die menschliche Prüfung (Review) oder die KI-Analyse bereits abgeschlossen wurde.
 
 Hierbei findet eine strikte Aufgabenteilung statt:
 
-#### Aufgaben der Systemaktivität (PHP-Code)
+### Aufgaben der Systemaktivität (PHP-Code)
 - Zeitsteuerung (Scheduling): Berechnung des nächsten Abholzeitpunkts basierend auf Konfigurationsparametern wie Arbeitszeiten (worktime) und Wochenend-Regelungen (weekend).
 
 - Batch-Abfrage: Systematisches Durchlaufen der Pedant-API-Listen (Pagination), um alle Dokumente mit Status wie reviewed, exported oder rejected zu finden.
@@ -148,13 +197,13 @@ Hierbei findet eine strikte Aufgabenteilung statt:
 
 - Status-Filterung: Entscheidung, welche Dokumente aufgrund ihres Status (z.B. nur reviewed) für einen Import in Frage kommen.
 
-### Vorstellung von Funktion: documentClassifier
+## Vorstellung von Funktion: documentClassifier
 Die Funktion documentClassifier dient der automatisierten Einordnung und Metadaten-Extraktion von Dokumenten, noch bevor diese in eine spezifische Fachverarbeitung (wie die Rechnungsprüfung) gehen. Sie wird genutzt, um die Art eines Dokuments zu bestimmen und grundlegende Kopfdaten zu identifizieren.
 
-#### Welche Aufgabe erfüllt documentClassifier?
+### Welche Aufgabe erfüllt documentClassifier?
 Die Hauptaufgabe dieser Funktion ist die Vorklassifizierung von Dokumenten. Sie entscheidet, um welchen Dokumententyp es sich handelt (z. B. Rechnung, Mahnung, Lieferschein) und extrahiert erste Identifikationsmerkmale wie Absender und Empfänger. Dies ermöglicht eine intelligente Steuerung des Workflows in JobRouter (Routing).
 
-#### Aufgaben der Systemaktivität (PHP-Code)
+### Aufgaben der Systemaktivität (PHP-Code)
 - Status-Management: Verwaltung des DC_UPLOADCOUNTER und der DC_DOCUMENTID, um zwischen der Upload-Phase und der Abfrage-Phase zu unterscheiden.
 
 - Datei-Transfer: Übermittlung des Dokuments an den speziellen Classifier-Endpunkt der Pedant-API (/classifier).
@@ -165,7 +214,7 @@ Die Hauptaufgabe dieser Funktion ist die Vorklassifizierung von Dokumenten. Sie 
 
 - Persistenz: Speicherung des vollständigen Antwort-JSONs in der Variable dc_tempJSON zur weiteren Verwendung im Prozess.
 
-#### Aufgaben der KI (Pedant.ai)
+### Aufgaben der KI (Pedant.ai)
 - Dokumententyp-Erkennung: Analyse des Layouts und Inhalts, um den Typ des Dokuments zu klassifizieren (z. B. "Invoice", "Credit Note").
 
 - Entitäten-Identifikation: Erkennung von Firmennamen für Kreditor (Vendor) und Debitor (Recipient) allein auf Basis der Klassifizierungs-Logik.
@@ -175,13 +224,13 @@ Die Hauptaufgabe dieser Funktion ist die Vorklassifizierung von Dokumenten. Sie 
 - ID-Vergabe: Erzeugung einer eindeutigen documentClassifierNumber für die Referenzierung.
 
 
-### Vorstellung der Import-Funktionen: importVendorCSV / importRecipientCSV / importCostCenterCSV
+## Vorstellung der Import-Funktionen: importVendorCSV / importRecipientCSV / importCostCenterCSV
 Diese Funktionen dienen dem Abgleich von Stammdaten zwischen JobRouter und Pedant.ai. Da die technische Umsetzung für alle drei Entitätstypen (Kreditoren, Debitoren und Kostenstellen) auf einer gemeinsamen Logik basiert, werden sie hier zusammengefasst. Trotzedem werden bestehende Unterschiede zusammenfassend am Ende behandelt.
 
-#### Welche Aufgabe erfüllen die Import-Funktionen?
+### Welche Aufgabe erfüllen die Import-Funktionen?
 Die Hauptaufgabe dieser Funktionen ist die Synchronisation von Stammdaten. Durch den regelmäßigen Export von Daten aus JobRouter und den anschließenden Import in Pedant.ai wird sichergestellt, dass die KI aktuelle Informationen (z. B. Adressdaten, Bankverbindungen oder Kostenstellennummern) besitzt. Dies erhöht die Erkennungsrate und Zuordnungsqualität bei der Dokumentenanalyse signifikant.
 
-#### Aufgaben der Systemaktivität (PHP-Code)
+### Aufgaben der Systemaktivität (PHP-Code)
 - Datenextraktion: Durchführung einer SQL-Abfrage auf die JobRouter-Datenbank, um die aktuell hinterlegten Stammdaten aus den konfigurierten Tabellen zu lesen.
 
 - CSV-Generierung: Umwandlung der Datenbank-Ergebnisse in eine temporäre CSV-Datei, die dem von Pedant geforderten Format entspricht.
@@ -192,14 +241,14 @@ Die Hauptaufgabe dieser Funktionen ist die Synchronisation von Stammdaten. Durch
 
 - Bereinigung: Sicheres Löschen der temporär erzeugten CSV-Dateien vom Server-Dateisystem nach Abschluss des Uploads.
 
-#### Aufgaben der KI / Plattform (Pedant.ai)
+### Aufgaben der KI / Plattform (Pedant.ai)
 - Daten-Ingestion: Einlesen und Validieren der hochgeladenen CSV-Struktur.
 
 - Datenbank-Update: Aktualisierung des internen Datenbestands für den jeweiligen API-Key.
 
 - Optimierung der Erkennung: Nutzung der neuen Stammdaten als Referenzwerte, um bei zukünftigen OCR-Analysen z. B. einen Kreditor anhand seiner IBAN oder seines Namens zweifelsfrei zu identifizieren.
 
-#### Unterschiede zwischen den Funktionen
+### Unterschiede zwischen den Funktionen
 Obwohl der Ablauf identisch ist, unterscheiden sich die Funktionen in folgenden Punkten:
 
 - Ziel-Endpunkte: Jede Funktion spricht einen spezifischen API-Endpunkt an (z. B. /vendors/import für Kreditoren, /recipients/import für Debitoren).
@@ -210,13 +259,13 @@ Obwohl der Ablauf identisch ist, unterscheiden sich die Funktionen in folgenden 
 
 - Konfigurations-Parameter: Die Funktionen nutzen unterschiedliche Input-Parameter aus der dialog.xml, um die Quell-Tabellen in JobRouter zu identifizieren (z. B. vendorTable vs. recipientTable).
 
-### Vorstellung der Dateien: german.php / english.php
+## Vorstellung der Dateien: german.php / english.php
 Diese Dateien dienen der Lokalisierung (Übersetzung) der Systemaktivität. Sie stellen sicher, dass die Benutzeroberfläche der Aktivität im JobRouter Designer in der jeweils vom Administrator gewählten Sprache angezeigt wird.
 
-#### Welche Aufgabe erfüllen german.php / english.php?
+### Welche Aufgabe erfüllen german.php / english.php?
 Die Hauptaufgabe dieser Dateien ist die Bereitstellung von Sprachkonstanten. Anstatt Texte (wie Beschreibungen von Eingabefeldern oder Fehlermeldungen) direkt "hart" in die dialog.xml zu schreiben, werden dort Platzhalter (Konstanten) verwendet. Die Übersetzungsdateien füllen diese Platzhalter mit dem tatsächlichen Text in der entsprechenden Sprache.
 
-#### Aufgaben der Sprachdateien (Lokalisierung)
+### Aufgaben der Sprachdateien (Lokalisierung)
 - Text-Definition: Zuweisung von lesbaren Texten zu technischen Bezeichnern (z. B. wird aus der Konstante INPUTFILE in der german.php der Text "Eingabedatei").
 
 - Beschreibungen: Bereitstellung von ausführlichen Hilfetexten für den Designer (z. B. Erklärungen, was ein bestimmter "Flag" bewirkt), die dem Administrator beim Drüberfahren mit der Maus angezeigt werden.
@@ -225,7 +274,7 @@ Die Hauptaufgabe dieser Dateien ist die Bereitstellung von Sprachkonstanten. Ans
 
 - Fehlermeldungs-Templates: Vorhalten von sprachspezifischen Textbausteinen, die im Log oder in der JobRouter-Oberfläche ausgegeben werden können.
 
-#### Funktionsweise im System
+### Funktionsweise im System
 Wenn JobRouter die dialog.xml lädt, um die Systemaktivität anzuzeigen, prüft das System die Spracheinstellung des aktuell angemeldeten Benutzers.
 
 Ist die Sprache auf Deutsch eingestellt, wird die german.php geladen.
@@ -234,13 +283,13 @@ Ist die Sprache auf Englisch eingestellt, wird die english.php geladen.
 
 Alle in der dialog.xml verwendeten Großbuchstaben-Konstanten (z. B. READ_DESC) werden dann durch die entsprechenden Werte aus dem $const-Array der jeweiligen Datei ersetzt.
 
-### Vorstellung von Datei: config.php
+## Vorstellung von Datei: config.php
 Die Datei config.php ist die zentrale Konfigurationsdatei für die Laufzeitumgebung der Systemaktivität. Während die dialog.xml die Einstellungen pro Workflow-Schritt regelt, definiert die config.php systemweite Parameter, die für alle Instanzen der Aktivität gleichermaßen gelten.
 
-#### Welche Aufgabe erfüllt config.php?
+### Welche Aufgabe erfüllt config.php?
 Die Hauptaufgabe dieser Datei ist die Bereitstellung von globalen Steuerungsparametern des Debuggings. Sie dient vor allem dazu, das Verhalten der Log-Informationen zu beeinflussen, ohne den PHP-Code selbst ändern zu müssen.
 
-#### Aufgaben der Datei config.php (Systemkonfiguration)
+### Aufgaben der Datei config.php (Systemkonfiguration)
 - Festlegung des Log-Levels: Definition, wie detailliert die Aktivität protokollieren soll (z. B. debug für die Entwicklung oder info für den Produktivbetrieb). Dies wird vom LoggerTrait ausgelesen.
 
 - Zentraler Parameter-Speicher: Rückgabe eines Konfigurations-Arrays (return [...]), welches von der SystemActivity.php und den Traits eingebunden wird.
@@ -248,10 +297,10 @@ Die Hauptaufgabe dieser Datei ist die Bereitstellung von globalen Steuerungspara
 - Umgebungsspezifische Anpassungen: Ermöglicht es, Einstellungen (wie z.B. Speicherpfade oder Debug-Optionen) schnell zwischen Test- und Livesystem zu unterscheiden, indem nur diese eine Datei ausgetauscht wird.
 
 
-## Technisches Zusammenspiel & Details
+# Technisches Zusammenspiel & Details
 Die Architektur der Systemaktivität basiert auf dem Prinzip der Separation of Concerns (Trennung von Zuständigkeiten). Anstatt die gesamte Logik in einer einzigen, unübersichtlichen Datei zu bündeln, ist der Code in modulare Traits unterteilt. Diese lassen sich in zwei Kategorien gliedern:
 
-### Die funktionalen Bausteine (Traits)
+## Die funktionalen Bausteine (Traits)
 Diese Traits enthalten die fachliche Hauptlogik für die in der dialog.xml definierten Funktionen.
 
 - InvoiceTrait.php (pedant): Steuert den Lebenszyklus der Rechnungsverarbeitung. Er verwaltet den Upload zur KI (uploadFile) und die zyklische Statusabfrage (checkFile), bis das Dokument finalisiert wurde.
@@ -262,7 +311,7 @@ Diese Traits enthalten die fachliche Hauptlogik für die in der dialog.xml defin
 
 - ImportTrait.php (import...CSV): Regelt den Stammdatenabgleich. Er extrahiert Daten (Kreditoren, Kostenstellen etc.) aus JobRouter-Tabellen, generiert CSV-Dateien und übermittelt diese an die Pedant-API.
 
-### Infrastruktur & Hilfsmittel
+## Infrastruktur & Hilfsmittel
 
 Diese Bausteine bilden das technische Fundament und werden von den funktionalen Traits im Hintergrund genutzt.
 
@@ -274,20 +323,20 @@ Diese Bausteine bilden das technische Fundament und werden von den funktionalen 
 
 - HelperTrait.php: Enthält allgemeine Hilfsfunktionen. Ein Kernaspekt ist die automatische Erkennung des Datenbanktyps (MySQL oder MSSQL), um SQL-Abfragen innerhalb der Systemaktivität dynamisch an die jeweilige Umgebung anzupassen.
 
-#### Abhängigkeitsmatrix
+### Abhängigkeitsmatrix
 Die folgende Tabelle zeigt, welche funktionalen Bausteine auf welche Infrastruktur-Traits zurückgreifen:
 
-| Funktion (Trait) | Benötigt ApiTrait? | Benötigt DataMapper? | Benötigt LoggerTrait? | Benötigt HelperTrait? |
-|-----------|-------|------------|------------|------------|
-| InvoiceTrait (Rechnungen)      |  Ja |   Ja |   Ja |  Ja |
-| FetchTrait (Batch-Abruf)    |  Ja |  Ja |  Ja |  Nein |
-| ImportTrait (Stammdaten) |  Ja |  Ja |  Ja |  Nein |
-| DocumentClassifierTrait |  Ja |  Nein |  Ja | Teilweise |
+| Funktion (Trait)          | Benötigt ApiTrait? | Benötigt DataMapper? | Benötigt LoggerTrait? | Benötigt HelperTrait? |
+| ------------------------- | ------------------ | -------------------- | --------------------- | --------------------- |
+| InvoiceTrait (Rechnungen) | Ja                 | Ja                   | Ja                    | Ja                    |
+| FetchTrait (Batch-Abruf)  | Ja                 | Ja                   | Ja                    | Nein                  |
+| ImportTrait (Stammdaten)  | Ja                 | Ja                   | Ja                    | Nein                  |
+| DocumentClassifierTrait   | Ja                 | Nein                 | Ja                    | Teilweise             |
 
 
-### Definition der Dialogfelder
+## Definition der Dialogfelder
 
-#### Funktion Pedant
+### Funktion Pedant
 
 **Inputfelder:**
 
@@ -351,7 +400,7 @@ Die folgende Tabelle zeigt, welche funktionalen Bausteine auf welche Infrastrukt
 
 ( ؕؔʘ̥̥̥̥ ه ؔؕʘ̥̥̥̥ )? ( ؕؔʘ̥̥̥̥ ه ؔؕʘ̥̥̥̥ )? ( ؕؔʘ̥̥̥̥ ه ؔؕʘ̥̥̥̥ )? ( ؕؔʘ̥̥̥̥ ه ؔؕʘ̥̥̥̥ )?
 
-#### Funktion FetchData
+### Funktion FetchData
 
 **Inputfelder**
 
@@ -375,7 +424,7 @@ Die folgende Tabelle zeigt, welche funktionalen Bausteine auf welche Infrastrukt
 
 _Für diese Funktion sind keine Outputparameter definiert, da sie direkt schreibend auf die JobRouter-Datenbank (JRINCIDENTS) zugreift, um die Wiedervorlage-Daten wartender Schritte zu aktualisieren._
 
-#### Funktion documentClassifier
+### Funktion documentClassifier
 
 **Inputfelder**
 
@@ -404,7 +453,7 @@ _Für diese Funktion sind keine Outputparameter definiert, da sie direkt schreib
     > CLASSIFICATIONDETAILS - Ein individuell erstelltes Listenfeld (UDL), das die wesentlichen Ergebnisse der Analyse strukturiert zurückgibt. Dazu gehören in der Regel der erkannte Dokumenttyp (z. B. "Rechnung"), Firmennamen von Absender/Empfänger sowie das erkannte Belegdatum.
 
 
-#### Funktion importVendorCSV / importRecipientCSV / importCostCenterCSV
+### Funktion importVendorCSV / importRecipientCSV / importCostCenterCSV
 
 **Inputfelder**
 
@@ -418,8 +467,8 @@ _Für diese Funktion sind keine Outputparameter definiert, da sie direkt schreib
 
 _Für diese Funktionen sind keine Outputparameter definiert, da es sich um reine Export-Funktionen handelt_
 
-### Detailansicht der Funktionen
+## Detailansicht der Funktionen
 
-#### InvoiceTrait
+### InvoiceTrait
 
 //..To fill put..//
