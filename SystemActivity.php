@@ -56,7 +56,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
      */
     public function getUDL($udl, $elementID)
         {
-        $this->logDebug('getUDL() called', ['udl' => $udl, 'elementID' => $elementID]);
+        
         if ($elementID == 'importVendor') {
             return [
                 ['name' => '-', 'value' => ''],
@@ -231,7 +231,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => DC_ISSUEDATE, 'value' => 'issueDate']
             ];
             }
-
+        $this->logDebug('getUDL() called', ['udl' => $udl, 'elementID' => $elementID]);
         return null;
         }
     }

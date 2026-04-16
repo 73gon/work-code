@@ -48,8 +48,6 @@ Inhaltsverzeichnis
     - [Funktion FetchData](#funktion-fetchdata)
     - [Funktion documentClassifier](#funktion-documentclassifier)
     - [Funktion importVendorCSV / importRecipientCSV / importCostCenterCSV](#funktion-importvendorcsv--importrecipientcsv--importcostcentercsv)
-  - [Detailansicht der Funktionen](#detailansicht-der-funktionen)
-    - [InvoiceTrait](#invoicetrait)
 
 
 # Wie funktioniert die Systemaktivität (allgemein)
@@ -466,9 +464,3 @@ _Für diese Funktion sind keine Outputparameter definiert, da sie direkt schreib
     > IMPORTVENDOR / IMPORTRECIPIENT / IMPORTCOSTCENTER - Ein Listenfeld (UDL), das für das Feldmapping genutzt wird. Hier wird definiert, welche Spalte der JobRouter-Datenbank (Datenbank-Feld) welcher Information in der Pedant-API (API-Feld) entspricht. Dies ermöglicht eine flexible Zuordnung, ohne den SQL-Code anpassen zu müssen.
 
 _Für diese Funktionen sind keine Outputparameter definiert, da es sich um reine Export-Funktionen handelt_
-
-## Detailansicht der Funktionen
-
-### InvoiceTrait
-
-//..To fill put..//
