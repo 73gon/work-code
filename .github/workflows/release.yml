@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build release archive
+        id: package
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          archive_root="pedant"
+          asset_name="pedant-${TAG_NAME}.zip"
+
+          git archive \
+            --format=zip \
+            --output="$asset_name" \
+            --prefix="${archive_root}/" \
+            "$GITHUB_SHA"
+
+          if unzip -Z1 "$asset_name" | grep -qx "${archive_root}/.gitignore"; then
+            zip -d "$asset_name" "${archive_root}/.gitignore"
+          fi
+
+          if unzip -Z1 "$asset_name" | grep -qx "${archive_root}/README.md"; then
+            zip -d "$asset_name" "${archive_root}/README.md"
+          fi
+
+          if unzip -Z1 "$asset_name" | grep -qx "${archive_root}/README.MD"; then
+            zip -d "$asset_name" "${archive_root}/README.MD"
+          fi
+
+          if unzip -Z1 "$asset_name" | grep -qx "${archive_root}/readme.md"; then
+            zip -d "$asset_name" "${archive_root}/readme.md"
+          fi
+
+          echo "asset_name=$asset_name" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: ${{ steps.package.outputs.asset_name }}
