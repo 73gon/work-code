@@ -1,5 +1,5 @@
 <?php
-//v2.2.1
+//v2.2.2
 
 require_once __DIR__ . '/traits/LoggerTrait.php';
 require_once __DIR__ . '/traits/HelperTrait.php';
@@ -56,7 +56,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
      */
     public function getUDL($udl, $elementID)
         {
-        
+
         if ($elementID == 'importVendor') {
             return [
                 ['name' => '-', 'value' => ''],

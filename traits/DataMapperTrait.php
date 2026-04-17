@@ -400,19 +400,6 @@ trait DataMapperTrait
 
       // ── Position Details (Subtable) ──────────────────────────────
       $attributes7 = $this->resolveOutputParameterListAttributes('positionDetails');
-      $lineItems = $dataItem['lineItems'];
-
-      $values7 = [
-        'positionNumber' => $lineItems['lineSubPositionNumber'],
-        'singleNetPrice' => $lineItems['lineSubUnitPrice'],
-        'singleNetAmount' => $lineItems['lineSubNetAmount'],
-        'quantity' => $lineItems['lineSubQuantity'],
-        'unitOfMeasureCode' => $lineItems['lineSubUnit'],
-        'articleNumber' => [],
-        'articleName' => [],
-        'itemDescription' => $lineItems['lineSubDescription'],
-        'vatRatePerLine' => $lineItems['lineSubVatPercent']
-      ];
 
       if ($type == "e_invoice") {
         $invoiceLine = $eInvoiceFields['invoiceLine'] ?? [];
@@ -428,9 +415,21 @@ trait DataMapperTrait
           $values7['itemDescription'][] = $line['itemInformationItemDescription'];
           $values7['vatRatePerLine'][] = $line['lineVatInformationInvoicedItemVatRate'];
           }
-        }
+        } else {
+          $invoiceLine = $dataItem['lineItems'][0] ?? [];
 
-      $invoiceLine = $eInvoiceFields['invoiceLine'] ?? [];
+          foreach ($invoiceLine as $line) {
+            $values7['positionNumber'][] = $line['lineSubPositionNumber'];
+            $values7['singleNetPrice'][] = $line['lineSubUnitPrice'];
+            $values7['singleNetAmount'][] = $line['lineSubNetAmount'];
+            $values7['quantity'][] = $line['lineSubQuantity'];
+            $values7['unitOfMeasureCode'][] = $line['lineSubUnit'];
+            $values7['articleNumber'][] = '';
+            $values7['articleName'][] = '';
+            $values7['itemDescription'][] = $line['lineSubDescription'];
+            $values7['vatRatePerLine'][] = $line['lineSubVatPercent'];
+          }
+        }
 
       $this->logDebug('Position details', ['lineItemCount' => count($invoiceLine)]);
 

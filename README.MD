@@ -1,7 +1,6 @@
 # Allgemein
 Dies ist die Dokumentation der Systemaktivität: "Pedant"
-- _Version 2.2.1_
-- _Datum: 15. April 2026_
+- _Version 2.2.2_
 
 Inhaltsverzeichnis
 
