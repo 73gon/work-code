@@ -225,7 +225,6 @@ trait DocumentClassifierTrait
           }
         }
 
-      $this->setResubmission(1, 's');
       $this->markActivityAsCompleted();
       $this->logInfo('Document classifier completed, activity marked as completed');
       } catch (JobRouterException $e) {
