@@ -1,5 +1,5 @@
 <?php
-//v2.2.2
+//v2.3.0
 
 require_once __DIR__ . '/traits/LoggerTrait.php';
 require_once __DIR__ . '/traits/HelperTrait.php';
@@ -166,6 +166,7 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
                 ['name' => RESOLVEDISSUES, 'value' => 'resolvedIssuesCount'],
                 ['name' => HASPROCESSINGISSUES, 'value' => 'hasProcessingIssues'],
                 ['name' => DELIVERYDATE, 'value' => 'deliveryDate'],
+                ['name' => ESRREFERENCENUMBER, 'value' => 'esrReferenceNumber']
             ];
             }
 
