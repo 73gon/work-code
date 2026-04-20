@@ -181,7 +181,7 @@ trait FetchTrait
         // Process all collected IDs
         $table_head = $this->resolveInputParameter('table_head');
         $stepID = $this->resolveInputParameter('stepID');
-        $fileid = $this->resolveInputParameter('fileid');
+        $fileid = $this->resolveInputParameter('fileid'); //We need the name of the Tablefield, not the value of that tablefield
 
         $currentTime = new DateTime();
         $currentTime->modify('+10 seconds');
@@ -199,7 +199,7 @@ trait FetchTrait
                         UPDATE JRINCIDENTS j
                         JOIN $table_head t ON t.step_id = j.process_step_id
                         SET j.resubmission_date = '$formattedTime'
-                        WHERE t.step = $stepID AND t.$fileid = '$id';
+                        WHERE t.step = $stepID AND t.fileid = '$id';
                         ";
               } elseif ($dbType === "MSSQL") {
               $query = "

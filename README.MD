@@ -51,8 +51,11 @@ Inhaltsverzeichnis
   - [Betrieb, Debugging \& Versionierung](#betrieb-debugging--versionierung)
     - [Logging](#logging)
     - [API-Umgebungen](#api-umgebungen)
-    - [Versionsstand und Repository](#versionsstand-und-repository)
     - [Support-Fälle und Maßnahmen](#support-fälle-und-maßnahmen)
+      - [HTTP-Codes im Support](#http-codes-im-support)
+      - [Typische Fehlermeldungen und was sie bedeuten](#typische-fehlermeldungen-und-was-sie-bedeuten)
+      - [Praktische Support-Regel für Max-Counter-Fälle](#praktische-support-regel-für-max-counter-fälle)
+      - [Besonderheiten von `fetchData` im Support](#besonderheiten-von-fetchdata-im-support)
 
 # Wie funktioniert die Systemaktivität (allgemein)
 
