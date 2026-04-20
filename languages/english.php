@@ -146,3 +146,4 @@ define('DC_DOCUMENTTYPE', 'Document Type');
 define('DC_VENDORCOMPANYNAME', 'Vendor Company Name');
 define('DC_RECIPIENTCOMPANYNAME', 'Recipient Company Name');
 define('DC_ISSUEDATE', 'Issue Date');
+define('ESRREFERENCENUMBER', 'ESR Reference Number');

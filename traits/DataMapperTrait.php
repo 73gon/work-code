@@ -145,6 +145,7 @@ trait DataMapperTrait
         'resolvedIssuesCount' => $dataItem['resolvedIssuesCount'],
         'hasProcessingIssues' => $dataItem['hasProcessingIssues'],
         'deliveryDate' => date("Y-m-d", strtotime(str_replace(".", "-", $eInvoiceFields['deliveryInformationActualDeliveryDate']))) . ' 00:00:00.000',
+        'esrReferenceNumber' => ''
       ] : [
         'taxRate1' => count($taxRates) > 0 ? ($taxRates[0]["subNetAmount"] ?? '') . ";" . ($taxRates[0]["subTaxAmount"] ?? '') . ";" . ($taxRates[0]["subTaxRate"] ?? '') : '',
         'taxRate2' => count($taxRates) > 1 ? ($taxRates[1]["subNetAmount"] ?? '') . ";" . ($taxRates[1]["subTaxAmount"] ?? '') . ";" . ($taxRates[1]["subTaxRate"] ?? '') : '',
@@ -173,6 +174,7 @@ trait DataMapperTrait
         'resolvedIssuesCount' => $dataItem["resolvedIssuesCount"] ?? '',
         'hasProcessingIssues' => $dataItem["hasProcessingIssues"] ?? '',
         'deliveryDate' => date("Y-m-d", strtotime(str_replace(".", "-", $dataItem["deliveryDate"] ?? ''))) . ' 00:00:00.000',
+        'esrReferenceNumber' => $dataItem["esrReferenceNumber"] ?? ''
       ];
 
       $this->logDebug('Invoice values mapped', ['invoiceNumber' => $values3['invoiceNumber'] ?? '', 'status' => $values3['status'] ?? '']);
@@ -416,18 +418,18 @@ trait DataMapperTrait
           $values7['vatRatePerLine'][] = $line['lineVatInformationInvoicedItemVatRate'];
           }
         } else {
-          $invoiceLine = $dataItem['lineItems'][0] ?? [];
+        $invoiceLine = $dataItem['lineItems'][0] ?? [];
 
-          foreach ($invoiceLine as $line) {
-            $values7['positionNumber'][] = $line['lineSubPositionNumber'];
-            $values7['singleNetPrice'][] = $line['lineSubUnitPrice'];
-            $values7['singleNetAmount'][] = $line['lineSubNetAmount'];
-            $values7['quantity'][] = $line['lineSubQuantity'];
-            $values7['unitOfMeasureCode'][] = $line['lineSubUnit'];
-            $values7['articleNumber'][] = '';
-            $values7['articleName'][] = '';
-            $values7['itemDescription'][] = $line['lineSubDescription'];
-            $values7['vatRatePerLine'][] = $line['lineSubVatPercent'];
+        foreach ($invoiceLine as $line) {
+          $values7['positionNumber'][] = $line['lineSubPositionNumber'];
+          $values7['singleNetPrice'][] = $line['lineSubUnitPrice'];
+          $values7['singleNetAmount'][] = $line['lineSubNetAmount'];
+          $values7['quantity'][] = $line['lineSubQuantity'];
+          $values7['unitOfMeasureCode'][] = $line['lineSubUnit'];
+          $values7['articleNumber'][] = '';
+          $values7['articleName'][] = '';
+          $values7['itemDescription'][] = $line['lineSubDescription'];
+          $values7['vatRatePerLine'][] = $line['lineSubVatPercent'];
           }
         }
 
