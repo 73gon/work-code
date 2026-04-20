@@ -350,13 +350,13 @@ Die folgende Tabelle zeigt, welche funktionalen Bausteine auf welche Infrastrukt
 
     > FLAG - Steuert den Verarbeitungsmodus der KI. Mögliche Werte sind:
 
-        - normal: Standardverarbeitung.
+        - normal: Ein Fallback von pedant falls keine spezifische Auswahl getroffen wurde.
 
-        - check_extraction: Nur fehlerfreie Dateien werden abgeholt; erfordert ggf. eine manuelle Verifizierung durch den Nutzer.
+        - check_extraction: Die Rechnung wird erst abgeholt wenn es manuell durch einen Benutzer bestätigt worden ist.
 
-        - skip_review: Die KI-Ergebnisse werden ohne menschliche Prüfung direkt zurückgegeben.
+        - skip_review: Erfolgreich erkannte Rechnungen müssen nicht manuell bestätigt werden um abgeholt zu werden.
 
-        - force_skip: Erzwingt das Überspringen bestimmter Validierungsschritte.
+        - force_skip: Unabhängig vom Erfolg können die Rechnung abgeholt werden.
 
     > FLAGXML - Ein technisches Feld zur Übergabe zusätzlicher Steuerungsoptionen im XML-Format für die API-Kommunikation.  _//Bitte Beispielhaften Input nachtragen wie bei Flag//_
 
@@ -404,11 +404,11 @@ Die folgende Tabelle zeigt, welche funktionalen Bausteine auf welche Infrastrukt
 
     > API_KEY - Der Authentifizierungsschlüssel für die Pedant-API, welcher die Prozessinstanz dem entsprechenden Benutzerkonto zuordnet.
 
-    > INVOICE_STATUS - Bestimmt, welcher Bearbeitungsstatus bei Pedant abgefragt werden soll (z. B. reviewed, exported oder rejected), um nur relevante Dokumente für den Batch-Abruf zu berücksichtigen.
+    > INVOICE_STATUS - Bestimmt, welcher Bearbeitungsstatus bei Pedant abgefragt werden soll (z. B. reviewed, exported, rejected oder archived), um nur relevante Dokumente für den Batch-Abruf zu berücksichtigen.
 
     > DEMO - Ein Checkbox-Feld, das bestimmt, ob die Anfrage an die Demo-Umgebung (api.demo.pedant.ai) oder an das Produktivsystem gesendet wird.
 
-    > FILEID - Der Name der Spalte in der JobRouter-Prozesstabelle (TABLEHEAD), in welcher die Pedant-Datei-ID gespeichert ist. Dies wird benötigt, um die API-Antwort dem richtigen Datensatz zuzuordnen.
+    > FILEID - Der Name der Spalte in der JobRouter-Prozesstabelle (TABLEHEAD), in welcher die Pedant-Datei-ID gespeichert ist. Hier benötigen wir zwingend den Namen der Spalte und nicht den Wert
 
     > TABLEHEAD - Der Name der JobRouter-Datenbanktabelle (Prozesstabelle), in der die zu aktualisierenden Instanzen liegen.
 
@@ -432,7 +432,15 @@ _Für diese Funktion sind keine Outputparameter definiert, da sie direkt schreib
 
     > INPUTFILE - Nimmt das zu verarbeitende Dokument aus dem JobRouter-Prozess entgegen, das an die Pedant-API übermittelt werden soll.
 
-    > DC_ACTION - //::Ich muss Infos einholen::\\
+    > DC_ACTION - Steuert den Verarbeitungsmodus der KI. Mögliche Werte sind:
+
+        - normal: Ein Fallback von pedant falls keine spezifische Auswahl getroffen wurde.
+
+        - check_extraction: Die Rechnung wird erst abgeholt wenn es manuell durch einen Benutzer bestätigt worden ist.
+
+        - skip_review: Erfolgreich erkannte Rechnungen müssen nicht manuell bestätigt werden um abgeholt zu werden.
+
+        - force_skip: Unabhängig vom Erfolg können die Rechnung abgeholt werden.
 
     > DC_MAXRETRIES - Bestimmt die maximale Anzahl an Abfrageversuchen, die die Systemaktivität unternimmt, um ein Klassifizierungsergebnis abzurufen, bevor ein Error ausgegeben wird.
 
@@ -459,8 +467,8 @@ _Für diese Funktion sind keine Outputparameter definiert, da sie direkt schreib
 
     > DEMO - Ein Checkbox-Feld, das bestimmt, ob die Anfrage an die Demo-Umgebung (api.demo.pedant.ai) oder an das Produktivsystem gesendet wird.
 
-    > VENDORTABLE / RECIPIENTTABLE / COSTCENTERTABLE - Der Name der JobRouter-Datenbanktabelle (oder View), welche die Stammdaten für den Export enthält (z. B. eine zentrale SQL-Tabelle für Kreditoren).
+    > VENDORTABLE / RECIPIENTTABLE / COSTCENTERTABLE - Der Name der JobRouter-Datenbanktabelle, welche die Stammdaten für den Export enthält (z. B. eine zentrale SQL-Tabelle für Kreditoren).
 
-    > IMPORTVENDOR / IMPORTRECIPIENT / IMPORTCOSTCENTER - Ein Listenfeld (UDL), das für das Feldmapping genutzt wird. Hier wird definiert, welche Spalte der JobRouter-Datenbank (Datenbank-Feld) welcher Information in der Pedant-API (API-Feld) entspricht. Dies ermöglicht eine flexible Zuordnung, ohne den SQL-Code anpassen zu müssen.
+    > IMPORTVENDOR / IMPORTRECIPIENT / IMPORTCOSTCENTER - Ein Listenfeld (UDL), das für das Feldmapping genutzt wird. Hier wird definiert, den Namen der Spalte welche die entsprechenden Information beeinhalten. Hier wird nicht der Wert der Spalte, sondern der Spaltenname benötigt
 
 _Für diese Funktionen sind keine Outputparameter definiert, da es sich um reine Export-Funktionen handelt_
