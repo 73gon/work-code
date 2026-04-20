@@ -1,4 +1,5 @@
 Inhaltsverzeichnis
+- [Definition der Versionierung](#definition-der-versionierung)
 - [Architektur: Trait-basiertes Design](#architektur-trait-basiertes-design)
   - [Die funktionalen Bausteine (Traits)](#die-funktionalen-bausteine-traits)
   - [Infrastruktur \& Hilfsmittel](#infrastruktur--hilfsmittel)
@@ -27,6 +28,16 @@ Inhaltsverzeichnis
     - [Welche Aufgabe erfüllt config.php?](#welche-aufgabe-erfüllt-configphp)
     - [Aufgaben der Datei config.php (Systemkonfiguration)](#aufgaben-der-datei-configphp-systemkonfiguration)
   - [Vorstellung der Datei: config.php](#vorstellung-der-datei-configphp)
+
+# Definition der Versionierung
+
+Die erste Ziffer steht für grundlegende Systemänderungen, während die zweite Ziffer neue Funktionen bei bestehender Kompatibilität kennzeichnet. Die finale Ziffer signalisiert reine Fehlerbehebungen (Bugfixes), die die Stabilität des Systems verbessern, ohne den Funktionsumfang zu verändern.
+
+| Stelle        | Bezeichnung | Bedeutung                                                   |
+| ------------- | ----------- | ----------------------------------------------------------- |
+| Erste Ziffer  | Major       | Massive Änderungen oder neue Systemarchitektur.             |
+| Zweite Ziffer | Minor       | Neue Features oder Felder, die bestehende Abläufe ergänzen. |
+| Dritte Ziffer | Patch       | Neue Features oder Felder, die bestehende Abläufe ergänzen. |
 
 
 # Architektur: Trait-basiertes Design
