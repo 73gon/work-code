@@ -28,6 +28,14 @@ Inhaltsverzeichnis
     - [Welche Aufgabe erfüllt config.php?](#welche-aufgabe-erfüllt-configphp)
     - [Aufgaben der Datei config.php (Systemkonfiguration)](#aufgaben-der-datei-configphp-systemkonfiguration)
   - [Vorstellung der Datei: config.php](#vorstellung-der-datei-configphp)
+- [Einrichtung der Systemaktivität](#einrichtung-der-systemaktivität)
+  - [Grundlegende systematische Verknüpfungen:](#grundlegende-systematische-verknüpfungen)
+  - [Beispiel anhand der Funktion: Rechnung auslesen (pedant)](#beispiel-anhand-der-funktion-rechnung-auslesen-pedant)
+    - [Nach Typ sortiert](#nach-typ-sortiert)
+  - [Nach Struktur sortiert](#nach-struktur-sortiert)
+  - [Beispielwerte](#beispielwerte)
+  - [Besonderheiten bei den Systemaktivitäten](#besonderheiten-bei-den-systemaktivitäten)
+- [Fußnoten](#fußnoten)
 
 # Definition der Versionierung
 
@@ -261,7 +269,7 @@ Die Hauptaufgabe dieser Datei ist die Bereitstellung von globalen Steuerungspara
 
 - Festlegung des Log-Levels: Definition, wie detailliert die Aktivität protokollieren soll (z. B. debug für die Entwicklung oder info für den Produktivbetrieb). Dies wird vom LoggerTrait ausgelesen.
 
-- Unterstützte Werte: `debug`, `info`, `warning`, `error`.
+- Unterstützte Werte: `info`[^info], `warning`[^warning], `error`[^error], `debug`[^debug].
 
 - Standardwert der aktuellen Codebasis: `info`.
 
@@ -269,3 +277,109 @@ Die Hauptaufgabe dieser Datei ist die Bereitstellung von globalen Steuerungspara
 
 ## Vorstellung der Datei: config.php
 Für Informationen zu dieser Datei sieh in unser [SUPPORT.md](SUPPORT.md)
+
+# Einrichtung der Systemaktivität
+
+Es gibt drei Kategorien der einzustellenden Felder:
+- **Grundlegende systematische Verknüpfungen**.
+
+Diese sind in jeder Systemaktivität gleich und folgen den selben Parametern
+
+
+- **Kundenentscheidungen** 
+
+Diese Einstellungen werden mit dem Kunden besprochen und vom ihm entschieden.
+
+- **Datenbank- & Prozesstabellenverknüpfung**
+
+Diese Einstellungen hängen von der Prozesstruktur und benennung der Felder ab
+
+
+## Grundlegende systematische Verknüpfungen:
+
+Unter diese Kategorie fallen Felder wie `Eingabedatei (inputFile)` oder `API-Key (api_key)`. 
+Das Grundprinzip ist bei diesen Feldern, über Mandatenübergreifend das selbe Prinzip.
+Diese Felder werden eingerichtet, empfangen den selben Parameter und arbeiten mit diesen Einstellungen.
+
+## Beispiel anhand der Funktion: Rechnung auslesen (pedant)
+Für spezifische Informationen zu den Parametern sieh bitte in die [README.md](../README.md)
+
+### Nach Typ sortiert
+| Inputparameter | Variablenname | System-Typ | Kommentar |
+|----------|-----------|-----------|-----|
+| `Eingabedatei` | `inputFile` | Grundlegende systematische Verknüpfungen |
+| `API-Key` | `api_key` | Grundlegende systematische Verknüpfungen |
+| `Demo` | `demo` | Grundlegende systematische Verknüpfungen |
+| `Maximale Wiederholungen` | `maxCounter` | Grundlegende systematische Verknüpfungen |
+| `Flag` | `flag` | Grundlegende systematische Verknüpfungen |
+| `Vorgang` | `incident` | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`
+| `Maximale Dateigröße` | `maxFileSize` | Grundlegende systematische Verknüpfungen |
+|  |   |   |   |
+|   |   |   |   |
+| `Flag XML` | `flagXML` | Kundenentscheidungen | Wenn der Kunde mit E-rechnungen arbeitet (XML-Rechnungen)
+| `ZUGFeRD bearbeiten` | `zugferd` | Kundenentscheidungen | Wenn der Kunde mit ZUGFeRD-Rechnungen arbeitet
+| `Ausführungsintervall in Minuten` | `intervalOld` | Kundenentscheidungen | Dies ist nur bei Versionen **VOR Version 2.0.0** wichtig. Wenn wir mit der neuen Version arbeiten, ist der Input hier irrelevant
+|   |   |   |   |
+|   |   |   |   |
+| `Mandant Vorauswahl` | `internalNumber` | Datenbank- & Prozesstabellenverknüpfung |
+| `Neue Version (2 SysAkt)` | `new` | Datenbank- & Prozesstabellenverknüpfung | Diese ist **AB Version 2.0.0** immer auf True |
+| `Nachricht` | `note` | Datenbank- & Prozesstabellenverknüpfung | Dieser Kommentar wird NICHT von der KI verarbeitet, sondern von einem Mitarbeiter gelesen
+| `Lieferanten-Tabelle` | `vendorTable` | Datenbank- & Prozesstabellenverknüpfung |
+| `Lieferantenkonfiguration` | `importVendor` | Datenbank- & Prozesstabellenverknüpfung |
+
+
+## Nach Struktur sortiert
+| Inputparameter | Variablenname | System-Typ | Kommentar |
+|----------|-----------|-----------|-----|
+| `Eingabedatei` | `inputFile` | Grundlegende systematische Verknüpfungen |
+| `API-Key` | `api_key` | Grundlegende systematische Verknüpfungen |
+| `Demo` | `demo` | Grundlegende systematische Verknüpfungen |
+| `Mandant Vorauswahl` | `internalNumber` | Datenbank- & Prozesstabellenverknüpfung |
+| `Maximale Wiederholungen` | `maxCounter` | Grundlegende systematische Verknüpfungen |
+| `Flag` | `flag` | Grundlegende systematische Verknüpfungen |
+| `Flag XML` | `flagXML` | Kundenentscheidungen | Wenn der Kunde mit E-rechnungen arbeitet (XML-Rechnungen)
+| `Neue Version (2 SysAkt)` | `new` | Datenbank- & Prozesstabellenverknüpfung | Diese ist **AB Version 2.0.0** immer auf True |
+| `ZUGFeRD bearbeiten` | `zugferd` | Kundenentscheidungen | Wenn der Kunde mit ZUGFeRD-Rechnungen arbeitet
+| `Ausführungsintervall in Minuten` | `intervalOld` | Kundenentscheidungen | Dies ist nur bei Versionen **VOR Version 2.0.0** wichtig. Wenn wir mit dem neuen System arbeiten, ist der Input hier irrelevant
+| `Nachricht` | `note` | Datenbank- & Prozesstabellenverknüpfung | Dieser Kommentar wird NICHT von der KI verarbeitet
+| `Vorgang` | `incident` | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`
+| `Vorgang` | `incident` | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`
+| `Maximale Dateigröße` | `maxFileSize` | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`
+| `Lieferanten-Tabelle` | `vendorTable` | Datenbank- & Prozesstabellenverknüpfung |
+| `Lieferantenkonfiguration` | `importVendor` | Datenbank- & Prozesstabellenverknüpfung | 
+
+## Beispielwerte
+| Inputparameter | Variablenname | Ressource |Value |
+|----------|-----------|-----------|-----|
+| `Eingabedatei` | `inputFile` | `Prozesstabelle` | `INVOICE` |
+| `API-Key` | `api_key` | `Prozesstabelle` |`APIKEY` |
+| `Demo` | `demo` | `Fester Wert` | `0` |
+| `Mandant Vorauswahl` | `internalNumber` | `Prozesstabelle` | `VENDORINTERNALNUMBER` |
+| `Maximale Wiederholungen` | `maxCounter` | `Fester Wert` | `20` |
+| `Flag` | `flag` |  `Fester Wert` | `skip_review` |
+| `Flag XML` | `flagXML` | `Fester Wert` | `check_extraction` |
+| `Neue Version (2 SysAkt)` | `new` | `Fester Wert` | `0` |
+| `ZUGFeRD bearbeiten` | `zugferd` |  `Prozesstabelle` | `1` |
+| `Ausführungsintervall in Minuten` | `intervalOld` | `Fester Wert` | `10` | 
+| `Nachricht` | `note` |  `Prozesstabelle` | `CASEWORKERCOMMENT` |
+| `Vorgang` | `incident` |  `Fester Wert` | `[jr_incident]` |
+| `Maximale Dateigröße` | `maxFileSize` | `Fester Wert` | `20` | 
+| `Lieferanten-Tabelle` | `vendorTable` | `Prozesstabelle` | `SQLVENDORTABLE` |
+
+## Besonderheiten bei den Systemaktivitäten
+
+| Funktion | Feld | Besonderheit |
+|-----|------|------|
+| `Rechnung abholen (fetchData)` | File-ID (fileid) | Hier müssen wir die Namen der Prozesstabellenfeldes eintragen, wo die Werte gespeicher werden. Wir wollen nicht den Value der File-Id |
+| Jede ` ` | UDL-Liste / Konfiguration | Hier müssen wir die Namen der Prozesstabellenfeldes eintragen, wo die Werte gespeicher werden. **NICHT** den Value der File-Id |
+| | | | 
+
+# Fußnoten
+
+[^info]: Protokolliert den Arbeitsablauf: welche Methode aufgerufen wurde, was abgerufen wurde, Änderungen des Upload-/Prüfstatus, Importfortschritt. Protokolliert außerdem alle Warnungen und Fehler. Gut geeignet für die tägliche Überwachung.
+
+[^warning]: Protokolliert unerwartete Situationen, die keine Funktionsstörungen verursachen: Wiederholungsversuche, fehlgeschlagene Dateibereinigungen, fehlende optionale Daten. Protokolliert außerdem alle Fehler
+
+[^error]: Protokolliert nur Ausnahmen und schwerwiegende Fehler. Minimale Ausgabe. Für den Einsatz in stabilen Produktionsumgebungen.
+
+[^debug]: Protokolliert ALLES: Abfragen, Variablen, Daten nach jeder Änderung, vollständige API-Anfrage- und Antworttexte. Die Protokolldateien wachsen schnell an (GB). Nur zur Fehlerbehebung bei bestimmten Problemen verwenden.

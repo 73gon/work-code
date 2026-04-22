@@ -78,7 +78,7 @@ Die Funktion pedant ist das Herzstück der Systemaktivität für die Rechnungsve
 | `NEWVERSION`   | Setzt die Wiedervorlage auf ca. 2 Jahre.                                   | Technische Sonderlogik                                             |
 | `ZUGFERD`      | Aktiviert den ZUGFeRD-bezogenen Uploadpfad.                                | Relevant für hybride E-Rechnungen                                  |
 | `INTERVAL`     | Wiedervorlage in Minuten, wenn `NEWVERSION` nicht aktiv ist.               | Polling-Abstand                                                    |
-| `NOTE`         | Optionaler Kommentar, der mit dem Dokument an Pedant übertragen wird.      | Optional                                                           |
+| `NOTE`         | Optionaler Kommentar, der mit dem Dokument an Pedant übertragen wird und bei der Überprüfung eines Mitarbeiters einsehbar.      | Optional                                                           |
 | `INCIDENT`     | Kennzeichnet den Vorgang für das Logging.                                  | Erscheint in jeder Logzeile                                        |
 | `MAXFILESIZE`  | Maximale Dateigröße in MB.                                                 | Standardwert ohne Eingabe: 20 MB                                   |
 | `VENDORTABLE`  | Optionale JobRouter-Tabelle für einen Vendor-Import während `checkFile()`. | Spezialfall                                                        |
