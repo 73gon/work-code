@@ -352,7 +352,6 @@ trait InvoiceTrait
       throw new JobRouterException('Check file error: ' . $e->getMessage());
       }
     }
-  }
 
   /**
    * Builds the URL needed for the API-Fetch depending on the systemactivity running
@@ -434,3 +433,4 @@ trait InvoiceTrait
       throw new JobrouterException('Current function to build URL is defined incorrectly: ' . $currentFunction);
     }
   }
+}
