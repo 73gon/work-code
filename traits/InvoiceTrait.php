@@ -12,8 +12,17 @@ trait InvoiceTrait
    */
   protected function pedant(): void
     {
+      $this->resolveParams("pedant")
+    }
+
+  protected funtion readDeliveryNote(): void
+  {
+    $this->resolveParams("Delivery Note")
+  }
+
+  protected function resolveParams(String $process): void {
     $this->cleanOldLogs();
-    $this->logInfo('Starting pedant workflow');
+    $this->logInfo('Starting ' . $process . ' workflow');
     try {
       $this->maxFileSizeMB = $this->resolveInputParameter('maxFileSize') ?: self::DEFAULT_MAX_FILE_SIZE_MB;
       $isNew = $this->resolveInputParameter('new');
@@ -31,7 +40,7 @@ trait InvoiceTrait
         }
 
       $fileId = $this->getSystemActivityVar('FILEID');
-      $this->logDebug('Pedant state check', [
+      $this->logDebug($process . 'state check', [
         'hasFileId' => !empty($fileId),
         'uploadCounter' => $uploadCounter,
         'maxFileSizeMB' => $this->maxFileSizeMB,
@@ -47,18 +56,18 @@ trait InvoiceTrait
         $this->uploadFile();
         }
       } catch (JobRouterException $e) {
-      $this->logError('Pedant processing failed', $e);
+      $this->logError($process . ' processing failed', $e);
       throw $e;
       } catch (Exception $e) {
-      $this->logError('Unexpected error in pedant method', $e);
-      throw new JobRouterException('Pedant processing error: ' . $e->getMessage());
-      }
+      $this->logError('Unexpected error in ' . $process . ' method', $e);
+      throw new JobRouterException($process . ' processing error: ' . $e->getMessage());
     }
-
-  /**
+  }
+  
+    /**
    * Uploads a file to the Pedant API.
    */
-  protected function uploadFile(): void
+  protected function uploadFile(String $process): void
     {
     try {
       $file = $this->getUploadPath() . $this->resolveInputParameter('inputFile');
