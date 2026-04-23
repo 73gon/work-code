@@ -266,7 +266,7 @@ trait InvoiceTrait
       $status = $dataItem["status"] ?? '';
 
       try {
-        $this->storeOutputParameter('tempJSON', json_encode($data));
+        $this->storeOutputParameter('tempJSON', json_encode($data, JSON_PRETTY_PRINT));
         } catch (Exception $e) {
         $this->logWarning('Failed to store tempJSON output parameter', ['error' => $e->getMessage()]);
         }
