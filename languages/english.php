@@ -147,3 +147,4 @@ define('DC_VENDORCOMPANYNAME', 'Vendor Company Name');
 define('DC_RECIPIENTCOMPANYNAME', 'Recipient Company Name');
 define('DC_ISSUEDATE', 'Issue Date');
 define('ESRREFERENCENUMBER', 'ESR Reference Number');
+define('READDELIVERYNOTE_DESC', 'This systemactivity can be used to upload a delivery note on pedant and check it on availability and correctness');
