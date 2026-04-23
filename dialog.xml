@@ -116,10 +116,8 @@
                     <field id='fileID' name='FILEID' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='invoiceID' name='INVOICEID' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
                     <field id='tempJSON' name='TEMPJSON' worktable='yes' subtable='no' fixed='no' datatype='varchar' required='no' />
-
                 </outputParameters>
             </function>
-
         </functions>
         <simulation>
             <behavior id='EXECUTE' name='CONST_ACT_SIM_EXECUTE' desc='CONST_ACT_SIM_EXECUTE_DESC' />

@@ -15,7 +15,7 @@ trait InvoiceTrait
       $this->resolveParams("pedant")
     }
 
-  protected funtion readDeliveryNote(): void
+  protected function readDeliveryNote(): void
   {
     $this->resolveParams("delivery")
   }
@@ -361,12 +361,12 @@ trait InvoiceTrait
    */
   protected function buildURL(string $process, string $currentFunction): string {
 
-    $this->logInfo('Building URL', ['process' => $process, 'currentFunction' => $currentFunction])
+    $this->logInfo('Building URL', ['process' => $process, 'currentFunction' => $currentFunction]);
     $baseURL = $this->getBaseUrl();
-    $processKey = ($process === "pedant") ? 'pedant' : 'delivery';
     $type = $this->getSystemActivityVar('TYPE');
       
     if($currentFunction === 'uploadFile'){
+      $fileExtension = pathinfo($file, PATHINFO_EXTENSION);
       $isXml    = strtolower($fileExtension) === 'xml';
       $isZugferd = $this->resolveInputParameter('zugferd') === '1';
       $type = match (true) {
@@ -386,10 +386,10 @@ trait InvoiceTrait
               'default' => "defaultPath",
           ]
       ];
-      $path = $paths[$processKey][$type] ?? $paths[$processKey]['default'];
-      $url = $baseUrl . $path;
+      $path = $paths[$process][$type] ?? $paths[$process]['default'];
+      $url = $baseURL . $path;
       $this->logDebug("Selected Upload-Path " . $url, [
-        "processKey" => $processKey,
+        "process" => $process,
         "type" => $type,
         "path" => $path
       ]);
@@ -398,51 +398,40 @@ trait InvoiceTrait
 
     } elseif ($currentFunction === 'checkFile') {
       
-      $urlType = match (true) {
-        $type => 'e_invoice',
-        $type => 'invoice',
-        $type => 'deliverNote', //BEISPIELWERT - WARTE AUF POSTMAN UM WERTE EINSEHEN ZU KÖNNEN
-      }
+      $urlType = match ($type) {
+        'e_invoice' => "e-invoices",
+        'invoice' => "invoice",
+        default => "deliverNote", //BEISPIELWERT - WARTE AUF POSTMAN UM WERTE EINSEHEN ZU KÖNNEN
+      };
 
       $paths = [
         'pedant' => [
-          'basePath' => '/v1/external/documents/',
-          'urlType' => [
-            'e_invoice' => 'e-invoices',
-            'invoice' => 'invoices',
-          ],
-          'identifier' => [
-            'e-invoices' => 'documentId=$fileId'
-            'invoices' => 'fileId=$fileId'
-          ] 
+          'basePath' => "/v1/external/documents/",
+          'e-invoices' => "documentId=$fileId",
+          'invoices' => "fileId=$fileId",
         ],
         'delivery' => [
-          'basePath' => '/v1/external/deliveryNotes/'
-          'urlType' => [
-            'deliveryNote'
-          ],
-          'identifier' => [
-            'deliveryNote' => 'fileId=$fileId'
-          ]
-        ]
-      ]
+          'basePath' => "/v1/external/deliveryNotes/",
+          'deliveryNote' => "deliveryNote",
+        ],
+      ];
 
-      $basePath = $paths[$processKey]['basePath'] 
-      $urlTypePath = $paths[$processKey]['urlType'][$urlType]
-      $urlIdentifier = $$paths[$processKey]['identifier'][$urlType]
+      $basePath = $paths[$process]['basePath'];
+      $urlTypePath = $paths[$process][$urlType];
       
-      $url = $baseUrl . $basePath . $urlIdentifier . '&auditTrail=true';
+      $url = $baseURL . $basePath . $urlType . "?" . $urlTypePath . "&auditTrail=true";
+
       $this->logInfo('Checking file status', ['fileId' => $fileId, 'type' => $type]);
       $this->logDebug("Selected Upload-Path " . $url, [
-        "processKey" => $processKey,
+        "process" => $process,
         "basePath" => $basePath,
         "urlTypePath" => $urlTypePath,
-        "urlIdentifier" => $urlIdentifier
+        "urlIdentifier" => $urlIdentifier,
       ]);
 
       return $url;
 
     } else {
-      throw new JobrouterException('Current function to build URL is defined incorrectly: ' . $currentFunction)
+      throw new JobrouterException('Current function to build URL is defined incorrectly: ' . $currentFunction);
     }
   }
