@@ -17,10 +17,10 @@ trait InvoiceTrait
 
   protected funtion readDeliveryNote(): void
   {
-    $this->resolveParams("Delivery Note")
+    $this->resolveParams("delivery")
   }
 
-  protected function resolveParams(String $process): void {
+  protected function resolveParams(string $process): void {
     $this->cleanOldLogs();
     $this->logInfo('Starting ' . $process . ' workflow');
     try {
@@ -48,12 +48,12 @@ trait InvoiceTrait
 
       if ($fileId) {
         $this->logInfo('File already uploaded, checking status', ['fileId' => $fileId]);
-        $this->checkFile();
+        $this->checkFile($process);
         }
 
       if (!$this->getSystemActivityVar('FILEID')) {
         $this->logInfo('No file uploaded yet, starting upload');
-        $this->uploadFile();
+        $this->uploadFile($process);
         }
       } catch (JobRouterException $e) {
       $this->logError($process . ' processing failed', $e);
@@ -67,7 +67,7 @@ trait InvoiceTrait
     /**
    * Uploads a file to the Pedant API.
    */
-  protected function uploadFile(String $process): void
+  protected function uploadFile(string $process): void
     {
     try {
       $file = $this->getUploadPath() . $this->resolveInputParameter('inputFile');
@@ -96,16 +96,10 @@ trait InvoiceTrait
         throw new JobRouterException("File size exceeds the maximum limit of $this->maxFileSizeMB MB. Actual size: $fileSizeMB MB.");
         }
 
-      $baseUrl = $this->getBaseUrl();
-      $zugferd = $this->resolveInputParameter('zugferd');
-      $url = $baseUrl . (strtolower($fileExtension) == 'xml'
-        ? "/v2/external/documents/invoices/upload"
-        : ($zugferd == '1'
-          ? "/v1/external/documents/invoices/upload"
-          : "/v2/external/documents/invoices/upload"));
-
+      $url = buildURL($process, 'uploadFile');
+      
       $flag = $this->resolveInputParameter('flag');
-      if (strtolower($fileExtension) == 'xml') {
+      if ($isXml) {
         $flagXML = $this->resolveInputParameter('flagXML');
         if (!empty($flagXML)) {
           $flag = $flagXML;
@@ -120,20 +114,33 @@ trait InvoiceTrait
         }
 
       $action = $flag;
-      $internalNumber = $this->resolveInputParameter('internalNumber');
       $note = $this->resolveInputParameter('note');
-      $this->logDebug('Upload parameters', ['url' => $url, 'action' => $action, 'internalNumber' => $internalNumber, 'note' => $note]);
 
-      $responseData = $this->makeApiRequest(
-        $url,
-        'POST',
-        [
-          'file' => new CURLFILE($file),
-          'recipientInternalNumber' => $internalNumber,
-          'action' => $action,
-          'note' => $note,
-        ]
-      );
+      if($process === "pedant"){
+        $internalNumber = $this->resolveInputParameter('internalNumber');
+        $this->logDebug('Upload parameters', ['url' => $url, 'action' => $action, 'internalNumber' => $internalNumber, 'note' => $note]);
+        $responseData = $this->makeApiRequest(
+          $url,
+          'POST',
+          [
+            'file' => new CURLFILE($file),
+            'recipientInternalNumber' => $internalNumber,
+            'action' => $action,
+            'note' => $note,
+          ]
+        );
+      } else {
+        $this->logDebug('Upload parameters', ['url' => $url, 'action' => $action, 'note' => $note]);
+        $responseData = $this->makeApiRequest(
+          $url,
+          'POST',
+          [
+            'file' => new CURLFILE($file),
+            'action' => $action,
+            'note' => $note,
+          ]
+        );
+      }
 
       $response = $responseData['response'];
       $httpcode = $responseData['httpCode'];
@@ -202,23 +209,20 @@ trait InvoiceTrait
    * Checks the processing status of a previously uploaded file.
    * If processing is complete, stores extracted data and marks activity as completed.
    */
-  protected function checkFile(): void
+  protected function checkFile(string $process): void
     {
     try {
-      $vendorTable = $this->resolveInputParameter('vendorTable');
-      if (!empty($vendorTable)) {
-        $this->logInfo('Vendor table configured, running vendor import during checkFile', ['vendorTable' => $vendorTable]);
-        $this->importVendor();
-        }
+      if($process === "pedant"){
+        $vendorTable = $this->resolveInputParameter('vendorTable');
+        if (!empty($vendorTable)) {
+          $this->logInfo('Vendor table configured, running vendor import during checkFile', ['vendorTable' => $vendorTable]);
+          $this->importVendor();
+          }
+      }
 
-      $baseURL = $this->getBaseUrl();
-      $fileId = $this->getSystemActivityVar('FILEID');
-      $type = $this->getSystemActivityVar('TYPE');
-      $urlType = $type == 'e_invoice' ? 'e-invoices' : 'invoices';
-      $url = "$baseURL/v1/external/documents/$urlType?" . ($urlType == 'e-invoices' ? "documentId=$fileId" : "fileId=$fileId") . "&auditTrail=true";
+      $url = $this->buildURL($process, "checkFile");
+
       $maxCounter = $this->resolveInputParameter('maxCounter');
-
-      $this->logInfo('Checking file status', ['fileId' => $fileId, 'type' => $type]);
 
       $responseData = $this->makeApiRequest($url, 'GET');
       $response = $responseData['response'];
@@ -289,7 +293,7 @@ trait InvoiceTrait
         } else {
         $this->logDebug('File still processing', ['status' => $dataItem['status']]);
         }
-
+      $type = $this->getSystemActivityVar('TYPE');
       if ($check === true) {
         // Clean up temporary files for e-invoices
         if ($type == "e_invoice") {
@@ -348,5 +352,93 @@ trait InvoiceTrait
       $this->logError('Unexpected error in checkFile', $e);
       throw new JobRouterException('Check file error: ' . $e->getMessage());
       }
+    }
+  }
+
+  protected function buildURL(string $process, string $currentFunction): string {
+
+    $this->logInfo('Building URL', ['process' => $process, 'currentFunction' => $currentFunction])
+    $baseURL = $this->getBaseUrl();
+    $processKey = ($process === "pedant") ? 'pedant' : 'delivery';
+    $type = $this->getSystemActivityVar('TYPE');
+      
+    if($currentFunction === 'uploadFile'){
+      $isXml    = strtolower($fileExtension) === 'xml';
+      $isZugferd = $this->resolveInputParameter('zugferd') === '1';
+      $type = match (true) {
+          $isXml => 'xml',
+          $isZugferd => 'zugferd',
+          default => 'default',
+      };
+      $paths = [
+          'pedant' => [
+              'xml' => "/v2/external/documents/invoices/upload",
+              'zugferd' => "/v1/external/documents/invoices/upload",
+              'default' => "/v2/external/documents/invoices/upload",
+          ],
+          'delivery' => [
+              'xml' => "xmlPath",
+              'zugferd' => "zugferdPath",
+              'default' => "defaultPath",
+          ]
+      ];
+      $path = $paths[$processKey][$type] ?? $paths[$processKey]['default'];
+      $url = $baseUrl . $path;
+      $this->logDebug("Selected Upload-Path " . $url, [
+        "processKey" => $processKey,
+        "type" => $type,
+        "path" => $path
+      ]);
+      
+      return $url;
+
+    } elseif ($currentFunction === 'checkFile') {
+      
+      $urlType = match (true) {
+        $type => 'e_invoice',
+        $type => 'invoice',
+        $type => 'deliverNote', //BEISPIELWERT - WARTE AUF POSTMAN UM WERTE EINSEHEN ZU KÖNNEN
+      }
+
+      $paths = [
+        'pedant' => [
+          'basePath' => '/v1/external/documents/',
+          'urlType' => [
+            'e_invoice' => 'e-invoices',
+            'invoice' => 'invoices',
+          ],
+          'identifier' => [
+            'e-invoices' => 'documentId=$fileId'
+            'invoices' => 'fileId=$fileId'
+          ] 
+        ],
+        'delivery' => [
+          'basePath' => '/v1/external/deliveryNotes/'
+          'urlType' => [
+            'deliveryNote'
+          ],
+          'identifier' => [
+            'deliveryNote' => 'fileId=$fileId'
+          ]
+        ]
+      ]
+
+      $basePath = $paths[$processKey]['basePath'] 
+      $urlTypePath = $paths[$processKey]['urlType'][$urlType]
+      $urlIdentifier = $$paths[$processKey]['identifier'][$urlType]
+      
+      $url = $baseUrl . $basePath . $urlIdentifier . '&auditTrail=true';
+      $this->logInfo('Checking file status', ['fileId' => $fileId, 'type' => $type]);
+      $this->logDebug("Selected Upload-Path " . $url, [
+        "processKey" => $processKey,
+        "basePath" => $basePath,
+        "urlTypePath" => $urlTypePath,
+        "urlIdentifier" => $urlIdentifier
+      ]);
+
+      return $url;
+
+    } else {
+      throw new JobrouterException('Current function to build URL is defined incorrectly: ' . $currentFunction)
     }
   }
