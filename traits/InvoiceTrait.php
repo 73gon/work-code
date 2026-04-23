@@ -12,12 +12,12 @@ trait InvoiceTrait
    */
   protected function pedant(): void
     {
-      $this->resolveParams("pedant")
+      $this->resolveParams("pedant");
     }
 
   protected function readDeliveryNote(): void
   {
-    $this->resolveParams("delivery")
+    $this->resolveParams("delivery");
   }
 
   protected function resolveParams(string $process): void {
@@ -96,10 +96,10 @@ trait InvoiceTrait
         throw new JobRouterException("File size exceeds the maximum limit of $this->maxFileSizeMB MB. Actual size: $fileSizeMB MB.");
         }
 
-      $url = buildURL($process, 'uploadFile');
+      $url = $this->buildURL($process, 'uploadFile');
       
       $flag = $this->resolveInputParameter('flag');
-      if ($isXml) {
+      if (strtolower($fileExtension) == 'xml') {
         $flagXML = $this->resolveInputParameter('flagXML');
         if (!empty($flagXML)) {
           $flag = $flagXML;
@@ -217,7 +217,7 @@ trait InvoiceTrait
         if (!empty($vendorTable)) {
           $this->logInfo('Vendor table configured, running vendor import during checkFile', ['vendorTable' => $vendorTable]);
           $this->importVendor();
-          }
+        }
       }
 
       $url = $this->buildURL($process, "checkFile");
@@ -344,7 +344,6 @@ trait InvoiceTrait
 
         $this->setResubmission(1, "s");
         $this->markActivityAsCompleted();
-        $this->logInfo('Activity completed successfully', ['fileId' => $fileId]);
         }
       } catch (JobRouterException $e) {
       throw $e;
@@ -361,6 +360,7 @@ trait InvoiceTrait
    */
   protected function buildURL(string $process, string $currentFunction): string {
 
+    $file = $this->getUploadPath() . $this->resolveInputParameter('inputFile');
     $this->logInfo('Building URL', ['process' => $process, 'currentFunction' => $currentFunction]);
     $baseURL = $this->getBaseUrl();
     $type = $this->getSystemActivityVar('TYPE');
@@ -397,11 +397,11 @@ trait InvoiceTrait
       return $url;
 
     } elseif ($currentFunction === 'checkFile') {
-      
+      $fileId = $this->getSystemActivityVar('FILEID');
       $urlType = match ($type) {
         'e_invoice' => "e-invoices",
-        'invoice' => "invoice",
-        default => "deliverNote", //BEISPIELWERT - WARTE AUF POSTMAN UM WERTE EINSEHEN ZU KÖNNEN
+        'invoice' => "invoices",
+        default => "deliveryNote", //BEISPIELWERT - WARTE AUF POSTMAN UM WERTE EINSEHEN ZU KÖNNEN
       };
 
       $paths = [
@@ -426,7 +426,6 @@ trait InvoiceTrait
         "process" => $process,
         "basePath" => $basePath,
         "urlTypePath" => $urlTypePath,
-        "urlIdentifier" => $urlIdentifier,
       ]);
 
       return $url;
