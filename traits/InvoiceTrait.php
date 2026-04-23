@@ -355,6 +355,10 @@ trait InvoiceTrait
     }
   }
 
+  /**
+   * Builds the URL needed for the API-Fetch depending on the systemactivity running
+   * @param string $url The URL containing the complete path
+   */
   protected function buildURL(string $process, string $currentFunction): string {
 
     $this->logInfo('Building URL', ['process' => $process, 'currentFunction' => $currentFunction])
