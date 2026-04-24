@@ -49,7 +49,6 @@
                     <field id='note' name='NOTE' worktable='yes' subtable='yes' fixed='yes' datatype='varchar'/>
 					<field id='incident' name='INCIDENT' worktable='no' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
                     <field id='maxFileSize' name='MAXFILESIZE' worktable='yes' subtable='no' fixed='yes' datatype='int' required='no'/>
-
                 </inputParameters>
                 <outputParameters>
                     <field id='fileID' name='FILEID' worktable='yes' subtable='no' fixed='yes' datatype='varchar' required='yes'/>
