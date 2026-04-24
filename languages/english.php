@@ -149,3 +149,18 @@ define('DC_ISSUEDATE', 'Issue Date');
 define('ESRREFERENCENUMBER', 'ESR Reference Number');
 define('READDELIVERYNOTE_DESC', 'This systemactivity can be used to upload a delivery note on pedant and check it on availability and correctness');
 define('DELIVERYNOTEDETAILS', 'Deliverynote details');
+
+define('DN_RECIPIENTCITY', 'Recipient City');
+define('DN_RECIPIENTCOMPANYNAME', 'Recipient Companyname');
+define('DN_RECIPIENTINFO', 'Recipient information');
+define('DN_RECIPIENTSTREET', 'Recipient Street');
+define('DN_RECIPIENTVATNUMBER', 'Recipient vat number');
+define('DN_RECIPIENTZIPCODE', 'Recipient Zipcode');
+define('DN_VENDORCOMPANYNAME', 'Vendor Company Name');
+define('DN_VENDORINFO', 'Vendor Info');
+define('DN_VENDORNAME', 'Vendor Name');
+define('DN_VENDORSTREET', 'Vendor street');
+define('DN_VENDORZIPCODE', 'Vendor Zipcode ');
+define('DN_VENDOREMAIL', 'Vendor Email');
+define('DN_VENDORCITY', 'Vendor city');
+define('DN_VENDORVATNUMBER', 'Vendor Vat number');
