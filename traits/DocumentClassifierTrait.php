@@ -196,6 +196,7 @@ trait DocumentClassifierTrait
 
       $dataItem = $data['data'][0];
       $status = $dataItem['status'] ?? '';
+      $confidence = $this->buildConfidenceField($dataItem)
       $this->logInfo('Document classifier status received', ['status' => $status]);
 
       if (in_array($status, self::FALSE_STATES)) {
@@ -208,11 +209,13 @@ trait DocumentClassifierTrait
 
       $attributes = $this->resolveOutputParameterListAttributes('classificationDetails');
       $values = [
+        // Values
         'documentClassifierNumber' => $dataItem['documentClassifierNumber'] ?? '',
         'documentType' => $dataItem['documentType'] ?? '',
         'vendorCompanyName' => $dataItem['vendorCompanyName'] ?? '',
         'recipientCompanyName' => $dataItem['recipientCompanyName'] ?? '',
         'issueDate' => !empty($dataItem['issueDate']) ? date('d.m.Y', strtotime($dataItem['issueDate'])) : '',
+        'confidences' => $confidence ?? '',
       ];
 
       $this->logDebug('Classification values', $values);
@@ -234,4 +237,30 @@ trait DocumentClassifierTrait
       throw new JobRouterException('Document classifier check error: ' . $e->getMessage());
       }
     }
-  }
+
+  protected function buildConfidenceField(array $dataValues): string{
+
+      $dataConfidence = $dataValues['documentClassifierDataBoxes'];
+      $values = [
+        'numberConfidence' => $dataConfidence['documentClassifierNumber']['confidence'] ?? '',
+        'typeConfidence' => $dataConfidence['documentClassifierType']['confidence'] ?? '',
+        'vendorCompanyConfidence' => $dataConfidence['vendorCompanyName']['confidence'] ?? '',
+        'recipientCompanyConfidence' => $dataConfidence['recipientCompanyName']['confidence'] ?? '',
+        'dateConfidence' => $dataConfidence['documentClassifierDate']['confidence'] ?? '',
+      ];
+      $string = [];
+      foreach($values as $name => $value ){
+        $string[] = $name . ': ' . $value;
+      };
+
+      $this->logDebug('Confidence values fetched', [
+        'function' => 'buildConfidenceField'
+        'values' => $string,
+        ]
+      );
+      return implode( ', ', $string);
+  }  
+  
+}
+
+
