@@ -255,4 +255,4 @@ class pedantSystemActivity extends AbstractSystemActivityAPI
         $this->logDebug('getUDL() called', ['udl' => $udl, 'elementID' => $elementID]);
         return null;
         }
-
+    }
