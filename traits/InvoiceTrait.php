@@ -380,9 +380,7 @@ trait InvoiceTrait
               'default' => "/v2/external/documents/invoices/upload",
           ],
           'delivery' => [
-              'xml' => "xmlPath",
-              'zugferd' => "zugferdPath",
-              'default' => "defaultPath",
+              'default' => "/v1/external/documents/delivery-notes/upload",
           ]
       ];
       $path = $paths[$process][$type] ?? $paths[$process]['default'];
@@ -400,7 +398,7 @@ trait InvoiceTrait
       $urlType = match ($type) {
         'e_invoice' => "e-invoices",
         'invoice' => "invoices",
-        default => "deliveryNote", //BEISPIELWERT - WARTE AUF POSTMAN UM WERTE EINSEHEN ZU KÖNNEN
+        default => "delivery-notes", // Type wird bei Lieferschein nicht mit angegeben 
       };
 
       $paths = [
@@ -410,8 +408,8 @@ trait InvoiceTrait
           'invoices' => "fileId=$fileId",
         ],
         'delivery' => [
-          'basePath' => "/v1/external/deliveryNotes/",
-          'deliveryNote' => "deliveryNote",
+          'basePath' => "/v1/external/documents/delivery-notes/",
+          'delivery-notes' => "documentId=$fileId",
         ],
       ];
 
