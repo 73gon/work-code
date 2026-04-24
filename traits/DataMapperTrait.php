@@ -485,8 +485,6 @@ trait DataMapperTrait
       'recipientStreet' => $dataItem['recipientStreet'],
       'recipientVatNumber' => $dataItem['recipientVatNumber'],
       'recipientZipCode' => $dataItem['recipientZipCode'],
-      'recipientCompanyName' => $dataItem['recipientCompanyName'],
-
       'vendorCompanyName' => $dataItem['vendorCompanyName'],
       'vendorInfo' => $dataItem['vendorInfo'],
       'vendorName' => $dataItem['vendorName'],
@@ -503,7 +501,7 @@ trait DataMapperTrait
           } catch (Exception $e) {
           $this->logWarning('Failed to set Delivery-Note value', ['attribute' => $attribute['id'], 'error' => $e->getMessage()]);
           }
-        }
+        };
 
 
   /**
