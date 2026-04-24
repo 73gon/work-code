@@ -305,74 +305,74 @@ Diese Felder werden eingerichtet, empfangen den selben Parameter und arbeiten mi
 Für spezifische Informationen zu den Parametern sieh bitte in die [README.md](../README.md)
 
 ### Nach Typ sortiert
-| Inputparameter | Variablenname | System-Typ | Kommentar |
-|----------|-----------|-----------|-----|
-| `Eingabedatei` | `inputFile` | Grundlegende systematische Verknüpfungen |
-| `API-Key` | `api_key` | Grundlegende systematische Verknüpfungen |
-| `Demo` | `demo` | Grundlegende systematische Verknüpfungen |
-| `Maximale Wiederholungen` | `maxCounter` | Grundlegende systematische Verknüpfungen |
-| `Flag` | `flag` | Grundlegende systematische Verknüpfungen |
-| `Vorgang` | `incident` | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`
-| `Maximale Dateigröße` | `maxFileSize` | Grundlegende systematische Verknüpfungen |
-|  |   |   |   |
-|   |   |   |   |
-| `Flag XML` | `flagXML` | Kundenentscheidungen | Wenn der Kunde mit E-rechnungen arbeitet (XML-Rechnungen)
-| `ZUGFeRD bearbeiten` | `zugferd` | Kundenentscheidungen | Wenn der Kunde mit ZUGFeRD-Rechnungen arbeitet
-| `Ausführungsintervall in Minuten` | `intervalOld` | Kundenentscheidungen | Dies ist nur bei Versionen **VOR Version 2.0.0** wichtig. Wenn wir mit der neuen Version arbeiten, ist der Input hier irrelevant
-|   |   |   |   |
-|   |   |   |   |
-| `Mandant Vorauswahl` | `internalNumber` | Datenbank- & Prozesstabellenverknüpfung |
-| `Neue Version (2 SysAkt)` | `new` | Datenbank- & Prozesstabellenverknüpfung | Diese ist **AB Version 2.0.0** immer auf True |
-| `Nachricht` | `note` | Datenbank- & Prozesstabellenverknüpfung | Dieser Kommentar wird NICHT von der KI verarbeitet, sondern von einem Mitarbeiter gelesen
-| `Lieferanten-Tabelle` | `vendorTable` | Datenbank- & Prozesstabellenverknüpfung |
-| `Lieferantenkonfiguration` | `importVendor` | Datenbank- & Prozesstabellenverknüpfung |
+| Inputparameter                    | Variablenname    | System-Typ                               | Kommentar                                                                                                                        |
+| --------------------------------- | ---------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `Eingabedatei`                    | `inputFile`      | Grundlegende systematische Verknüpfungen |
+| `API-Key`                         | `api_key`        | Grundlegende systematische Verknüpfungen |
+| `Demo`                            | `demo`           | Grundlegende systematische Verknüpfungen |
+| `Maximale Wiederholungen`         | `maxCounter`     | Grundlegende systematische Verknüpfungen |
+| `Flag`                            | `flag`           | Grundlegende systematische Verknüpfungen |
+| `Vorgang`                         | `incident`       | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`                                                                                                   |
+| `Maximale Dateigröße`             | `maxFileSize`    | Grundlegende systematische Verknüpfungen |
+|                                   |                  |                                          |                                                                                                                                  |
+|                                   |                  |                                          |                                                                                                                                  |
+| `Flag XML`                        | `flagXML`        | Kundenentscheidungen                     | Wenn der Kunde mit E-rechnungen arbeitet (XML-Rechnungen)                                                                        |
+| `ZUGFeRD bearbeiten`              | `zugferd`        | Kundenentscheidungen                     | Wenn der Kunde mit ZUGFeRD-Rechnungen arbeitet                                                                                   |
+| `Ausführungsintervall in Minuten` | `intervalOld`    | Kundenentscheidungen                     | Dies ist nur bei Versionen **VOR Version 2.0.0** wichtig. Wenn wir mit der neuen Version arbeiten, ist der Input hier irrelevant |
+|                                   |                  |                                          |                                                                                                                                  |
+|                                   |                  |                                          |                                                                                                                                  |
+| `Mandant Vorauswahl`              | `internalNumber` | Datenbank- & Prozesstabellenverknüpfung  |
+| `Neue Version (2 SysAkt)`         | `new`            | Datenbank- & Prozesstabellenverknüpfung  | Diese ist **AB Version 2.0.0** immer auf True                                                                                    |
+| `Nachricht`                       | `note`           | Datenbank- & Prozesstabellenverknüpfung  | Dieser Kommentar wird NICHT von der KI verarbeitet, sondern von einem Mitarbeiter gelesen                                        |
+| `Lieferanten-Tabelle`             | `vendorTable`    | Datenbank- & Prozesstabellenverknüpfung  |
+| `Lieferantenkonfiguration`        | `importVendor`   | Datenbank- & Prozesstabellenverknüpfung  |
 
 
 ## Nach Struktur sortiert
-| Inputparameter | Variablenname | System-Typ | Kommentar |
-|----------|-----------|-----------|-----|
-| `Eingabedatei` | `inputFile` | Grundlegende systematische Verknüpfungen |
-| `API-Key` | `api_key` | Grundlegende systematische Verknüpfungen |
-| `Demo` | `demo` | Grundlegende systematische Verknüpfungen |
-| `Mandant Vorauswahl` | `internalNumber` | Datenbank- & Prozesstabellenverknüpfung |
-| `Maximale Wiederholungen` | `maxCounter` | Grundlegende systematische Verknüpfungen |
-| `Flag` | `flag` | Grundlegende systematische Verknüpfungen |
-| `Flag XML` | `flagXML` | Kundenentscheidungen | Wenn der Kunde mit E-rechnungen arbeitet (XML-Rechnungen)
-| `Neue Version (2 SysAkt)` | `new` | Datenbank- & Prozesstabellenverknüpfung | Diese ist **AB Version 2.0.0** immer auf True |
-| `ZUGFeRD bearbeiten` | `zugferd` | Kundenentscheidungen | Wenn der Kunde mit ZUGFeRD-Rechnungen arbeitet
-| `Ausführungsintervall in Minuten` | `intervalOld` | Kundenentscheidungen | Dies ist nur bei Versionen **VOR Version 2.0.0** wichtig. Wenn wir mit dem neuen System arbeiten, ist der Input hier irrelevant
-| `Nachricht` | `note` | Datenbank- & Prozesstabellenverknüpfung | Dieser Kommentar wird NICHT von der KI verarbeitet
-| `Vorgang` | `incident` | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`
-| `Vorgang` | `incident` | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`
-| `Maximale Dateigröße` | `maxFileSize` | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`
-| `Lieferanten-Tabelle` | `vendorTable` | Datenbank- & Prozesstabellenverknüpfung |
-| `Lieferantenkonfiguration` | `importVendor` | Datenbank- & Prozesstabellenverknüpfung | 
+| Inputparameter                    | Variablenname    | System-Typ                               | Kommentar                                                                                                                       |
+| --------------------------------- | ---------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `Eingabedatei`                    | `inputFile`      | Grundlegende systematische Verknüpfungen |
+| `API-Key`                         | `api_key`        | Grundlegende systematische Verknüpfungen |
+| `Demo`                            | `demo`           | Grundlegende systematische Verknüpfungen |
+| `Mandant Vorauswahl`              | `internalNumber` | Datenbank- & Prozesstabellenverknüpfung  |
+| `Maximale Wiederholungen`         | `maxCounter`     | Grundlegende systematische Verknüpfungen |
+| `Flag`                            | `flag`           | Grundlegende systematische Verknüpfungen |
+| `Flag XML`                        | `flagXML`        | Kundenentscheidungen                     | Wenn der Kunde mit E-rechnungen arbeitet (XML-Rechnungen)                                                                       |
+| `Neue Version (2 SysAkt)`         | `new`            | Datenbank- & Prozesstabellenverknüpfung  | Diese ist **AB Version 2.0.0** immer auf True                                                                                   |
+| `ZUGFeRD bearbeiten`              | `zugferd`        | Kundenentscheidungen                     | Wenn der Kunde mit ZUGFeRD-Rechnungen arbeitet                                                                                  |
+| `Ausführungsintervall in Minuten` | `intervalOld`    | Kundenentscheidungen                     | Dies ist nur bei Versionen **VOR Version 2.0.0** wichtig. Wenn wir mit dem neuen System arbeiten, ist der Input hier irrelevant |
+| `Nachricht`                       | `note`           | Datenbank- & Prozesstabellenverknüpfung  | Dieser Kommentar wird NICHT von der KI verarbeitet                                                                              |
+| `Vorgang`                         | `incident`       | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`                                                                                                  |
+| `Vorgang`                         | `incident`       | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`                                                                                                  |
+| `Maximale Dateigröße`             | `maxFileSize`    | Grundlegende systematische Verknüpfungen | Grundsätzlich: `[jr_incident]`                                                                                                  |
+| `Lieferanten-Tabelle`             | `vendorTable`    | Datenbank- & Prozesstabellenverknüpfung  |
+| `Lieferantenkonfiguration`        | `importVendor`   | Datenbank- & Prozesstabellenverknüpfung  |
 
 ## Beispielwerte
-| Inputparameter | Variablenname | Ressource |Value |
-|----------|-----------|-----------|-----|
-| `Eingabedatei` | `inputFile` | `Prozesstabelle` | `INVOICE` |
-| `API-Key` | `api_key` | `Prozesstabelle` |`APIKEY` |
-| `Demo` | `demo` | `Fester Wert` | `0` |
-| `Mandant Vorauswahl` | `internalNumber` | `Prozesstabelle` | `VENDORINTERNALNUMBER` |
-| `Maximale Wiederholungen` | `maxCounter` | `Fester Wert` | `20` |
-| `Flag` | `flag` |  `Fester Wert` | `skip_review` |
-| `Flag XML` | `flagXML` | `Fester Wert` | `check_extraction` |
-| `Neue Version (2 SysAkt)` | `new` | `Fester Wert` | `0` |
-| `ZUGFeRD bearbeiten` | `zugferd` |  `Prozesstabelle` | `1` |
-| `Ausführungsintervall in Minuten` | `intervalOld` | `Fester Wert` | `10` | 
-| `Nachricht` | `note` |  `Prozesstabelle` | `CASEWORKERCOMMENT` |
-| `Vorgang` | `incident` |  `Fester Wert` | `[jr_incident]` |
-| `Maximale Dateigröße` | `maxFileSize` | `Fester Wert` | `20` | 
-| `Lieferanten-Tabelle` | `vendorTable` | `Prozesstabelle` | `SQLVENDORTABLE` |
+| Inputparameter                    | Variablenname    | Ressource        | Value                  |
+| --------------------------------- | ---------------- | ---------------- | ---------------------- |
+| `Eingabedatei`                    | `inputFile`      | `Prozesstabelle` | `INVOICE`              |
+| `API-Key`                         | `api_key`        | `Prozesstabelle` | `APIKEY`               |
+| `Demo`                            | `demo`           | `Fester Wert`    | `0`                    |
+| `Mandant Vorauswahl`              | `internalNumber` | `Prozesstabelle` | `VENDORINTERNALNUMBER` |
+| `Maximale Wiederholungen`         | `maxCounter`     | `Fester Wert`    | `20`                   |
+| `Flag`                            | `flag`           | `Fester Wert`    | `skip_review`          |
+| `Flag XML`                        | `flagXML`        | `Fester Wert`    | `check_extraction`     |
+| `Neue Version (2 SysAkt)`         | `new`            | `Fester Wert`    | `0`                    |
+| `ZUGFeRD bearbeiten`              | `zugferd`        | `Prozesstabelle` | `1`                    |
+| `Ausführungsintervall in Minuten` | `intervalOld`    | `Fester Wert`    | `10`                   |
+| `Nachricht`                       | `note`           | `Prozesstabelle` | `CASEWORKERCOMMENT`    |
+| `Vorgang`                         | `incident`       | `Fester Wert`    | `[jr_incident]`        |
+| `Maximale Dateigröße`             | `maxFileSize`    | `Fester Wert`    | `20`                   |
+| `Lieferanten-Tabelle`             | `vendorTable`    | `Prozesstabelle` | `SQLVENDORTABLE`       |
 
 ## Besonderheiten bei den Systemaktivitäten
 
-| Funktion | Feld | Besonderheit |
-|-----|------|------|
-| `Rechnung abholen (fetchData)` | File-ID (fileid) | Hier müssen wir die Namen der Prozesstabellenfeldes eintragen, wo die Werte gespeicher werden. Wir wollen nicht den Value der File-Id |
-| Jede ` ` | UDL-Liste / Konfiguration | Hier müssen wir die Namen der Prozesstabellenfeldes eintragen, wo die Werte gespeicher werden. **NICHT** den Value der File-Id |
-| | | | 
+| Funktion                       | Feld                      | Besonderheit                                                                                                                          |
+| ------------------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `Rechnung abholen (fetchData)` | File-ID (fileid)          | Hier müssen wir die Namen der Prozesstabellenfeldes eintragen, wo die Werte gespeicher werden. Wir wollen nicht den Value der File-Id |
+| Jede ` `                       | UDL-Liste / Konfiguration | Hier müssen wir die Namen der Prozesstabellenfeldes eintragen, wo die Werte gespeicher werden. **NICHT** den Value der File-Id        |
+|                                |                           |                                                                                                                                       |
 
 # Fußnoten
 
