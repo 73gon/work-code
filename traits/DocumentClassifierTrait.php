@@ -215,7 +215,7 @@ trait DocumentClassifierTrait
         'vendorCompanyName' => $dataItem['vendorCompanyName'] ?? '',
         'recipientCompanyName' => $dataItem['recipientCompanyName'] ?? '',
         'issueDate' => !empty($dataItem['issueDate']) ? date('d.m.Y', strtotime($dataItem['issueDate'])) : '',
-        'confidences' => $confidence ?? '',
+        'documentClassifierConfidence' => $confidence ?? '',
       ];
 
       $this->logDebug('Classification values', $values);
