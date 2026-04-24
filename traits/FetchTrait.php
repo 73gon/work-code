@@ -181,7 +181,7 @@ trait FetchTrait
         // Process all collected IDs
         $table_head = $this->resolveInputParameter('table_head');
         $stepID = $this->resolveInputParameter('stepID');
-        $fileid = $this->resolveInputParameter('fileid');
+        $fileid = $this->resolveInputParameter('fileid'); //We need the name of the Tablefield, not the value of that tablefield
 
         $currentTime = new DateTime();
         $currentTime->modify('+10 seconds');
