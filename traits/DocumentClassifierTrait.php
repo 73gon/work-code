@@ -196,7 +196,7 @@ trait DocumentClassifierTrait
 
       $dataItem = $data['data'][0];
       $status = $dataItem['status'] ?? '';
-      $confidence = $this->buildConfidenceField($dataItem)
+      $confidence = $this->buildConfidenceField($dataItem);
       $this->logInfo('Document classifier status received', ['status' => $status]);
 
       if (in_array($status, self::FALSE_STATES)) {
@@ -254,7 +254,7 @@ trait DocumentClassifierTrait
       };
 
       $this->logDebug('Confidence values fetched', [
-        'function' => 'buildConfidenceField'
+        'function' => 'buildConfidenceField',
         'values' => $string,
         ]
       );
