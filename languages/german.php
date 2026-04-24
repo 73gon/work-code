@@ -149,3 +149,4 @@ define('DC_ISSUEDATE', 'Rechnungsdatum');
 define('ESRREFERENCENUMBER', 'ESR-Referenznummer');
 define('READDELIVERYNOTE', 'Lieferschein auslesen');
 define('READDELIVERYNOTE_DESC', 'Diese Systemaktivität kann dazu verwendet werden, einen Lieferschein auf Pedant hochzuladen und auf Existenz und Richtigkeit zu überprüfen.');
+define('DELIVERYNOTEDETAILS', 'Lieferscheininformationen');
