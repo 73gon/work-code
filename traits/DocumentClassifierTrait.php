@@ -231,7 +231,9 @@ trait DocumentClassifierTrait
         if( $this->isCompleted() === false ){
           $this->markActivityAsCompleted();
           $this->logInfo('Document classifier completed, activity marked as completed');
-        } 
+        } else {
+          $this->logInfo('Document classifier still running');
+        }
       
       } catch (JobRouterException $e) {
       throw $e;
