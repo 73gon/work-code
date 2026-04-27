@@ -171,21 +171,23 @@ trait InvoiceTrait
         }
 
       if($process === 'pedant'){
+        $this->logInfo("Response Data from Pedant-function");
         if (!isset($data['files'][0])) {
-        $this->logError('Invalid upload response structure', null, ['response' => $response]);
-        throw new JobRouterException('Invalid API response: missing files data');
+          $this->logError('Invalid upload response structure', null, ['response' => $response]);
+          throw new JobRouterException('Invalid API response: missing files data');
         }
         $fileId = $data['files'][0]['fileId'] ?? null;
         $invoiceId = $data['files'][0]['invoiceId'] ?? null;
         $type = $data['files'][0]['type'] ?? null;
       } elseif($process === 'delivery'){
-        if (!isset($data[0])) {
+        $this->logInfo("Response Data from DeliveryNote-function");
+        if (!isset($data['documents'][0])) {
         $this->logError('Invalid upload response structure', null, ['response' => $response]);
         throw new JobRouterException('Invalid API response: missing files data');
         }
-        $fileId = $data[0]['documentId'] ?? null;
-        $invoiceId = $data[0]['dnId'] ?? null;
-        $type = $data[0]['type'] ?? null;
+        $fileId = $data['documents'][0]['documentId'] ?? null;
+        $invoiceId = $data['documents'][0]['dnId'] ?? null;
+        $type = null;
       }
       
       
