@@ -1,5 +1,5 @@
 <?php
-//v2.3.1
+//v2.4.0
 
 require_once __DIR__ . '/traits/LoggerTrait.php';
 require_once __DIR__ . '/traits/HelperTrait.php';
