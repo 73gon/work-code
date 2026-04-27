@@ -15,10 +15,10 @@ Inhaltsverzeichnis
   - [Dialogfelder von Rechnung auslesen (pedant)](#dialogfelder-von-rechnung-auslesen-pedant)
 - [Funktion: Rechnung abholen (fetchData)](#funktion-rechnung-abholen-fetchdata)
   - [Dialogfelder von fetchData](#dialogfelder-von-fetchdata)
-  - [Vorstellung von Funktion: documentClassifier](#vorstellung-von-funktion-documentclassifier)
-    - [Dialogfelder von documentClassifier](#dialogfelder-von-documentclassifier)
-  - [Vorstellung der Import-Funktionen: importVendorCSV / importRecipientCSV / importCostCenterCSV](#vorstellung-der-import-funktionen-importvendorcsv--importrecipientcsv--importcostcentercsv)
-    - [Dialogfelder der Import-Funktionen](#dialogfelder-der-import-funktionen)
+- [Vorstellung von Funktion: documentClassifier](#vorstellung-von-funktion-documentclassifier)
+  - [Dialogfelder von documentClassifier](#dialogfelder-von-documentclassifier)
+- [Vorstellung der Import-Funktionen: importVendorCSV / importRecipientCSV / importCostCenterCSV](#vorstellung-der-import-funktionen-importvendorcsv--importrecipientcsv--importcostcentercsv)
+  - [Dialogfelder der Import-Funktionen](#dialogfelder-der-import-funktionen)
 - [Für Developer](#für-developer)
 - [Support](#support)
 - [Fußnoten](#fußnoten)
@@ -66,23 +66,23 @@ Die Funktion pedant ist das Herzstück der Systemaktivität für die Rechnungsve
 
 **Inputfelder**
 
-| Parameter      | Bedeutung                                                                  | Hinweis                                                            |
-| -------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `INPUTFILE`    | Nimmt das zu verarbeitende Dokument aus dem JobRouter-Prozess entgegen.    | Pflichtfeld                                                        |
-| `API_KEY`      | Authentifizierungsschlüssel für die Pedant-API.                            | Pflichtfeld                                                        |
-| `DEMO`         | Schaltet zwischen Demo- und Produktivumgebung um.                          | `1` = Demo |
-| `INTNUMBER`    | Übergibt eine Mandanten- oder Empfängerreferenz an Pedant.                 | Unterstützt die Zuordnung                                          |
-| `MAXRETRIES`   | Legt die maximale Anzahl an Upload- oder Check-Versuchen fest.             | Schutz vor Endlosschleifen                                         |
-| `FLAG`         | Steuert den Verarbeitungsmodus.                                            | Erlaubt: `normal`[^1], `check_extraction`[^2], `skip_review`[^3], `force_skip`[^4] |
-| `FLAGXML`      | Überschreibt `FLAG`, wenn eine XML-Datei verarbeitet wird.                 | Nur für XML relevant                                               |
-| `NEWVERSION`   | Setzt die Wiedervorlage auf ca. 2 Jahre.                                   | Technische Sonderlogik                                             |
-| `ZUGFERD`      | Aktiviert den ZUGFeRD-bezogenen Uploadpfad.                                | Relevant für hybride E-Rechnungen                                  |
-| `INTERVAL`     | Wiedervorlage in Minuten, wenn `NEWVERSION` nicht aktiv ist.               | Polling-Abstand                                                    |
-| `NOTE`         | Optionaler Kommentar, der mit dem Dokument an Pedant übertragen wird und bei der Überprüfung eines Mitarbeiters einsehbar.      | Optional                                                           |
-| `INCIDENT`     | Kennzeichnet den Vorgang für das Logging.                                  | Erscheint in jeder Logzeile                                        |
-| `MAXFILESIZE`  | Maximale Dateigröße in MB.                                                 | Standardwert ohne Eingabe: 20 MB                                   |
-| `VENDORTABLE`  | Optionale JobRouter-Tabelle für einen Vendor-Import während `checkFile()`. | Spezialfall                                                        |
-| `IMPORTVENDOR` | Mapping-Liste für den optionalen Vendor-Import.                            | Gehört zu `VENDORTABLE`                                            |
+| Parameter      | Bedeutung                                                                                                                  | Hinweis                                                                            |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `INPUTFILE`    | Nimmt das zu verarbeitende Dokument aus dem JobRouter-Prozess entgegen.                                                    | Pflichtfeld                                                                        |
+| `API_KEY`      | Authentifizierungsschlüssel für die Pedant-API.                                                                            | Pflichtfeld                                                                        |
+| `DEMO`         | Schaltet zwischen Demo- und Produktivumgebung um.                                                                          | `1` = Demo                                                                         |
+| `INTNUMBER`    | Übergibt eine Mandanten- oder Empfängerreferenz an Pedant.                                                                 | Unterstützt die Zuordnung                                                          |
+| `MAXRETRIES`   | Legt die maximale Anzahl an Upload- oder Check-Versuchen fest.                                                             | Schutz vor Endlosschleifen                                                         |
+| `FLAG`         | Steuert den Verarbeitungsmodus.                                                                                            | Erlaubt: `normal`[^1], `check_extraction`[^2], `skip_review`[^3], `force_skip`[^4] |
+| `FLAGXML`      | Überschreibt `FLAG`, wenn eine XML-Datei verarbeitet wird.                                                                 | Nur für XML relevant                                                               |
+| `NEWVERSION`   | Setzt die Wiedervorlage auf ca. 2 Jahre.                                                                                   | Technische Sonderlogik                                                             |
+| `ZUGFERD`      | Aktiviert den ZUGFeRD-bezogenen Uploadpfad.                                                                                | Relevant für hybride E-Rechnungen                                                  |
+| `INTERVAL`     | Wiedervorlage in Minuten, wenn `NEWVERSION` nicht aktiv ist.                                                               | Polling-Abstand                                                                    |
+| `NOTE`         | Optionaler Kommentar, der mit dem Dokument an Pedant übertragen wird und bei der Überprüfung eines Mitarbeiters einsehbar. | Optional                                                                           |
+| `INCIDENT`     | Kennzeichnet den Vorgang für das Logging.                                                                                  | Erscheint in jeder Logzeile                                                        |
+| `MAXFILESIZE`  | Maximale Dateigröße in MB.                                                                                                 | Standardwert ohne Eingabe: 20 MB                                                   |
+| `VENDORTABLE`  | Optionale JobRouter-Tabelle für einen Vendor-Import während `checkFile()`.                                                 | Spezialfall                                                                        |
+| `IMPORTVENDOR` | Mapping-Liste für den optionalen Vendor-Import.                                                                            | Gehört zu `VENDORTABLE`                                                            |
 
 **Outputfelder**
 
@@ -125,11 +125,11 @@ Die Funktion fetchData dient als zentraler Abhol-Dienst (Poller) für bereits ve
 
 Für `fetchData` sind keine Outputparameter definiert. Die Funktion arbeitet direkt auf der JobRouter-Datenbank und aktualisiert dort die Wiedervorlage wartender Schritte.
 
-## Vorstellung von Funktion: documentClassifier
+# Vorstellung von Funktion: documentClassifier
 
 Die Funktion documentClassifier dient der automatisierten Einordnung und Metadaten-Extraktion von Dokumenten, noch bevor diese in eine spezifische Fachverarbeitung (wie die Rechnungsprüfung) gehen. Sie wird genutzt, um die Art eines Dokuments zu bestimmen und grundlegende Kopfdaten zu identifizieren.
 
-### Dialogfelder von documentClassifier
+## Dialogfelder von documentClassifier
 
 **Inputfelder**
 
@@ -151,11 +151,11 @@ Die Funktion documentClassifier dient der automatisierten Einordnung und Metadat
 | `DC_TEMPJSON`           | Vollständige Rohantwort der API als JSON.                           |
 | `CLASSIFICATIONDETAILS` | Strukturierte Klassifikation wie Dokumenttyp, Firmenname und Datum. |
 
-## Vorstellung der Import-Funktionen: importVendorCSV / importRecipientCSV / importCostCenterCSV
+# Vorstellung der Import-Funktionen: importVendorCSV / importRecipientCSV / importCostCenterCSV
 
 Diese Funktionen dienen dem Abgleich von Stammdaten zwischen JobRouter und Pedant.ai. Da die technische Umsetzung für alle drei Entitätstypen auf derselben Grundlogik basiert, werden sie hier zusammengefasst. Trotzdem werden die fachlich relevanten Unterschiede am Ende separat aufgeführt.
 
-### Dialogfelder der Import-Funktionen
+## Dialogfelder der Import-Funktionen
 
 **Inputfelder**
 
