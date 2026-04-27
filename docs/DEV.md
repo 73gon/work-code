@@ -1,4 +1,5 @@
 Inhaltsverzeichnis
+- [Allgemein](#allgemein)
 - [Definition der Versionierung](#definition-der-versionierung)
 - [Architektur: Trait-basiertes Design](#architektur-trait-basiertes-design)
   - [Die funktionalen Bausteine (Traits)](#die-funktionalen-bausteine-traits)
@@ -20,6 +21,7 @@ Inhaltsverzeichnis
     - [Unterschiede zwischen den Funktionen](#unterschiede-zwischen-den-funktionen)
 - [Zusätzliche Dateien](#zusätzliche-dateien)
   - [Vorstellung von Datei: dialog.xml](#vorstellung-von-datei-dialogxml)
+    - [Einrichten der dialog.xml](#einrichten-der-dialogxml)
   - [Vorstellung der Dateien: german.php / english.php](#vorstellung-der-dateien-germanphp--englishphp)
     - [Welche Aufgabe erfüllen german.php / english.php?](#welche-aufgabe-erfüllen-germanphp--englishphp)
     - [Aufgaben der Sprachdateien (Lokalisierung)](#aufgaben-der-sprachdateien-lokalisierung)
@@ -36,6 +38,14 @@ Inhaltsverzeichnis
   - [Beispielwerte](#beispielwerte)
   - [Besonderheiten bei den Systemaktivitäten](#besonderheiten-bei-den-systemaktivitäten)
 - [Fußnoten](#fußnoten)
+
+# Allgemein
+Für zusätzliche Informationen zu JobRouter Systemaktivitäten siehe in die Dokumentation von JobRouter. Du findest die Dokumentation unter `"Hilfe"` -> `"Handbücher"` -> `"Entwickler"` -> `"Systemaktivität"`
+
+![hilfe](../staticFiles/docimages/help.png)
+
+![handbuecher](../staticFiles/docimages/handbuecher.png)
+
 
 # Definition der Versionierung
 
@@ -228,6 +238,16 @@ Aufgaben der Datei dialog.xml (Struktur/Konfiguration)
 - Pflichtfeld-Steuerung: Festlegung, welche Parameter zwingend ausgefüllt werden müssen (required='yes'), damit die Aktivität korrekt funktioniert.
 
 - Tabellen-Mapping: Konfiguration von Listen-Parametern (UDL), um die Rückgabe von Rechnungspositionen oder Klassifizierungsdetails in JobRouter-Untertabellen zu ermöglichen.
+  
+### Einrichten der dialog.xml
+Die Input als auch Outputfelder, werden über ihre Attribute eingerichtet.
+
+```
+ <field id='inputFile' name='INPUTFILE' worktable='yes' subtable='no' fixed='no' datatype='file' required='yes'/>
+```
+| Attribut | Erklärung | Erlaubter Input | 
+
+
 
 ## Vorstellung der Dateien: german.php / english.php
 
@@ -340,7 +360,7 @@ Für spezifische Informationen zu den Parametern sieh bitte in die [README.md](.
 | `Neue Version (2 SysAkt)`         | `new`            | Datenbank- & Prozesstabellenverknüpfung  | Diese ist **AB Version 2.0.0** immer auf True                                                                                    |
 | `Nachricht`                       | `note`           | Datenbank- & Prozesstabellenverknüpfung  | Dieser Kommentar wird NICHT von der KI verarbeitet, sondern von einem Mitarbeiter gelesen                                        |
 | `Lieferanten-Tabelle`             | `vendorTable`    | Datenbank- & Prozesstabellenverknüpfung  |
-| `Lieferantenkonfiguration`        | `importVendor`   | Datenbank- & Prozesstabellenverknüpfung  |
+| `Lieferantenkonfiguration`        | `importVendor`   | Datenbank- & Prozesstabellenverknüpfung  | Dies ist eine "UDL-Liste"                                                                                                        |
 
 
 ## Nach Struktur sortiert
