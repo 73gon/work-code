@@ -355,7 +355,6 @@ trait InvoiceTrait
             }
           }
 
-        $this->setResubmission(1, "s");
         $this->markActivityAsCompleted();
         }
       } catch (JobRouterException $e) {
