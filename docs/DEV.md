@@ -27,7 +27,7 @@ Inhaltsverzeichnis
   - [Vorstellung von Datei: config.php](#vorstellung-von-datei-configphp)
     - [Welche Aufgabe erfüllt config.php?](#welche-aufgabe-erfüllt-configphp)
     - [Aufgaben der Datei config.php (Systemkonfiguration)](#aufgaben-der-datei-configphp-systemkonfiguration)
-  - [Vorstellung der Datei: config.php](#vorstellung-der-datei-configphp)
+    - [Logging](#logging)
 - [Einrichtung der Systemaktivität](#einrichtung-der-systemaktivität)
   - [Grundlegende systematische Verknüpfungen:](#grundlegende-systematische-verknüpfungen)
   - [Beispiel anhand der Funktion: Rechnung auslesen (pedant)](#beispiel-anhand-der-funktion-rechnung-auslesen-pedant)
@@ -45,7 +45,7 @@ Die erste Ziffer steht für grundlegende Systemänderungen, während die zweite 
 | ------------- | ----------- | ----------------------------------------------------------- |
 | Erste Ziffer  | Major       | Massive Änderungen oder neue Systemarchitektur.             |
 | Zweite Ziffer | Minor       | Neue Features oder Felder, die bestehende Abläufe ergänzen. |
-| Dritte Ziffer | Patch       | Neue Features oder Felder, die bestehende Abläufe ergänzen. |
+| Dritte Ziffer | Patch       | Kleinere Bugfixes                                           |
 
 
 # Architektur: Trait-basiertes Design
@@ -275,8 +275,23 @@ Die Hauptaufgabe dieser Datei ist die Bereitstellung von globalen Steuerungspara
 
 - Zentraler Parameter-Speicher: Rückgabe eines Konfigurations-Arrays (return [...]), welches von der SystemActivity.php und den Traits eingebunden wird.
 
-## Vorstellung der Datei: config.php
-Für Informationen zu dieser Datei sieh in unser [SUPPORT.md](SUPPORT.md)
+Die Hauptaufgabe dieser Datei ist die Bereitstellung von globalen Steuerungsparametern des Debuggings. Sie dient vor allem dazu, das Verhalten der Log-Informationen zu beeinflussen, ohne den PHP-Code selbst ändern zu müssen.
+
+### Logging
+
+- Die Logdateien werden automatisch unter `pedant/logs/log/` angelegt.
+
+- Der Dateiname entspricht immer dem aktuellen Tag im Format `DDMMYYYY.log`.
+
+- Jede Logzeile enthält Zeitstempel, Log-Level, Incident und die eigentliche Nachricht. Optional werden Exception-Details und JSON-Kontext angehängt.
+
+- Das Incident-Tag kommt aus dem Input-Parameter `INCIDENT`. Wenn dieser Wert nicht aufgelöst werden kann, wird `NO_INCIDENT` verwendet.
+
+- Logdateien älter als 7 Tage werden beim Einstieg in die Hauptfunktionen automatisch gelöscht.
+
+- Für Supportfälle sollten nach Möglichkeit immer `INCIDENT`, `TEMPJSON` und `COUNTERSUMMARY` mitgeführt werden.
+
+Details zu Support-Fällen findest du in der [SUPPORT.md-Datei](./SUPPORT.md)
 
 # Einrichtung der Systemaktivität
 

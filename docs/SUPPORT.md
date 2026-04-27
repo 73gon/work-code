@@ -1,42 +1,13 @@
 Inhaltsverzeichnis
-- [config.php](#configphp)
-  - [Aufgaben der Datei config.php (Systemkonfiguration)](#aufgaben-der-datei-configphp-systemkonfiguration)
-- [Logging](#logging)
 - [API-Umgebungen](#api-umgebungen)
 - [Support-Fälle und Maßnahmen](#support-fälle-und-maßnahmen)
   - [HTTP-Codes im Support](#http-codes-im-support)
   - [Typische Fehlermeldungen und was sie bedeuten](#typische-fehlermeldungen-und-was-sie-bedeuten)
   - [Praktische Support-Regel für Max-Counter-Fälle](#praktische-support-regel-für-max-counter-fälle)
   - [Besonderheiten von `fetchData` im Support](#besonderheiten-von-fetchdata-im-support)
+- [config.php](#configphp)
 - [Fußnoten](#fußnoten)
 
-
-# config.php
-
-Die Hauptaufgabe dieser Datei ist die Bereitstellung von globalen Steuerungsparametern des Debuggings. Sie dient vor allem dazu, das Verhalten der Log-Informationen zu beeinflussen, ohne den PHP-Code selbst ändern zu müssen.
-
-## Aufgaben der Datei config.php (Systemkonfiguration)
-
-- Festlegung des Log-Levels: Definition, wie detailliert die Aktivität protokollieren soll (z. B. debug für die Entwicklung oder info für den Produktivbetrieb). Dies wird vom LoggerTrait ausgelesen.
-
-- Unterstützte Werte: `info`[^info], `warning`[^warning], `error`[^error], `debug`[^debug].
-
-- Standardwert der aktuellen Codebasis: `info`.
-
-
-# Logging
-
-- Die Logdateien werden automatisch unter `pedant/logs/log/` angelegt.
-
-- Der Dateiname entspricht immer dem aktuellen Tag im Format `DDMMYYYY.log`.
-
-- Jede Logzeile enthält Zeitstempel, Log-Level, Incident und die eigentliche Nachricht. Optional werden Exception-Details und JSON-Kontext angehängt.
-
-- Das Incident-Tag kommt aus dem Input-Parameter `INCIDENT`. Wenn dieser Wert nicht aufgelöst werden kann, wird `NO_INCIDENT` verwendet.
-
-- Logdateien älter als 7 Tage werden beim Einstieg in die Hauptfunktionen automatisch gelöscht.
-
-- Für Supportfälle sollten nach Möglichkeit immer `INCIDENT`, `TEMPJSON` und `COUNTERSUMMARY` mitgeführt werden.
 
 # API-Umgebungen
 
@@ -97,6 +68,8 @@ Die folgenden Hinweise sind als praktische Erstmaßnahmen für den Support gedac
 
 - Zusätzlich prüfen, ob `TABLEHEAD`, `STEPID` und vor allem `FILEID` als Spaltenname korrekt konfiguriert wurden.
 
+# config.php
+Für detailierte Informationen zum Thema `Phph-logs`/`Code-Debuging` siehe bitte in unserer [DEV.md-Datei](./DEV.md)
 
 # Fußnoten
 
