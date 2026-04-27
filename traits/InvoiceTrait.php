@@ -170,14 +170,25 @@ trait InvoiceTrait
         $this->logWarning('Failed to store counterSummary output parameter', ['error' => $e->getMessage()]);
         }
 
-      if (!isset($data['files'][0])) {
+      if($process === 'pedant'){
+        if (!isset($data['files'][0])) {
         $this->logError('Invalid upload response structure', null, ['response' => $response]);
         throw new JobRouterException('Invalid API response: missing files data');
         }
-
-      $fileId = $data['files'][0]['fileId'] ?? null;
-      $invoiceId = $data['files'][0]['invoiceId'] ?? null;
-      $type = $data['files'][0]['type'] ?? null;
+        $fileId = $data['files'][0]['fileId'] ?? null;
+        $invoiceId = $data['files'][0]['invoiceId'] ?? null;
+        $type = $data['files'][0]['type'] ?? null;
+      } elseif($process === 'delivery'){
+        if (!isset($data[0])) {
+        $this->logError('Invalid upload response structure', null, ['response' => $response]);
+        throw new JobRouterException('Invalid API response: missing files data');
+        }
+        $fileId = $data[0]['documentId'] ?? null;
+        $invoiceId = $data[0]['dnId'] ?? null;
+        $type = $data[0]['type'] ?? null;
+      }
+      
+      
 
       if (empty($fileId)) {
         throw new JobRouterException('Upload response missing fileId');
