@@ -228,8 +228,11 @@ trait DocumentClassifierTrait
           }
         }
 
-      $this->markActivityAsCompleted();
-      $this->logInfo('Document classifier completed, activity marked as completed');
+        if( $this->isCompleted() === false ){
+          $this->markActivityAsCompleted();
+          $this->logInfo('Document classifier completed, activity marked as completed');
+        } 
+      
       } catch (JobRouterException $e) {
       throw $e;
       } catch (Exception $e) {
@@ -242,16 +245,31 @@ trait DocumentClassifierTrait
 
       $dataConfidence = $dataValues['documentClassifierDataBoxes'];
       $values = [
-        'numberConfidence' => $dataConfidence['documentClassifierNumber']['confidence'] ?? '',
-        'typeConfidence' => $dataConfidence['documentClassifierType']['confidence'] ?? '',
-        'vendorCompanyConfidence' => $dataConfidence['vendorCompanyName']['confidence'] ?? '',
-        'recipientCompanyConfidence' => $dataConfidence['recipientCompanyName']['confidence'] ?? '',
-        'dateConfidence' => $dataConfidence['documentClassifierDate']['confidence'] ?? '',
+        'numberConfidence' => [
+          'confidence' => $dataConfidence['documentClassifierNumber']['confidence'] ?? '',
+          'reasoning' => $dataConfidence['documentClassifierNumber']['reasoning'] ?? '',
+        ],
+        'typeConfidence' => [
+          'confidence' => $dataConfidence['documentClassifierType']['confidence'] ?? '',
+          'reasoning' => $dataConfidence['documentClassifierType']['reasoning'] ?? '',
+        ],  
+        'vendorCompanyConfidence' => [
+          'confidence' => $dataConfidence['vendorCompanyName']['confidence'] ?? '',
+          'reasoning' => $dataConfidence['vendorCompanyName']['reasoning'] ?? '',
+        ] ,
+        'recipientCompanyConfidence' => [
+          'confidence' => $dataConfidence['recipientCompanyName']['confidence'] ?? '',
+          'reasoning' => $dataConfidence['recipientCompanyName']['reasoning'] ?? '',
+        ],
+        'dateConfidence' => [
+          'confidence' => $dataConfidence['documentClassifierDate']['confidence'] ?? '',
+          'reasoning' => $dataConfidence['documentClassifierDate']['reasoning'] ?? '',
+        ] 
       ];
       $string = [];
       foreach($values as $name => $value ){
-        $string[] = $name . ': ' . $value;
-      };
+        $string[] = $name . ': [reason: ' . $value['reasoning'] . ', confidence: ' . $value['confidence'] . ']';
+      }
 
       $this->logDebug('Confidence values fetched', [
         'function' => 'buildConfidenceField',
