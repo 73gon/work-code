@@ -242,10 +242,26 @@ Aufgaben der Datei dialog.xml (Struktur/Konfiguration)
 ### Einrichten der dialog.xml
 Die Input als auch Outputfelder, werden über ihre Attribute eingerichtet.
 
+Beispielfelder:
+
 ```
- <field id='inputFile' name='INPUTFILE' worktable='yes' subtable='no' fixed='no' datatype='file' required='yes'/>
+ <field id='new' name='NEWVERSION' worktable='no' subtable='no' fixed='yes' datatype='int' required='yes' texttype='checkbox'/>
+
+ <list id="importVendor" name="IMPORTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
 ```
 | Attribut | Erklärung | Erlaubter Input | 
+| ---- | ---- | ----| 
+| category | | `field` oder `list` |
+| id | | |
+| name | | |
+| worktable | | |
+| subtable | | |
+| fixed | | |
+| datatype | | |
+| requiered | | |
+| texttype | | |
+| texttype | | |
+
 
 
 
