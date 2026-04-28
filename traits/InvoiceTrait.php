@@ -21,6 +21,15 @@ trait InvoiceTrait
   }
 
   protected function resolveParams(string $process): void {
+      $this->resolveParams("pedant");
+    }
+
+  protected function readDeliveryNote(): void
+  {
+    $this->resolveParams("delivery");
+  }
+
+  protected function resolveParams(string $process): void {
     $this->cleanOldLogs();
     $this->logInfo('Starting ' . $process . ' workflow');
     try {
