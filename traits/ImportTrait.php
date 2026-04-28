@@ -214,12 +214,18 @@ trait ImportTrait
     try {
       $this->logInfo("Starting $entityType import");
 
-      $table = $this->resolveInputParameter($tableParam);
-      $listfields = $this->resolveInputParameterListValues($listParam);
-      $externalDatabse = $this->resolveInputParameter($external_database);
-      if($externalDatabase === 1){
-        $externalConnection = $this->resolveInputParameter($external_connection);
-      }
+      $table = $this->resolveInputParameter($tableParam) ?? null;
+      $listfields = $this->resolveInputParameterListValues($listParam) ?? null;
+      $externalDatabase = $this->resolveInputParameter('external_database') == '1';
+      $externalConnection = $this->resolveInputParameter('external_connection');
+
+      $this->logError("Resolving input Parameter", [
+        'table' => $table,
+        'listfields' => $listfields,
+        'externalDatabase' => $externalDatabase,
+        'externalConnection' => $externalConnection,
+      ]);
+      
 
       $list = array();
       foreach ($listfields as $listindex => $listvalue) {
@@ -232,9 +238,11 @@ trait ImportTrait
         return;
         }
       // Build SELECT query from field mapping
-      if($externalDatabase === 0){
+      if(!$externalDatabase){
+        $this->logInfo("Connectiong to internal Database");
         $DB = $this->getJobDB();
       } else {
+        $this->logInfo("Connectiong to external Database");
         $DB = $this->getDBConnection($externalConnection);
       }
   
