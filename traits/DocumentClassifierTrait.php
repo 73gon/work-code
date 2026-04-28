@@ -205,7 +205,7 @@ trait DocumentClassifierTrait
         }
 
       $this->storeOutputParameter('dc_documentId', $dataItem['documentId'] ?? '');
-      $this->storeOutputParameter('dc_tempJSON', json_encode($data));
+      $this->storeOutputParameter('dc_tempJSON', json_encode($data, JSON_PRETTY_PRINT));
 
       $attributes = $this->resolveOutputParameterListAttributes('classificationDetails');
       $values = [
