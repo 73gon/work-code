@@ -251,7 +251,7 @@ trait DocumentClassifierTrait
           'confidence' => $dataConfidence['documentClassifierDate']['confidence'] ?? '',
           'reasoning' => $dataConfidence['documentClassifierDate']['reasoning'] ?? '',
         ],
-        'documentClassifierNumberConfidence' => [
+        'numberConfidence' => [
           'confidence' => $dataConfidence['documentClassifierNumber']['confidence'] ?? '',
           'reasoning' => $dataConfidence['documentClassifierNumber']['reasoning'] ?? '',
         ],
