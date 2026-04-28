@@ -219,7 +219,7 @@ trait ImportTrait
       $externalDatabase = $this->resolveInputParameter('external_database') == '1';
       $externalConnection = $this->resolveInputParameter('external_connection');
 
-      $this->logError("Resolving input Parameter", [
+      $this->logDebug("Resolving input Parameter", [
         'table' => $table,
         'listfields' => $listfields,
         'externalDatabase' => $externalDatabase,
