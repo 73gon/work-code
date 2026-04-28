@@ -1,4 +1,5 @@
 Inhaltsverzeichnis
+- [Allgemein](#allgemein)
 - [Definition der Versionierung](#definition-der-versionierung)
 - [Architektur: Trait-basiertes Design](#architektur-trait-basiertes-design)
   - [Die funktionalen Bausteine (Traits)](#die-funktionalen-bausteine-traits)
@@ -20,6 +21,7 @@ Inhaltsverzeichnis
     - [Unterschiede zwischen den Funktionen](#unterschiede-zwischen-den-funktionen)
 - [Zusätzliche Dateien](#zusätzliche-dateien)
   - [Vorstellung von Datei: dialog.xml](#vorstellung-von-datei-dialogxml)
+    - [Einrichten der dialog.xml](#einrichten-der-dialogxml)
   - [Vorstellung der Dateien: german.php / english.php](#vorstellung-der-dateien-germanphp--englishphp)
     - [Welche Aufgabe erfüllen german.php / english.php?](#welche-aufgabe-erfüllen-germanphp--englishphp)
     - [Aufgaben der Sprachdateien (Lokalisierung)](#aufgaben-der-sprachdateien-lokalisierung)
@@ -27,7 +29,7 @@ Inhaltsverzeichnis
   - [Vorstellung von Datei: config.php](#vorstellung-von-datei-configphp)
     - [Welche Aufgabe erfüllt config.php?](#welche-aufgabe-erfüllt-configphp)
     - [Aufgaben der Datei config.php (Systemkonfiguration)](#aufgaben-der-datei-configphp-systemkonfiguration)
-  - [Vorstellung der Datei: config.php](#vorstellung-der-datei-configphp)
+    - [Logging](#logging)
 - [Einrichtung der Systemaktivität](#einrichtung-der-systemaktivität)
   - [Grundlegende systematische Verknüpfungen:](#grundlegende-systematische-verknüpfungen)
   - [Beispiel anhand der Funktion: Rechnung auslesen (pedant)](#beispiel-anhand-der-funktion-rechnung-auslesen-pedant)
@@ -37,6 +39,14 @@ Inhaltsverzeichnis
   - [Besonderheiten bei den Systemaktivitäten](#besonderheiten-bei-den-systemaktivitäten)
 - [Fußnoten](#fußnoten)
 
+# Allgemein
+Für zusätzliche Informationen zu JobRouter Systemaktivitäten siehe in die Dokumentation von JobRouter. Du findest die Dokumentation unter `"Hilfe"` -> `"Handbücher"` -> `"Entwickler"` -> `"Systemaktivität"`
+
+![hilfe](../staticFiles/docimages/help.png)
+
+![handbuecher](../staticFiles/docimages/handbuecher.png)
+
+
 # Definition der Versionierung
 
 Die erste Ziffer steht für grundlegende Systemänderungen, während die zweite Ziffer neue Funktionen bei bestehender Kompatibilität kennzeichnet. Die finale Ziffer signalisiert reine Fehlerbehebungen (Bugfixes), die die Stabilität des Systems verbessern, ohne den Funktionsumfang zu verändern.
@@ -45,7 +55,7 @@ Die erste Ziffer steht für grundlegende Systemänderungen, während die zweite 
 | ------------- | ----------- | ----------------------------------------------------------- |
 | Erste Ziffer  | Major       | Massive Änderungen oder neue Systemarchitektur.             |
 | Zweite Ziffer | Minor       | Neue Features oder Felder, die bestehende Abläufe ergänzen. |
-| Dritte Ziffer | Patch       | Neue Features oder Felder, die bestehende Abläufe ergänzen. |
+| Dritte Ziffer | Patch       | Kleinere Bugfixes                                           |
 
 
 # Architektur: Trait-basiertes Design
@@ -228,6 +238,32 @@ Aufgaben der Datei dialog.xml (Struktur/Konfiguration)
 - Pflichtfeld-Steuerung: Festlegung, welche Parameter zwingend ausgefüllt werden müssen (required='yes'), damit die Aktivität korrekt funktioniert.
 
 - Tabellen-Mapping: Konfiguration von Listen-Parametern (UDL), um die Rückgabe von Rechnungspositionen oder Klassifizierungsdetails in JobRouter-Untertabellen zu ermöglichen.
+  
+### Einrichten der dialog.xml
+Die Input als auch Outputfelder, werden über ihre Attribute eingerichtet.
+
+Beispielfelder:
+
+```
+ <field id='new' name='NEWVERSION' worktable='no' subtable='no' fixed='yes' datatype='int' required='yes' texttype='checkbox'/>
+
+ <list id="importVendor" name="IMPORTVENDOR" worktable="yes" subtable="no" fixed="yes" datatype="varchar" required="no" udl="yes"/>
+```
+| Attribut | Erklärung | Erlaubter Input | 
+| ---- | ---- | ----| 
+| category | | `field` oder `list` |
+| id | | |
+| name | | |
+| worktable | | |
+| subtable | | |
+| fixed | | |
+| datatype | | |
+| requiered | | |
+| texttype | | |
+| texttype | | |
+
+
+
 
 ## Vorstellung der Dateien: german.php / english.php
 
@@ -275,8 +311,23 @@ Die Hauptaufgabe dieser Datei ist die Bereitstellung von globalen Steuerungspara
 
 - Zentraler Parameter-Speicher: Rückgabe eines Konfigurations-Arrays (return [...]), welches von der SystemActivity.php und den Traits eingebunden wird.
 
-## Vorstellung der Datei: config.php
-Für Informationen zu dieser Datei sieh in unser [SUPPORT.md](SUPPORT.md)
+Die Hauptaufgabe dieser Datei ist die Bereitstellung von globalen Steuerungsparametern des Debuggings. Sie dient vor allem dazu, das Verhalten der Log-Informationen zu beeinflussen, ohne den PHP-Code selbst ändern zu müssen.
+
+### Logging
+
+- Die Logdateien werden automatisch unter `pedant/logs/log/` angelegt.
+
+- Der Dateiname entspricht immer dem aktuellen Tag im Format `DDMMYYYY.log`.
+
+- Jede Logzeile enthält Zeitstempel, Log-Level, Incident und die eigentliche Nachricht. Optional werden Exception-Details und JSON-Kontext angehängt.
+
+- Das Incident-Tag kommt aus dem Input-Parameter `INCIDENT`. Wenn dieser Wert nicht aufgelöst werden kann, wird `NO_INCIDENT` verwendet.
+
+- Logdateien älter als 7 Tage werden beim Einstieg in die Hauptfunktionen automatisch gelöscht.
+
+- Für Supportfälle sollten nach Möglichkeit immer `INCIDENT`, `TEMPJSON` und `COUNTERSUMMARY` mitgeführt werden.
+
+Details zu Support-Fällen findest du in der [SUPPORT.md-Datei](./SUPPORT.md)
 
 # Einrichtung der Systemaktivität
 
@@ -325,7 +376,7 @@ Für spezifische Informationen zu den Parametern sieh bitte in die [README.md](.
 | `Neue Version (2 SysAkt)`         | `new`            | Datenbank- & Prozesstabellenverknüpfung  | Diese ist **AB Version 2.0.0** immer auf True                                                                                    |
 | `Nachricht`                       | `note`           | Datenbank- & Prozesstabellenverknüpfung  | Dieser Kommentar wird NICHT von der KI verarbeitet, sondern von einem Mitarbeiter gelesen                                        |
 | `Lieferanten-Tabelle`             | `vendorTable`    | Datenbank- & Prozesstabellenverknüpfung  |
-| `Lieferantenkonfiguration`        | `importVendor`   | Datenbank- & Prozesstabellenverknüpfung  |
+| `Lieferantenkonfiguration`        | `importVendor`   | Datenbank- & Prozesstabellenverknüpfung  | Dies ist eine "UDL-Liste"                                                                                                        |
 
 
 ## Nach Struktur sortiert
