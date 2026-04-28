@@ -216,6 +216,10 @@ trait ImportTrait
 
       $table = $this->resolveInputParameter($tableParam);
       $listfields = $this->resolveInputParameterListValues($listParam);
+      $externalDatabse = $this->resolveInputParameter($external_database);
+      if($externalDatabase === 1){
+        $externalConnection = $this->resolveInputParameter($external_connection);
+      }
 
       $list = array();
       foreach ($listfields as $listindex => $listvalue) {
@@ -227,10 +231,13 @@ trait ImportTrait
         $this->logInfo("$entityType import skipped: table parameter is empty");
         return;
         }
-
       // Build SELECT query from field mapping
-      $JobDB = $this->getJobDB();
-
+      if($externalDatabase === 0){
+        $DB = $this->getJobDB();
+      } else {
+        $DB = $this->getDBConnection($externalConnection);
+      }
+  
       $lastKey = null;
       foreach ($list as $listindex => $listvalue) {
         if (!empty($listvalue)) {
@@ -251,10 +258,10 @@ trait ImportTrait
 
       $this->logDebug("$entityType import query", ['query' => $temp]);
 
-      $result = $JobDB->query($temp);
+      $result = $DB->query($temp);
       $payloads = [];
 
-      while ($row = $JobDB->fetchRow($result)) {
+      while ($row = $DB->fetchRow($result)) {
         $data = [];
         foreach ($fields as $index => $field) {
           $value = isset($row[$fields[$index]]) ? $row[$fields[$index]] : '';
